@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design Intelligence Hub | BannerBuzz Design Operations</title>
+  <meta name="description" content="AI-Powered Design File Pre-Check & Consolidated Customer Proof Studio adhering to BannerBuzz Standard Operating Procedures (SOP).">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ── BANNERBUZZ HEADER ── -->
+  <header class="bb-header">
+    <div class="bb-logo" onclick="setSubnav(document.querySelector('.subnav-item'), 'precheck')">
+      <div class="bb-logo-icon">BB</div>
+      <div class="bb-logo-text">
+        <span class="bb-logo-name">BANNERBUZZ</span>
+        <span class="bb-logo-sub">Design Operations</span>
+      </div>
+    </div>
+    <div class="bb-header-divider"></div>
+    <div class="bb-tool-name">
+      <span>Design Intelligence Hub</span>
+      <span class="bb-tool-tag">SOP Pre-Check v3.0</span>
+    </div>
+    <div class="bb-header-right">
+      <span class="header-link" onclick="setSubnav(null, 'dashboard')">📊 Metrics</span>
+      <span class="header-link" onclick="setSubnav(null, 'rules')">📐 SOP Specs</span>
+      <div class="header-user">
+        <div class="user-avatar">DT</div>
+        <span class="user-name">Design Team</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── SUB NAVIGATION ── -->
+  <nav class="bb-subnav">
+    <div class="subnav-item active" onclick="setSubnav(this, 'precheck')">
+      ⚡ AI Pre-Check
+      <span class="subnav-badge fail" id="fail-badge" style="display:none">0</span>
+    </div>
+    <div class="subnav-item" onclick="setSubnav(this, 'precheck'); setTimeout(() => switchTab('previous'), 50);">
+      🔍 Previous Orders
+    </div>
+    <div class="subnav-item" onclick="setSubnav(this, 'proof')">
+      📋 Proof Studio
+    </div>
+    <div class="subnav-item" style="margin-left:auto" onclick="setSubnav(this, 'rules')">
+      📐 Product Rules (SOPs)
+    </div>
+    <div class="subnav-item" onclick="setSubnav(this, 'dashboard')">
+      📊 Operations Dashboard
+    </div>
+  </nav>
+
+  <!-- ── APPLICATION BODY ── -->
+  <main class="app-body">
+
+    <!-- ══ LEFT PANEL ══ -->
+    <aside class="left-panel">
+
+      <!-- PRE-CHECK MODE CONTROLS -->
+      <div class="lp-block active" id="lp-precheck">
+        
+        <!-- Order & Customer -->
+        <section class="lp-section">
+          <div class="lp-title">Order Information</div>
+          <div class="form-row">
+            <div class="fg">
+              <label class="fl" for="order-num">Order #</label>
+              <input type="text" class="fi" id="order-num" placeholder="e.g. US102938" />
+            </div>
+            <div class="fg">
+              <label class="fl" for="customer-name">Customer</label>
+              <input type="text" class="fi" id="customer-name" placeholder="Name / Email" />
+            </div>
+          </div>
+
+          <!-- Category & Product -->
+          <div class="fg">
+            <label class="fl" for="cat-select">Category</label>
+            <div class="fs-wrap">
+              <select class="fs" id="cat-select" onchange="onCategoryChange()">
+                <option value="">— Select Category —</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="fg" id="product-row" style="display:none;">
+            <label class="fl" for="product-select">Product Type</label>
+            <div class="fs-wrap">
+              <select class="fs" id="product-select" onchange="onProductChange()">
+                <option value="">— Select Product —</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Dimensions & Units -->
+          <div class="fg">
+            <label class="fl">Ordered Finished Size</label>
+            <div class="dim-input-group">
+              <input type="number" step="0.25" class="fi" id="print-w" placeholder="Width" oninput="onDimensionInput()" />
+              <span style="color:var(--text-muted); font-weight:700;">×</span>
+              <input type="number" step="0.25" class="fi" id="print-h" placeholder="Height" oninput="onDimensionInput()" />
+              <select class="unit-select" id="dim-unit" onchange="onUnitChange()">
+                <option value="in" selected>Inches</option>
+                <option value="ft">Feet</option>
+                <option value="cm">CM</option>
+                <option value="mm">MM</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Finishing & Hardware Specifications -->
+          <div class="fg" id="finishing-section" style="margin-top:10px;">
+            <label class="fl" style="display:flex; justify-content:space-between; align-items:center;">
+              <span>Finishing &amp; Hardware Details</span>
+              <span id="finishing-detected-badge" style="font-size:9.5px; font-weight:800; color:#c2410c; background:#ffedd5; padding:1px 6px; border-radius:3px; display:none;">AUTO-DETECTED</span>
+            </label>
+            <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:10px; font-size:12px; display:flex; flex-direction:column; gap:8px;">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div>
+                  <label style="font-size:10.5px; font-weight:700; color:#475569; display:block; margin-bottom:3px;">Grommets / Eyelets</label>
+                  <select class="fi" id="finishing-grommets" style="font-size:11px; padding:5px 8px;" onchange="onFinishingOptionChange()">
+                    <option value="None">None</option>
+                    <option value="Standard Metal Grommets">Standard Metal Grommets</option>
+                    <option value="Brass Grommets">Brass Grommets</option>
+                    <option value="Left Side Grommets (Flags)">Left Side Grommets (Flags)</option>
+                    <option value="Perimeter Metal Grommets">Perimeter Metal Grommets</option>
+                    <option value="4 Corner Grommets">4 Corner Grommets</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:10.5px; font-weight:700; color:#475569; display:block; margin-bottom:3px;">Pockets &amp; Sleeves</label>
+                  <select class="fi" id="finishing-pockets" style="font-size:11px; padding:5px 8px;" onchange="onFinishingOptionChange()">
+                    <option value="None">None</option>
+                    <option value="Pole Sleeve at Left Side">Pole Sleeve at Left Side</option>
+                    <option value="3 Pole Pockets at Left Side">3 Pole Pockets at Left Side</option>
+                    <option value="Top Pole Pocket">Top Pole Pocket (3 in)</option>
+                    <option value="Top & Bottom Pole Pockets">Top &amp; Bottom Pole Pockets</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div>
+                  <label style="font-size:10.5px; font-weight:700; color:#475569; display:block; margin-bottom:3px;">Edges / Stakes</label>
+                  <select class="fi" id="finishing-edges" style="font-size:11px; padding:5px 8px;" onchange="onFinishingOptionChange()">
+                    <option value="Clean Cut">Clean Cut / Flush</option>
+                    <option value="Hemmed Edges">Hemmed Edges</option>
+                    <option value="Stitched Edges">Stitched Edges</option>
+                    <option value="Single Side Metal Stakes (H-Stakes)">Metal Step Stakes (H-Stakes)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:10.5px; font-weight:700; color:#475569; display:block; margin-bottom:3px;">Print Side</label>
+                  <select class="fi" id="finishing-sides" style="font-size:11px; padding:5px 8px;" onchange="onFinishingOptionChange()">
+                    <option value="Single-Sided">Single-Sided</option>
+                    <option value="Double-Sided">Double-Sided</option>
+                    <option value="Double-Sided (Front File)">Double-Sided (Front File)</option>
+                    <option value="Double-Sided (Back File)">Double-Sided (Back File)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Product SOP Specifications Box -->
+          <div class="spec-box" id="spec-box"></div>
+        </section>
+
+        <!-- Artwork Upload Zone & Production Sample Selector -->
+        <section class="lp-section">
+          <div style="margin-bottom:12px; background:#fff8f5; border:1px solid #fed7aa; border-radius:8px; padding:10px 12px;">
+            <label class="fl" for="example-file-select" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="color:#c2410c; font-weight:800;">⚡ Test Real Production Filenames</span>
+              <span style="font-size:10px; color:#ea580c; font-weight:700; background:#ffedd5; padding:2px 6px; border-radius:4px;">30 Samples</span>
+            </label>
+            <select class="fs" id="example-file-select" onchange="loadExampleFilename(this.value)" style="font-size:11.5px; border-color:#fdba74; background:#ffffff;">
+              <option value="">— Choose a Real Production File —</option>
+              <option value="US2395878_Desk_Flags_Blade_5.51_x_17.71_(inch)_Single-Sided_1pc.jpg">🚩 Desk Flags Blade 5.51×17.71 Inch (US2395878)</option>
+              <option value="Flag_Fabric_Gian_US2395441_1_1_qty_Teardrop_Flags_2_x_7_(FT)_Teardrop_Flags_Pole_Sleeve_at_Left_Side_Single_Sided_(PO)_script_Front_print_file.pdf">🚩 Teardrop Flags 2×7 FT (US2395441)</option>
+              <option value="Flag_Fabric_Gian_US2396245_2_1_qty_Personalized_Flags_5_x_3_(FT)_Personalized_Flags_Metal_Grommets_at_Left_Side_Double_Sided_(PO)_script_Front_print_file.pdf">🚩 Personalized Flags 5×3 FT (US2396245)</option>
+              <option value="Flag_Fabric_Feat_US2395880_1_1_qty_Feather_Flags_2.5_x_8_(FT)_Feather_Flags_Pole_Sleeve_at_Left_Side_(P)_print_file.pdf">🚩 Feather Flags 2.5×8 FT (US2395880)</option>
+              <option value="Canvas_Bann-US2392457_1_1_qty_Canvas_Banners_2_x_3_(FT)_Metal_Grommets_(SS)_script_print_file.pdf">🎌 Canvas Banners 2×3 FT (US2392457)</option>
+              <option value="Corflute_Bann-BS2310454_1_1_qty_Die-Cut_Yard_Signs_48_x_32_(Inch)_Single_Side_Metal_Stakes_(ES)_print_file.pdf">🪟 Die-Cut Yard Signs 48×32 Inch (BS2310454)</option>
+              <option value="Round_Sign_US2394551_1_1_qty_Circle_Yard_Signs_24_x_24_(Inch)_Single_Sided_(ES)_print_file.pdf">⭕ Circle Yard Signs 24×24 Inch (US2394551)</option>
+              <option value="Roll_Up_Stand_US2399120_1_1_qty_Roll_Up_Banner_Stands_33_x_80_(Inch)_print_file.pdf">🖼️ Roll-Up Banner Stands 33×80 Inch (US2399120)</option>
+              <option value="Table_Cover_US2398912_1_1_qty_Custom_Table_Covers_8_ft_x_6_ft_(FT)_print_file.pdf">🪑 Custom Table Covers 8×6 FT (US2398912)</option>
+              <option value="Flag_Fabric_Bann_US2395340_1_1_qty_Rectangle_Flags_6_x_4_(FT)_Rectangle_Flags_Double_Sided_3_Pole_Pockets_at_Left_Side_(P)_front_script_print_file.pdf">🚩 Rectangle Flags 6×4 FT (US2395340)</option>
+              <option value="Knitted_Polyester_Fabric_Bann-BS2311027_1_50_qty_Hand_Flags_6_Inch_x_4_Inch_(Inch)_Hand_Flags_Single_(ES)_print_file.pdf">🚩 Hand Flags 6×4 Inch (BS2311027)</option>
+              <option value="Magnet_Bann_BS2312109_1_1_qty_Truck_Magnetic_Signs_15.75_x_52.5_(Inch)_UV_Print_(MS)_print_file.pdf">🪟 Truck Magnetic Signs 15.75×52.5 Inch (BS2312109)</option>
+              <option value="N_A_SEZm_US2377020_1_1_qty_300_piece_Square_Business_Cards_2.5_Inch_x_2.5_Inch_(Inch)_Square_Standard_14_pt_Gloss_Finish_Front_and_Back_(SS)_Front_print_file.pdf">📄 Square Business Cards 2.5×2.5 Inch (US2377020)</option>
+              <option value="POLYESTER_FABRIC_Atla-US2382836_3_2_qty_Polyester_Fabric_Banners_2_x_6_(FT)_Single_Sided_Metal_Grommets_with_Stitched_Edges_(PO)_script_print_file.pdf">🎌 Polyester Fabric Banners 2×6 FT (US2382836)</option>
+              <option value="POLYESTER_FABRIC_Bann-AU2396585_1_1_qty_Fabric_Pop_Up_Counter_Display_-_Graphic_840_mm_x_840_mm_(MM)_(E)_print_file.pdf">🏪 Fabric Pop Up Counter 840×840 MM (AU2396585)</option>
+              <option value="PP_Material_Bannerstand_Material_Bann_US2400580_1(1)_2_qty_L_Banner_Stands_Graphic_2_Ft_x_5.33_Ft_(FT)_(E)_print_file.pdf">🖼️ L Banner Stands 2×5.33 FT (US2400580)</option>
+              <option value="PVC_FLEX_Atla-US2382836_1_1_qty_Custom_Vinyl_Banners_36_x_136_(Inch)_Single_Sided_Standard_Top_Pole_Pocket_(PO)_script_print_file.pdf">🎌 Custom Vinyl Banners 36×136 Inch (US2382836)</option>
+              <option value="PVC_FLEX_Bann-BS2311185_1_1_qty_Vinyl_Banners_6_x_3_(FT)_One_Side_Standard_Vinyl_(13_oz)_Yes_Lamination_Brass_Grommets_(MS)_script_print_file.pdf">🎌 Vinyl Banners 6×3 FT (BS2311185)</option>
+              <option value="PVC_FLEX_Bann-US2395381_1_1_qty_Outdoor_Banners_8_x_3_(FT)_Single_Sided_Metal_Grommets_Standard_(E)_script_print_file.pdf">🎌 Outdoor Banners 8×3 FT (US2395381)</option>
+              <option value="PVC_FLEX_Bann_US2382447_1_1_qty_Custom_Vinyl_Banners_4_x_3_(FT)_Single_Sided_Standard_Metal_Grommets_(P)_script_print_file.pdf">🎌 Custom Vinyl Banners 4×3 FT (US2382447)</option>
+              <option value="Poster_Paper_Bann_BS2311025_1_1_qty_Poster_Paper_18_x_24_(Inch)_(ES)_script_print_file.pdf">🪟 Poster Paper 18×24 Inch (BS2311025)</option>
+            </select>
+          </div>
+
+          <div class="lp-title">Upload Customer Artwork</div>
+          <div class="upload-zone" id="upload-zone">
+            <span class="upload-icon">📁</span>
+            <div class="upload-text-main">Click or drag artwork here</div>
+            <div class="upload-text-sub">SVG · AI · EPS · PDF · JPG · PNG · TIFF · PSD</div>
+          </div>
+          <input type="file" class="hidden-input" id="file-input" accept=".svg,.ai,.eps,.pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff,.psd,.bmp" />
+
+          <!-- Filename Auto-Detection Banner -->
+          <div class="fn-banner" id="fn-banner"></div>
+          <div class="fn-proof-note" id="fn-proof-note">
+            ⚠️ <strong>Proof render detected:</strong> This file appears to be a script export. Resolution check will be evaluated against production source.
+          </div>
+
+          <!-- Preview Card -->
+          <div class="preview-card" id="preview-card">
+            <div class="preview-thumb-wrap">
+              <img id="preview-img" class="preview-img" src="" alt="Thumbnail" />
+            </div>
+            <div class="preview-meta">
+              <div class="preview-name" id="preview-name">file_name.pdf</div>
+              <div class="preview-size" id="preview-size">0 KB</div>
+            </div>
+            <div class="preview-remove" onclick="removeFile()" title="Remove file">✕</div>
+          </div>
+        </section>
+
+        <!-- Pre-Check Trigger Button -->
+        <section class="lp-section">
+          <div class="fg">
+            <label class="fl" for="notes">Special Production Notes</label>
+            <input type="text" class="fi" id="notes" placeholder="Color code, pole pocket size, hem instructions…" />
+          </div>
+          <button class="run-btn" id="run-btn" onclick="runPreCheck()" disabled>
+            <span id="run-icon">⚡</span>
+            <span id="run-text">Run SOP Pre-Check</span>
+          </button>
+        </section>
+
+      </div><!-- /lp-precheck -->
+
+
+      <!-- PROOF STUDIO MODE CONTROLS -->
+      <div class="lp-block" id="lp-proof">
+        <section class="lp-section">
+          <div class="lp-title">Proof Order Details</div>
+          <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">
+            Verified order information displayed on the consolidated proof header and specifications matrix.
+          </div>
+
+          <div class="fg" style="margin-bottom:8px;">
+            <label class="fl" for="proof-order-num">Order Number</label>
+            <input type="text" class="fi" id="proof-order-num" placeholder="e.g. CA2384567" oninput="onProofOrderNumChange(this.value)" />
+          </div>
+
+          <div class="fg" style="margin-bottom:8px;">
+            <label class="fl" for="proof-product-select">Product Name</label>
+            <select class="fi" id="proof-product-select" onchange="onProofProductSelect(this.value)">
+              <option value="">— Auto-Detect from Upload / Selection —</option>
+            </select>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+            <div class="fg">
+              <label class="fl" for="proof-w">Width (Inches)</label>
+              <input type="number" class="fi" id="proof-w" placeholder="48" oninput="onProofDimsChange()" />
+            </div>
+            <div class="fg">
+              <label class="fl" for="proof-h">Height (Inches)</label>
+              <input type="number" class="fi" id="proof-h" placeholder="32" oninput="onProofDimsChange()" />
+            </div>
+          </div>
+
+          <hr style="border:none; border-top:1px solid var(--border); margin:12px 0;" />
+
+          <!-- Slot 1: Product Overall Proof -->
+          <div class="slot" style="margin-bottom:12px;">
+            <div style="font-size:11.5px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">1. Product Overall Proof (Required)</div>
+            <div class="upload-zone" style="padding:14px;" id="drop-overall" onclick="document.getElementById('in-overall').click()">
+              <div style="font-size:11.5px; font-weight:600;">Click or drop Entire Artwork</div>
+            </div>
+            <input type="file" id="in-overall" class="hidden-input" accept="image/*,.pdf" onchange="handleProofSlotFile('overall', event)" />
+            <div class="preview-card" id="prev-overall" style="margin-top:6px;">
+              <div class="preview-thumb-wrap"><img id="prev-img-overall" class="preview-img" src="" alt="" /></div>
+              <div class="preview-meta"><div class="preview-name" id="prev-name-overall"></div></div>
+              <div class="preview-remove" onclick="clearProofSlot('overall')">✕</div>
+            </div>
+          </div>
+
+          <!-- Slot 2: Product Template -->
+          <div class="slot" style="margin-bottom:12px;">
+            <div style="font-size:11.5px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">2. Product Template / Die-Line (Optional)</div>
+            <div class="upload-zone" style="padding:14px;" id="drop-template" onclick="document.getElementById('in-template').click()">
+              <div style="font-size:11.5px; font-weight:600;">Click or drop Template Overlay</div>
+            </div>
+            <input type="file" id="in-template" class="hidden-input" accept="image/*,.pdf" onchange="handleProofSlotFile('template', event)" />
+            <div class="preview-card" id="prev-template" style="margin-top:6px;">
+              <div class="preview-thumb-wrap"><img id="prev-img-template" class="preview-img" src="" alt="" /></div>
+              <div class="preview-meta"><div class="preview-name" id="prev-name-template"></div></div>
+              <div class="preview-remove" onclick="clearProofSlot('template')">✕</div>
+            </div>
+          </div>
+
+          <!-- Slot 3: 3D Mockup -->
+          <div class="slot" style="margin-bottom:12px;">
+            <div style="font-size:11.5px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">3. 3D Product Mockup (Recommended)</div>
+            <div class="upload-zone" style="padding:14px;" id="drop-mockup" onclick="document.getElementById('in-mockup').click()">
+              <div style="font-size:11.5px; font-weight:600;">Click or drop 3D Mockup Render</div>
+            </div>
+            <input type="file" id="in-mockup" class="hidden-input" accept="image/*,.pdf" onchange="handleProofSlotFile('mockup', event)" />
+            <div class="preview-card" id="prev-mockup" style="margin-top:6px;">
+              <div class="preview-thumb-wrap"><img id="prev-img-mockup" class="preview-img" src="" alt="" /></div>
+              <div class="preview-meta"><div class="preview-name" id="prev-name-mockup"></div></div>
+              <div class="preview-remove" onclick="clearProofSlot('mockup')">✕</div>
+            </div>
+          </div>
+
+          <!-- Slot 4: Print Preview Crop Shot Option -->
+          <div class="slot" style="margin-bottom:12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; font-weight:700; color:var(--text-primary); margin:0;">
+                <input type="checkbox" id="check-crop-shot" checked onchange="onCropShotToggle(this.checked)" style="width:16px; height:16px; cursor:pointer; accent-color:#4739d2;" />
+                <span>4. Print Quality Crop Shot (100% Scale)</span>
+              </label>
+              <span id="crop-status-badge" style="font-size:9.5px; font-weight:800; color:#4739d2; background:#ede9fe; padding:2px 6px; border-radius:3px;">AUTO CROP</span>
+            </div>
+            
+            <div id="crop-shot-panel" style="margin-top:8px;">
+              <div style="font-size:10.5px; color:#64748b; margin-bottom:8px; line-height:1.35;">
+                Automatically zooms 100% into artwork details. If you prefer your own crop shot, upload it below:
+              </div>
+              
+              <div class="upload-zone" style="padding:10px; font-size:11px;" id="drop-crop" onclick="document.getElementById('in-crop').click()">
+                <div style="font-weight:600; color:#475569;">📁 Upload Custom Crop Shot (Optional)</div>
+                <div style="font-size:9.5px; color:#94a3b8; margin-top:2px;">Click or drop image if not using auto-crop</div>
+              </div>
+              <input type="file" id="in-crop" class="hidden-input" accept="image/*,.pdf" onchange="handleProofSlotFile('crop', event)" />
+              
+              <div class="preview-card" id="prev-crop" style="margin-top:6px; display:none;">
+                <div class="preview-thumb-wrap"><img id="prev-img-crop" class="preview-img" src="" alt="" /></div>
+                <div class="preview-meta">
+                  <div class="preview-name" id="prev-name-crop">Custom Crop Shot</div>
+                  <div style="font-size:9.5px; color:#16a34a; font-weight:700;">Custom Upload Active</div>
+                </div>
+                <div class="preview-remove" onclick="clearProofSlot('crop')" title="Revert to Automatic Crop">✕ Auto</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="fg" style="margin-top:14px;">
+            <label class="fl" for="proof-note">Customer Note on Proof</label>
+            <input type="text" class="fi" id="proof-note" placeholder="e.g. Logo vectorized to ensure sharp print output." oninput="generateProofView()" />
+          </div>
+
+          <!-- Prominent Generate / Refresh Proof Button -->
+          <button type="button" class="btn btn-orange" id="btn-generate-proof" onclick="generateProofView()" style="width:100%; margin-top:14px; font-weight:800; font-size:13px; padding:12px; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 2px 6px rgba(255,95,31,0.25);">
+            <span>⚡</span> <span>Generate Consolidated Customer Proof</span>
+          </button>
+        </section>
+      </div><!-- /lp-proof -->
+
+    </aside>
+
+    <!-- ══ MAIN DISPLAY PANEL ══ -->
+    <section class="main-panel">
+
+      <!-- Page Header & Action Bar -->
+      <div class="page-header">
+        <div class="breadcrumb">
+          <span>BannerBuzz</span> <span class="sep">›</span>
+          <span>Design Ops</span> <span class="sep">›</span>
+          <span id="crumb-order">New Order</span> <span class="sep">›</span>
+          <span id="crumb-product" style="color:var(--bb-orange); font-weight:700;">Select Product</span>
+        </div>
+        <div class="page-header-actions" id="actions-precheck">
+          <button class="btn btn-outline btn-sm" onclick="removeFile()">Clear</button>
+          <button class="btn btn-orange btn-sm" id="gen-proof-btn" onclick="setSubnav(document.querySelectorAll('.subnav-item')[2], 'proof')" disabled>
+            Generate Consolidated Proof →
+          </button>
+        </div>
+        <div class="page-header-actions" id="actions-proof" style="display:none;">
+          <button class="btn btn-outline btn-sm" onclick="setSubnav(document.querySelectorAll('.subnav-item')[0], 'precheck')">← Back to Pre-Check</button>
+          <button class="btn btn-outline btn-sm" id="proof-print-btn" onclick="ProofStudio.print()" disabled>🖨 Print / Export PDF</button>
+          <button class="btn btn-orange btn-sm" id="proof-share-btn" onclick="alert('Consolidated proof link generated and copied to clipboard!')" disabled>Send Proof to Customer</button>
+        </div>
+      </div>
+
+      <!-- ── VIEW 1: PRE-CHECK ── -->
+      <div class="view active" id="view-precheck">
+        <div class="results-wrap">
+
+          <!-- Initial Empty State -->
+          <div class="empty-state" id="empty-state">
+            <div class="empty-illo">🎯</div>
+            <div class="empty-h">SOP Design File Pre-Check Ready</div>
+            <div class="empty-p">
+              Upload customer artwork (SVG, AI, EPS, PDF, JPG, PNG) and select the target BannerBuzz product. The AI validation engine will automatically verify resolution, measurements, orientation, safe area, and lines & dots against SOP checklists.
+            </div>
+          </div>
+
+          <!-- Results Content -->
+          <div id="results-content" style="display:none; flex-direction:column; gap:16px;">
+            <div class="summary-card" id="summary-card"></div>
+
+            <!-- Tab Navigation Bar -->
+            <div class="tabs-bar">
+              <div class="tab active" id="tab-checks" onclick="switchTab('checks')">
+                Automated SOP Checks
+                <span class="tab-badge" id="fail-tab-badge" style="display:none;">0</span>
+              </div>
+              <div class="tab" id="tab-previous" onclick="switchTab('previous')">
+                Previous Orders Matching
+              </div>
+              <div class="tab" id="tab-sop" onclick="switchTab('sop')">
+                SOP Guidelines Reference
+              </div>
+            </div>
+
+            <!-- Tab 1: Checks & Canvas Inspector -->
+            <div class="result-tab active" id="rt-checks"></div>
+
+            <!-- Tab 2: Previous Orders Verification -->
+            <div class="result-tab" id="rt-previous"></div>
+
+            <!-- Tab 3: SOP Guide -->
+            <div class="result-tab" id="rt-sop"></div>
+          </div>
+
+        </div>
+      </div><!-- /view-precheck -->
+
+      <!-- ── VIEW 2: PROOF STUDIO ── -->
+      <div class="view" id="view-proof">
+        <div class="proof-studio-wrap">
+          <div id="proof-action-banner" class="no-print" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:12px 20px; border-radius:8px; border:1px solid var(--border); box-shadow:var(--shadow-sm);">
+            <div>
+              <div style="font-weight:800; font-size:15px; color:var(--bb-navy);">BannerBuzz Single Consolidated Customer Proof</div>
+              <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Replicates official proof layout from <strong>BB Proof.png</strong> (Header, Artwork, Print Quality Crop, Specs Matrix, Approval Callout)</div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <button onclick="openBBProofRefModal()" class="btn btn-outline" style="font-size:12px; padding:7px 14px; display:inline-flex; align-items:center; gap:6px;">
+                <span>📷</span> <span>View BB Proof.png Reference</span>
+              </button>
+              <button onclick="ProofStudio.print()" class="btn btn-orange" style="font-size:12px; padding:7px 18px; background:#4739d2; border-color:#4739d2; display:inline-flex; align-items:center; gap:6px;">
+                <span>🖨️</span> <span>Export / Print Proof PDF</span>
+              </button>
+            </div>
+          </div>
+          <div id="proof-output"></div>
+        </div>
+      </div><!-- /view-proof -->
+
+      <!-- ── VIEW 3: PRODUCT RULES (SOP CATALOG) ── -->
+      <div class="view" id="view-rules">
+        <div style="max-width:1180px; margin:0 auto;">
+          <div style="margin-bottom:16px;">
+            <h2 style="font-size:20px; font-weight:800; color:var(--bb-navy);">Standard Operating Procedure (SOP) Master Catalog</h2>
+            <p style="font-size:12.5px; color:var(--text-muted); margin-top:4px;">Authoritative resolution, safe zone, bleed, and color specifications sourced directly from BannerBuzz.com complete catalog &amp; Caterpillar Signs SOP decks (626 products across 11 categories).</p>
+          </div>
+          <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; align-items:center; background:#fff; padding:12px 16px; border-radius:8px; border:1px solid var(--border);">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <label for="rules-cat-filter" style="font-size:12px; font-weight:700; color:var(--bb-navy);">Category:</label>
+              <select id="rules-cat-filter" style="padding:7px 12px; border-radius:6px; border:1px solid #cbd5e1; font-size:12.5px; font-weight:600; min-width:200px;" onchange="filterRulesTable()">
+                <option value="">All Categories (626 products)</option>
+              </select>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:240px;">
+              <label for="rules-search-input" style="font-size:12px; font-weight:700; color:var(--bb-navy);">Search:</label>
+              <input type="text" id="rules-search-input" placeholder="Search by product name, slug, or material..." style="width:100%; padding:7px 12px; border-radius:6px; border:1px solid #cbd5e1; font-size:12.5px;" oninput="filterRulesTable()">
+            </div>
+            <span id="rules-count-badge" class="v-tag" style="background:#eef2ff; color:#3b82f6; font-size:12px; font-weight:700; padding:6px 12px;">626 Products</span>
+          </div>
+          <div id="rules-table-container"></div>
+        </div>
+      </div><!-- /view-rules -->
+
+      <!-- ── VIEW 4: OPERATIONS DASHBOARD ── -->
+      <div class="view" id="view-dashboard">
+        <div style="max-width:1180px; margin:0 auto; display:flex; flex-direction:column; gap:20px;">
+          <div>
+            <h2 style="font-size:20px; font-weight:800; color:var(--bb-navy);">Design Operations Efficiency Metrics</h2>
+            <p style="font-size:12.5px; color:var(--text-muted); margin-top:4px;">Measuring the business impact of AI Pre-Check, Consolidated Proofing, and Previous Order Verification.</p>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px;">
+            <div class="prev-stats" style="background:#fff; border:1px solid var(--border); padding:20px;">
+              <div class="ps-val" style="color:var(--bb-navy); font-size:28px;">1,420</div>
+              <div class="ps-label">Pre-Checks Executed</div>
+            </div>
+            <div class="prev-stats" style="background:#fff; border:1px solid var(--border); padding:20px;">
+              <div class="ps-val" style="color:var(--pass); font-size:28px;">92.4%</div>
+              <div class="ps-label">First-Time Pass Rate</div>
+            </div>
+            <div class="prev-stats" style="background:#fff; border:1px solid var(--border); padding:20px;">
+              <div class="ps-val" style="color:#3b82f6; font-size:28px;">-68%</div>
+              <div class="ps-label">RRR Reduction (Reprints)</div>
+            </div>
+            <div class="prev-stats" style="background:#fff; border:1px solid var(--border); padding:20px;">
+              <div class="ps-val" style="color:var(--bb-orange); font-size:28px;">412 hrs</div>
+              <div class="ps-label">Touchpoint Time Saved</div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /view-dashboard -->
+
+    </section>
+  </main>
+
+  <!-- ── OVERRIDE REASON MODAL ── -->
+  <div class="modal-overlay" id="override-modal">
+    <div class="modal">
+      <div class="modal-title">Override SOP Pre-Check Finding</div>
+      <div class="modal-sub" id="override-subtitle">Provide a mandatory business rationale for this override (will be recorded in production audit log).</div>
+      <label class="fl" for="override-reason">Logged Override Reason (Required)</label>
+      <textarea class="modal-textarea" id="override-reason" placeholder="e.g. Customer provided written confirmation approving historical logo resolution for indoor display."></textarea>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeOverrideModal()">Cancel</button>
+        <button class="btn btn-orange" onclick="submitOverride()">Authorize Override</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BB PROOF REFERENCE MODAL ── -->
+  <div class="modal-overlay" id="bb-proof-modal">
+    <div class="modal" style="width:850px; max-width:95vw; max-height:90vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div>
+          <div class="modal-title" style="font-size:18px;">Original BannerBuzz Proof Template (BB Proof.png)</div>
+          <div class="modal-sub" style="margin-bottom:0;">Official layout reference sourced from <code>C:\Users\Vishal Hingol\Downloads\AI TOOL\BB Proof.png</code></div>
+        </div>
+        <button class="btn btn-outline" onclick="closeBBProofRefModal()" style="padding:4px 10px; font-size:16px;">✕</button>
+      </div>
+      <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden; text-align:center; background:#f8fafc; padding:10px;">
+        <img src="BB%20Proof.png" alt="BB Proof Reference" style="max-width:100%; height:auto; box-shadow:0 4px 16px rgba(0,0,0,0.1); border-radius:4px;" />
+      </div>
+      <div class="modal-actions" style="margin-top:14px;">
+        <button class="btn btn-orange" onclick="closeBBProofRefModal()">Close Reference</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ASSET LIGHTBOX MODAL ── -->
+  <div class="modal-overlay" id="asset-lightbox-modal">
+    <div class="modal" style="width:750px; max-width:95vw; max-height:90vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div>
+          <div class="modal-title" id="asset-modal-title" style="font-size:18px;">Official BannerBuzz Template</div>
+          <div class="modal-sub" id="asset-modal-sub" style="margin-bottom:0;">Sourced from <code>\\192.168.0.250\qnap\Template_Mockups</code></div>
+        </div>
+        <button class="btn btn-outline" onclick="closeAssetLightbox()" style="padding:4px 10px; font-size:16px;">✕</button>
+      </div>
+      <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden; text-align:center; background:#ffffff; padding:16px;">
+        <img id="asset-modal-img" src="" alt="Asset Preview" style="max-width:100%; max-height:60vh; object-fit:contain; box-shadow:0 4px 16px rgba(0,0,0,0.1); border-radius:4px;" />
+      </div>
+      <div class="modal-actions" style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:11px; color:var(--text-muted);">Lightweight JPG · Optimized for GitHub database &amp; high-speed rendering</span>
+        <button class="btn btn-orange" onclick="closeAssetLightbox()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SCRIPTS ── -->
+  <script src="js/sop_data.js"></script>
+  <script src="js/template_registry.js"></script>
+  <script src="js/file_analyzer.js"></script>
+  <script src="js/precheck_engine.js"></script>
+  <script src="js/previous_orders.js"></script>
+  <script src="js/canvas_inspector.js"></script>
+  <script src="js/proof_studio.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
