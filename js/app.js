@@ -1,0 +1,1617 @@
+/**
+ * Design Intelligence Hub - Application Controller
+ * Coordinates File Upload, SOP Pre-Check, Visual Inspector, Previous Orders, and Proof Studio.
+ */
+
+// Application State
+const appState = {
+  currentTab: 'precheck',
+  file: null,
+  analysis: null,
+  product: null,
+  category: null,
+  userDims: { widthIn: 36, heightIn: 24, unit: 'in' },
+  overrides: {},
+  report: null,
+  previousOrders: [],
+  customerName: '',
+  orderNum: '',
+  designerNotes: '',
+  messageToCustomer: '',
+  history: []
+};
+
+// ── DOM Content Loaded Initialization ──
+document.addEventListener('DOMContentLoaded', () => {
+  initCategories();
+  initProofProductDropdown();
+  setupEventListeners();
+  CanvasInspector.init('artwork-canvas');
+});
+
+/**
+ * Initialize Category and Product Dropdowns
+ */
+function initCategories() {
+  const catSel = document.getElementById('cat-select');
+  if (!catSel) return;
+
+  catSel.innerHTML = '<option value="">— Select Category —</option>';
+  Object.entries(CATEGORIES).forEach(([key, cat]) => {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = cat.label;
+    catSel.appendChild(opt);
+  });
+}
+
+function onCategoryChange() {
+  const catKey = document.getElementById('cat-select').value;
+  const prodRow = document.getElementById('product-row');
+  const prodSel = document.getElementById('product-select');
+  prodSel.innerHTML = '<option value="">— Select Product —</option>';
+
+  if (!catKey || !CATEGORIES[catKey]) {
+    prodRow.style.display = 'none';
+    appState.category = null;
+    appState.product = null;
+    hideSpecBox();
+    updateRunButtonState();
+    return;
+  }
+
+  appState.category = catKey;
+  const prods = CATEGORIES[catKey].products;
+  Object.entries(prods).forEach(([slug, pr]) => {
+    const opt = document.createElement('option');
+    opt.value = slug;
+    opt.textContent = pr.name;
+    prodSel.appendChild(opt);
+  });
+
+  prodRow.style.display = 'block';
+  updateRunButtonState();
+}
+
+function onProductChange() {
+  const slug = document.getElementById('product-select').value;
+  const catKey = appState.category || (document.getElementById('cat-select') ? document.getElementById('cat-select').value : null);
+  const spec = (catKey && CATEGORIES[catKey]?.products?.[slug]) || SPECS[slug];
+  if (!slug || !spec) {
+    appState.product = null;
+    hideSpecBox();
+    updateRunButtonState();
+    return;
+  }
+
+  appState.product = spec;
+
+  // Sync Proof Studio product dropdown
+  const proofProdSel = document.getElementById('proof-product-select');
+  if (proofProdSel && proofProdSel.value !== slug) {
+    proofProdSel.value = slug;
+  }
+
+  // Set default dimensions only if no custom dimensions exist
+  const wInput = document.getElementById('print-w');
+  const hInput = document.getElementById('print-h');
+  if (wInput && hInput && (!wInput.value || parseFloat(wInput.value) === 0) && (!appState.userDims || !appState.userDims.widthIn)) {
+    wInput.value = spec.defaultW;
+    hInput.value = spec.defaultH;
+    appState.userDims = {
+      widthIn: spec.defaultW,
+      heightIn: spec.defaultH,
+      unit: 'in'
+    };
+  }
+
+  // Sync Proof Studio dimension inputs
+  const proofW = document.getElementById('proof-w');
+  const proofH = document.getElementById('proof-h');
+  if (proofW && appState.userDims?.widthIn) proofW.value = appState.userDims.widthIn;
+  if (proofH && appState.userDims?.heightIn) proofH.value = appState.userDims.heightIn;
+
+  // Auto-update Proof Studio Slots 2 (Template) & 3 (Mockup) if not custom user upload
+  if (typeof getOfficialProductTemplate === 'function') {
+    const offT = getOfficialProductTemplate(spec.slug, appState.userDims);
+    const offM = (typeof getOfficialProductMockup === 'function')
+      ? getOfficialProductMockup(spec.slug, appState.userDims)
+      : null;
+
+    if (offT && (!ProofStudio.slots.template || !ProofStudio.slots.template.isCustom)) {
+      ProofStudio.setSlot('template', offT.templateFile, offT.name);
+      const cardEl = document.getElementById('prev-template');
+      const dropEl = document.getElementById('drop-template');
+      const imgEl = document.getElementById('prev-img-template');
+      const nameEl = document.getElementById('prev-name-template');
+      if (imgEl) imgEl.src = offT.templateFile;
+      if (nameEl) nameEl.textContent = `${offT.name} (Official Template)`;
+      if (cardEl) cardEl.style.display = 'flex';
+      if (dropEl) dropEl.style.display = 'none';
+    }
+
+    if (offM && (!ProofStudio.slots.mockup || !ProofStudio.slots.mockup.isCustom)) {
+      ProofStudio.setSlot('mockup', offM.mockupFile, offM.name);
+      const cardEl = document.getElementById('prev-mockup');
+      const dropEl = document.getElementById('drop-mockup');
+      const imgEl = document.getElementById('prev-img-mockup');
+      const nameEl = document.getElementById('prev-name-mockup');
+      if (imgEl) imgEl.src = offM.mockupFile;
+      if (nameEl) nameEl.textContent = `${offM.name} (Official 3D Mockup)`;
+      if (cardEl) cardEl.style.display = 'flex';
+      if (dropEl) dropEl.style.display = 'none';
+    }
+  }
+
+  renderSpecBox(spec);
+  updateRunButtonState();
+  updateBreadcrumbs();
+
+  // If canvas is visible in the DOM, immediately update the product template shape
+  if (document.getElementById('artwork-canvas')) {
+    CanvasInspector.renderArtwork(
+      appState.analysis?.previewDataUrl || appState.previewDataUrl,
+      appState.product,
+      appState.userDims
+    );
+  }
+
+  // If proof view is active, refresh proof output
+  if (document.getElementById('proof-output')?.style.display === 'block') {
+    generateProofView();
+  }
+}
+
+function renderSpecBox(spec) {
+  const box = document.getElementById('spec-box');
+  if (!box) return;
+
+  box.innerHTML = `
+    <div class="spec-grid">
+      <div class="spec-item">
+        <span class="spec-label">SOP Resolution</span>
+        <span class="spec-value">${spec.resolution}</span>
+      </div>
+      <div class="spec-item">
+        <span class="spec-label">Safe Zone</span>
+        <span class="spec-value">${spec.safeArea}</span>
+      </div>
+      <div class="spec-item">
+        <span class="spec-label">Bleed Margin</span>
+        <span class="spec-value">${spec.bleed}</span>
+      </div>
+      <div class="spec-item">
+        <span class="spec-label">Min Font Size</span>
+        <span class="spec-value">${spec.minFont}</span>
+      </div>
+    </div>
+    <div style="margin-top:8px; font-size:11px; color:#8b4513; border-top:1px dashed var(--bb-orange-mid); padding-top:6px;">
+      <strong>Material:</strong> ${spec.material} · ${spec.finishing}
+    </div>
+  `;
+  box.classList.add('visible');
+}
+
+function hideSpecBox() {
+  const box = document.getElementById('spec-box');
+  if (box) box.classList.remove('visible');
+}
+
+/**
+ * Handle Dimension Unit Changes
+ */
+function onUnitChange() {
+  const unit = document.getElementById('dim-unit').value;
+  const wEl = document.getElementById('print-w');
+  const hEl = document.getElementById('print-h');
+  let w = parseFloat(wEl.value) || 36;
+  let h = parseFloat(hEl.value) || 24;
+
+  // Convert to Inches for storage
+  if (unit === 'ft') {
+    appState.userDims.widthIn = w * 12;
+    appState.userDims.heightIn = h * 12;
+  } else if (unit === 'cm') {
+    appState.userDims.widthIn = w / 2.54;
+    appState.userDims.heightIn = h / 2.54;
+  } else if (unit === 'mm') {
+    appState.userDims.widthIn = w / 25.4;
+    appState.userDims.heightIn = h / 25.4;
+  } else {
+    appState.userDims.widthIn = w;
+    appState.userDims.heightIn = h;
+  }
+}
+
+function onDimensionInput() {
+  const w = parseFloat(document.getElementById('print-w').value) || 36;
+  const h = parseFloat(document.getElementById('print-h').value) || 24;
+  const unit = document.getElementById('dim-unit').value;
+
+  if (unit === 'ft') {
+    appState.userDims.widthIn = +(w * 12).toFixed(2);
+    appState.userDims.heightIn = +(h * 12).toFixed(2);
+  } else if (unit === 'cm') {
+    appState.userDims.widthIn = +(w / 2.54).toFixed(2);
+    appState.userDims.heightIn = +(h / 2.54).toFixed(2);
+  } else if (unit === 'mm') {
+    appState.userDims.widthIn = +(w / 25.4).toFixed(2);
+    appState.userDims.heightIn = +(h / 25.4).toFixed(2);
+  } else {
+    appState.userDims.widthIn = w;
+    appState.userDims.heightIn = h;
+  }
+}
+
+/**
+ * Setup File Drag & Drop and Event Handlers
+ */
+function setupEventListeners() {
+  const dropZone = document.getElementById('upload-zone');
+  const fileInput = document.getElementById('file-input');
+
+  if (dropZone && fileInput) {
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+  }
+
+  // Inputs for order info
+  const ordInput = document.getElementById('order-num');
+  if (ordInput) ordInput.addEventListener('input', (e) => {
+    appState.orderNum = e.target.value;
+    updateBreadcrumbs();
+  });
+
+  const custInput = document.getElementById('customer-name');
+  if (custInput) custInput.addEventListener('input', (e) => {
+    appState.customerName = e.target.value;
+  });
+}
+
+/**
+ * Handle Uploaded File
+ */
+function handleFile(file) {
+  appState.file = file;
+  const ext = (file.name.split('.').pop() || '').toUpperCase();
+  const sizeKB = (file.size / 1024).toFixed(1);
+
+  // 1. Filename metadata parser FIRST
+  const parsed = FileAnalyzer.parseFilename(file.name);
+  appState.parsedFilename = parsed;
+  const banner = document.getElementById('fn-banner');
+
+  if (parsed) {
+    applyParsedMetadata(parsed);
+
+    const spec = parsed.spec || (parsed.productSlug && SPECS[parsed.productSlug]);
+    if (banner && spec) {
+      banner.innerHTML = `
+        <div style="font-weight:800; font-size:12px; margin-bottom:6px; color:#c2410c; display:flex; align-items:center; gap:6px;">
+          <span>⚡</span> <span>BannerBuzz Production Filename Auto-Identified</span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px 10px; font-size:11.5px; background:#fff; padding:10px; border-radius:6px; border:1px solid #fed7aa;">
+          <div><span style="color:#64748b;">Product Name:</span> <strong style="color:#111c38;">${parsed.productName}</strong></div>
+          <div><span style="color:#64748b;">Order No:</span> <strong style="color:#111c38;">${parsed.orderNum || 'N/A'}</strong></div>
+          <div><span style="color:#64748b;">Parsed Size:</span> <strong style="color:#111c38;">${parsed.rawDim || (parsed.widthIn + '" × ' + parsed.heightIn + '"')} (${parsed.widthIn}" × ${parsed.heightIn}")</strong></div>
+          <div><span style="color:#64748b;">Side:</span> <strong style="color:#111c38;">${parsed.side}</strong></div>
+          <div style="grid-column:span 2;"><span style="color:#64748b;">Finishing Details:</span> <strong style="color:#111c38;">${parsed.finishing}</strong></div>
+          <div style="grid-column:span 2; color:#1d4ed8; font-weight:700; background:#eff6ff; padding:4px 8px; border-radius:4px; margin-top:2px;">
+            SOP Requirement: ${spec.resolution} · Safe Area: ${spec.safeArea} · Bleed: ${spec.bleed}
+          </div>
+        </div>
+      `;
+      banner.classList.add('show');
+    }
+
+    const proofNote = document.getElementById('fn-proof-note');
+    if (proofNote) proofNote.classList.toggle('show', !!parsed.isProof);
+  }
+
+  // 2. Update preview card and artwork
+  const previewCard = document.getElementById('preview-card');
+  const previewName = document.getElementById('preview-name');
+  const previewSize = document.getElementById('preview-size');
+  const previewImg = document.getElementById('preview-img');
+
+  if (previewCard) {
+    if (previewName) previewName.textContent = file.name;
+    if (previewSize) previewSize.textContent = `${sizeKB} KB · ${file.type || ext}`;
+
+    if (file.type.startsWith('image/') || ext === 'SVG') {
+      const r = new FileReader();
+      r.onload = (e) => {
+        if (previewImg) previewImg.src = e.target.result;
+        appState.previewDataUrl = e.target.result;
+        if (!ProofStudio.slots.overall || !ProofStudio.slots.overall.isCustom) {
+          ProofStudio.setSlot('overall', e.target.result, file.name);
+          const prevImg = document.getElementById('prev-img-overall');
+          const prevName = document.getElementById('prev-name-overall');
+          const prevCard = document.getElementById('prev-overall');
+          const dropZone = document.getElementById('drop-overall');
+          if (prevImg) prevImg.src = e.target.result;
+          if (prevName) prevName.textContent = file.name;
+          if (prevCard) prevCard.style.display = 'flex';
+          if (dropZone) dropZone.style.display = 'none';
+        }
+        if (document.getElementById('artwork-canvas') && appState.product) {
+          CanvasInspector.renderArtwork(e.target.result, appState.product, appState.userDims);
+        }
+      };
+      r.readAsDataURL(file);
+    } else {
+      // Vector or PDF file preview SVG using parsed dimensions
+      const previewSvg = FileAnalyzer._generateVectorPreviewSvg(
+        { fileExt: ext },
+        file.name,
+        appState.userDims?.widthIn || 36,
+        appState.userDims?.heightIn || 24
+      );
+      if (previewImg) previewImg.src = previewSvg;
+      appState.previewDataUrl = previewSvg;
+      if (!ProofStudio.slots.overall || !ProofStudio.slots.overall.isCustom) {
+        ProofStudio.setSlot('overall', previewSvg, file.name);
+        const prevImg = document.getElementById('prev-img-overall');
+        const prevName = document.getElementById('prev-name-overall');
+        const prevCard = document.getElementById('prev-overall');
+        const dropZone = document.getElementById('drop-overall');
+        if (prevImg) prevImg.src = previewSvg;
+        if (prevName) prevName.textContent = file.name;
+        if (prevCard) prevCard.style.display = 'flex';
+        if (dropZone) dropZone.style.display = 'none';
+      }
+      if (document.getElementById('artwork-canvas') && appState.product) {
+        CanvasInspector.renderArtwork(previewSvg, appState.product, appState.userDims);
+      }
+    }
+    previewCard.classList.add('show');
+  }
+
+  updateRunButtonState();
+
+  // Automatically trigger SOP pre-check if product identified
+  if (appState.product) {
+    runPreCheck();
+  }
+}
+
+/**
+ * Automatically synchronize Order Info, Product Selection, Exact Dimensions, Unit,
+ * Finishing Options, and Proof Studio Slots from parsed production filename metadata
+ */
+function applyParsedMetadata(parsed) {
+  if (!parsed) return;
+
+  // 1. Order Number
+  if (parsed.orderNum) {
+    const ordInput = document.getElementById('order-num');
+    if (ordInput) ordInput.value = parsed.orderNum;
+    const proofOrd = document.getElementById('proof-order-num');
+    if (proofOrd) proofOrd.value = parsed.orderNum;
+    appState.orderNum = parsed.orderNum;
+    updateBreadcrumbs();
+  }
+
+  // 2. Exact Dimensions & Unit Synchronization (SET BEFORE onProductChange to avoid default overwrite)
+  const unit = parsed.detectedUnit || 'in';
+  const uSel = document.getElementById('dim-unit');
+  if (uSel) uSel.value = unit;
+
+  const wInput = document.getElementById('print-w');
+  const hInput = document.getElementById('print-h');
+  const proofW = document.getElementById('proof-w');
+  const proofH = document.getElementById('proof-h');
+
+  const displayW = parsed.rawW !== undefined ? parsed.rawW : parsed.widthIn;
+  const displayH = parsed.rawH !== undefined ? parsed.rawH : parsed.heightIn;
+
+  if (wInput) wInput.value = displayW;
+  if (hInput) hInput.value = displayH;
+  if (proofW) proofW.value = parsed.widthIn;
+  if (proofH) proofH.value = parsed.heightIn;
+
+  appState.userDims = {
+    widthIn: parsed.widthIn,
+    heightIn: parsed.heightIn,
+    unit: unit,
+    rawW: displayW,
+    rawH: displayH
+  };
+
+  // 3. Category & Product Selection
+  const spec = parsed.spec || (parsed.productSlug && SPECS[parsed.productSlug]);
+  if (spec) {
+    appState.product = spec;
+    const catSel = document.getElementById('cat-select');
+    if (catSel && spec._catKey) {
+      catSel.value = spec._catKey;
+      onCategoryChange();
+    }
+    const prodSel = document.getElementById('product-select');
+    if (prodSel) {
+      prodSel.value = spec.slug || parsed.productSlug;
+      onProductChange();
+    }
+    const proofProdSel = document.getElementById('proof-product-select');
+    if (proofProdSel) proofProdSel.value = spec.slug || parsed.productSlug;
+  }
+
+  // 4. Finishing Options Synchronization
+  if (parsed.finishingDetails) {
+    const fd = parsed.finishingDetails;
+    const gSel = document.getElementById('finishing-grommets');
+    const pSel = document.getElementById('finishing-pockets');
+    const eSel = document.getElementById('finishing-edges');
+    const sSel = document.getElementById('finishing-sides');
+    const badge = document.getElementById('finishing-detected-badge');
+
+    if (gSel && fd.grommets) gSel.value = fd.grommets;
+    if (pSel && fd.pockets) pSel.value = fd.pockets;
+    if (eSel) {
+      if (fd.stakes && fd.stakes !== 'None') {
+        eSel.value = fd.stakes;
+      } else if (fd.edges) {
+        eSel.value = fd.edges;
+      }
+    }
+    if (sSel && fd.side) sSel.value = fd.side;
+    if (badge) badge.style.display = 'inline-block';
+
+    appState.finishingDetails = fd;
+    appState.finishingDetailsSummary = parsed.finishing || '';
+  }
+
+  // 5. Proof Studio Slots 2 & 3 Auto-population with Real QNAP Assets
+  if (typeof getOfficialProductTemplate === 'function') {
+    const activeSpec = spec || appState.product;
+    const officialTemplate = getOfficialProductTemplate(activeSpec?.slug || activeSpec?.name, appState.userDims);
+    const officialMockup = (typeof getOfficialProductMockup === 'function')
+      ? getOfficialProductMockup(activeSpec?.slug || activeSpec?.name, appState.userDims)
+      : null;
+
+    if (officialTemplate && officialTemplate.templateFile && (!ProofStudio.slots.template || !ProofStudio.slots.template.isCustom)) {
+      ProofStudio.setSlot('template', officialTemplate.templateFile, officialTemplate.name);
+      const cardEl = document.getElementById('prev-template');
+      const dropEl = document.getElementById('drop-template');
+      const imgEl = document.getElementById('prev-img-template');
+      const nameEl = document.getElementById('prev-name-template');
+      if (imgEl) imgEl.src = officialTemplate.templateFile;
+      if (nameEl) nameEl.textContent = `${officialTemplate.name} (Official Template)`;
+      if (cardEl) cardEl.style.display = 'flex';
+      if (dropEl) dropEl.style.display = 'none';
+    }
+
+    if (officialMockup && officialMockup.mockupFile && (!ProofStudio.slots.mockup || !ProofStudio.slots.mockup.isCustom)) {
+      ProofStudio.setSlot('mockup', officialMockup.mockupFile, officialMockup.name);
+      const cardEl = document.getElementById('prev-mockup');
+      const dropEl = document.getElementById('drop-mockup');
+      const imgEl = document.getElementById('prev-img-mockup');
+      const nameEl = document.getElementById('prev-name-mockup');
+      if (imgEl) imgEl.src = officialMockup.mockupFile;
+      if (nameEl) nameEl.textContent = `${officialMockup.name} (Official 3D Mockup)`;
+      if (cardEl) cardEl.style.display = 'flex';
+      if (dropEl) dropEl.style.display = 'none';
+    }
+  }
+
+  // 6. Re-render Canvas Inspector if canvas exists
+  if (document.getElementById('artwork-canvas') && appState.product) {
+    CanvasInspector.renderArtwork(
+      appState.analysis?.previewDataUrl || appState.previewDataUrl,
+      appState.product,
+      appState.userDims
+    );
+  }
+}
+
+/**
+ * Handle manual or auto changes to Finishing dropdowns
+ */
+function onFinishingOptionChange() {
+  const gVal = document.getElementById('finishing-grommets')?.value || 'None';
+  const pVal = document.getElementById('finishing-pockets')?.value || 'None';
+  const eVal = document.getElementById('finishing-edges')?.value || 'Clean Cut';
+  const sVal = document.getElementById('finishing-sides')?.value || 'Single-Sided';
+
+  const parts = [];
+  if (sVal) parts.push(sVal);
+  if (gVal && gVal !== 'None') parts.push(gVal);
+  if (pVal && pVal !== 'None') parts.push(pVal);
+  if (eVal && eVal !== 'Clean Cut') parts.push(eVal);
+
+  const summary = parts.length > 0 ? parts.join(' · ') : 'Standard Trim & Finishing';
+
+  appState.finishingDetails = {
+    grommets: gVal,
+    pockets: pVal,
+    edges: eVal,
+    side: sVal,
+    summary: summary
+  };
+  appState.finishingDetailsSummary = summary;
+
+  if (appState.parsedFilename) {
+    appState.parsedFilename.finishing = summary;
+    appState.parsedFilename.side = sVal;
+  }
+
+  // If proof view is active in DOM, re-render proof with updated finishing
+  if (document.getElementById('proof-output')?.style.display === 'block') {
+    generateProofView();
+  }
+}
+
+/**
+ * Interactive Real Production File Loader
+ * Supports all 30 real files from EXAMPLE OF FILE NAME THAT WE USE FOR PRE CHECK
+ */
+function loadExampleFilename(fname) {
+  if (!fname) return;
+
+  const parsed = FileAnalyzer.parseFilename(fname);
+  if (!parsed) return;
+
+  // Apply all parsed order info, product, unit, dimensions, and finishing options
+  applyParsedMetadata(parsed);
+
+  const spec = parsed.spec || (parsed.productSlug && SPECS[parsed.productSlug]);
+
+  // 4. Update preview card
+  const previewCard = document.getElementById('preview-card');
+  const previewName = document.getElementById('preview-name');
+  const previewSize = document.getElementById('preview-size');
+  const previewImg = document.getElementById('preview-img');
+
+  if (previewCard && previewName) {
+    previewName.textContent = fname;
+    previewSize.textContent = `Production PDF · Real SOP Sample`;
+    previewImg.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52"><rect width="52" height="52" rx="6" fill="%23f1f5f9"/><text x="26" y="32" font-size="13" font-weight="900" fill="%234739d2" text-anchor="middle" font-family="sans-serif">PDF</text></svg>';
+    previewCard.classList.add('show');
+  }
+
+  // 5. Display comprehensive production banner
+  const banner = document.getElementById('fn-banner');
+  if (banner && spec) {
+    banner.innerHTML = `
+      <div style="font-weight:800; font-size:12px; margin-bottom:6px; color:#c2410c; display:flex; align-items:center; gap:6px;">
+        <span>⚡</span> <span>BannerBuzz Production Filename Auto-Identified</span>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px 10px; font-size:11.5px; background:#fff; padding:10px; border-radius:6px; border:1px solid #fed7aa;">
+        <div><span style="color:#64748b;">Product Name:</span> <strong style="color:#111c38;">${parsed.productName}</strong></div>
+        <div><span style="color:#64748b;">Order No:</span> <strong style="color:#111c38;">${parsed.orderNum || 'N/A'}</strong></div>
+        <div><span style="color:#64748b;">Parsed Size:</span> <strong style="color:#111c38;">${parsed.rawDim} &rarr; ${parsed.widthIn}" × ${parsed.heightIn}"</strong></div>
+        <div><span style="color:#64748b;">Side:</span> <strong style="color:#111c38;">${parsed.side}</strong></div>
+        <div style="grid-column:span 2;"><span style="color:#64748b;">Finishing Details:</span> <strong style="color:#111c38;">${parsed.finishing}</strong></div>
+        <div style="grid-column:span 2; color:#1d4ed8; font-weight:700; background:#eff6ff; padding:4px 8px; border-radius:4px; margin-top:2px;">
+          SOP Requirement: ${spec.resolution} · Safe Area: ${spec.safeArea} · Bleed: ${spec.bleed}
+        </div>
+      </div>
+    `;
+    banner.classList.add('show');
+  }
+
+  // 6. Create realistic production vector artwork tailored to the product
+  let demoArtUrl = (typeof CanvasInspector !== 'undefined' && CanvasInspector._createDemoArtwork)
+    ? CanvasInspector._createDemoArtwork(spec, appState.userDims)
+    : null;
+
+  if (!demoArtUrl) {
+    demoArtUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect width="600" height="400" fill="#ffffff"/><text x="300" y="200" font-family="sans-serif" font-size="28" font-weight="900" fill="#0f172a" text-anchor="middle">${spec ? spec.name : 'BANNERBUZZ'}</text></svg>`);
+  }
+
+  const blob = new Blob([demoArtUrl], { type: 'image/svg+xml' });
+  const mockFile = new File([blob], fname, { type: 'application/pdf', lastModified: Date.now() });
+  appState.file = mockFile;
+  appState.parsedFilename = parsed;
+  appState.previewDataUrl = demoArtUrl;
+
+  // Sync Slot 1 for Proof Studio
+  if (!ProofStudio.slots.overall || !ProofStudio.slots.overall.isCustom) {
+    ProofStudio.setSlot('overall', demoArtUrl, fname);
+    const prevImg1 = document.getElementById('prev-img-overall');
+    const prevName1 = document.getElementById('prev-name-overall');
+    const prevCard1 = document.getElementById('prev-overall');
+    const dropZone1 = document.getElementById('drop-overall');
+    if (prevImg1) prevImg1.src = demoArtUrl;
+    if (prevName1) prevName1.textContent = fname;
+    if (prevCard1) prevCard1.style.display = 'flex';
+    if (dropZone1) dropZone1.style.display = 'none';
+  }
+
+  updateRunButtonState();
+  runPreCheck();
+}
+
+function openBBProofRefModal() {
+  const m = document.getElementById('bb-proof-modal');
+  if (m) m.classList.add('open');
+}
+
+function closeBBProofRefModal() {
+  const m = document.getElementById('bb-proof-modal');
+  if (m) m.classList.remove('open');
+}
+
+function removeFile() {
+  appState.file = null;
+  appState.analysis = null;
+  const previewCard = document.getElementById('preview-card');
+  if (previewCard) previewCard.classList.remove('show');
+  document.getElementById('file-input').value = '';
+  document.getElementById('fn-banner').classList.remove('show');
+  document.getElementById('fn-proof-note').classList.remove('show');
+  updateRunButtonState();
+}
+
+function updateRunButtonState() {
+  const btn = document.getElementById('run-btn');
+  if (btn) btn.disabled = !(appState.file && appState.product);
+}
+
+function updateBreadcrumbs() {
+  const ordEl = document.getElementById('crumb-order');
+  const prodEl = document.getElementById('crumb-product');
+  if (ordEl) ordEl.textContent = appState.orderNum || 'New Order';
+  if (prodEl) prodEl.textContent = appState.product ? appState.product.name : 'Select Product';
+}
+
+/**
+ * Execute the AI SOP Pre-Check
+ */
+async function runPreCheck() {
+  if (!appState.file || !appState.product) return;
+
+  const btn = document.getElementById('run-btn');
+  const btnIcon = document.getElementById('run-icon');
+  const btnText = document.getElementById('run-text');
+
+  btn.disabled = true;
+  btnIcon.innerHTML = '<div class="spinner"></div>';
+  btnText.textContent = 'Inspecting SOP…';
+
+  onDimensionInput();
+
+  try {
+    // 1. Analyze File
+    const analysis = await FileAnalyzer.analyze(appState.file, appState.product, appState.userDims);
+    appState.analysis = analysis;
+
+    if (analysis?.parsedFilename) {
+      if (!appState.userDims) appState.userDims = {};
+      Object.assign(appState.userDims, {
+        hasGrommets: analysis.parsedFilename.hasGrommets,
+        hasPolePockets: analysis.parsedFilename.hasPolePockets,
+        finishingDetails: analysis.parsedFilename.finishingDetails,
+        pocketType: analysis.parsedFilename.finishingDetails?.pockets,
+        grommetType: analysis.parsedFilename.finishingDetails?.grommets
+      });
+    }
+
+    // 2. Evaluate SOP Checkpoints
+    const report = PrecheckEngine.evaluate(analysis, appState.product, appState.userDims, appState.overrides);
+    appState.report = report;
+
+    // 3. Search Previous Orders
+    const previousOrders = PreviousOrdersEngine.findMatches(appState.customerName, appState.product.slug);
+    appState.previousOrders = previousOrders;
+
+    // 4. Render Pre-Check Results
+    renderResults(report, previousOrders);
+
+    // 5. Render Interactive Canvas with Product Die-Line Template
+    CanvasInspector.renderArtwork(
+      analysis?.previewDataUrl || appState.previewDataUrl,
+      appState.product,
+      appState.userDims
+    );
+  } catch (err) {
+    console.error('Pre-check error:', err);
+    alert('An error occurred during pre-check analysis: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btnIcon.textContent = '⚡';
+    btnText.textContent = 'Run Pre-Check';
+  }
+}
+
+/**
+ * Render the Pre-Check UI Report
+ */
+function renderResults(report, previousOrders) {
+  document.getElementById('empty-state').style.display = 'none';
+  const content = document.getElementById('results-content');
+  content.style.display = 'flex';
+
+  const { overall, score, checks, analysis, spec, dimensions } = report;
+  const fails = checks.filter(c => c.status === 'FAIL' && !c.isOverridden).length;
+  const warns = checks.filter(c => c.status === 'WARNING' && !c.isOverridden).length;
+  const passes = checks.filter(c => c.status === 'PASS' || c.isOverridden).length;
+
+  // Subnav Badges
+  const failBadge = document.getElementById('fail-badge');
+  const failTabBadge = document.getElementById('fail-tab-badge');
+  if (fails > 0) {
+    failBadge.textContent = fails;
+    failBadge.style.display = 'inline-block';
+    failTabBadge.textContent = fails;
+    failTabBadge.style.display = 'inline-block';
+  } else {
+    failBadge.style.display = 'none';
+    failTabBadge.style.display = 'none';
+  }
+
+  // 1. VECTOR "GOOD FOR PRINT" HERO BANNER
+  let vectorBannerHtml = '';
+  if (analysis.isVector) {
+    vectorBannerHtml = `
+      <div class="vector-hero-banner">
+        <div class="vector-hero-icon">⭐</div>
+        <div class="vector-hero-content">
+          <div class="vector-hero-badge">🌟 Good for Print Protocol</div>
+          <div class="vector-hero-title">Vector Artwork Identified — Resolution Independent</div>
+          <div class="vector-hero-desc">
+            File format <strong>.${analysis.fileExt.toUpperCase()}</strong> is composed of mathematical geometric paths and curves. It will print 100% razor sharp at any scale with zero pixelation or degradation.
+          </div>
+          <div class="vector-hero-specs">
+            <span class="v-tag">✓ Scale-Independent (Infinite DPI)</span>
+            <span class="v-tag">✓ Clean Contours</span>
+            ${analysis.embeddedRasterFound ? '<span class="v-tag" style="background:rgba(230,119,0,0.3); border-color:#e67700;">⚠ Embedded Photos Detected</span>' : '<span class="v-tag">✓ Pure Vector Graphics</span>'}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // 2. PREVIOUS ORDERS ALERT BANNER
+  let prevAlertHtml = '';
+  if (previousOrders && previousOrders.length > 0) {
+    const po = previousOrders[0];
+    prevAlertHtml = `
+      <div class="prev-alert-banner">
+        <div class="prev-alert-left">
+          <div class="prev-alert-icon">🔍</div>
+          <div>
+            <div class="prev-alert-title">Previous Relevant Order Found (${po.orderNum})</div>
+            <div class="prev-alert-desc">${po.approvalType} · Approved ${po.customerApprovedDate || po.date} · Match: ${po.artworkSimilarity}% Artwork, ${po.productSimilarity}% Product</div>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-orange" onclick="switchTab('previous')">Review Previous Order →</button>
+      </div>
+    `;
+  }
+
+  // 3. SUMMARY CARD
+  const verdClass = overall === 'PASS' ? 'verd-pass' : overall === 'WARNING' ? 'verd-warning' : 'verd-fail';
+  const scoreClass = overall.toLowerCase();
+
+  document.getElementById('summary-card').innerHTML = `
+    ${vectorBannerHtml}
+    ${prevAlertHtml}
+    <div class="summary-top">
+      <div class="summary-score-block">
+        <div class="score-num ${scoreClass}">${score}</div>
+        <div class="score-label">SOP Quality Score</div>
+      </div>
+      <div class="summary-chips">
+        <div class="chip chip-pass"><span class="chip-dot"></span>${passes} Passed</div>
+        <div class="chip chip-warn"><span class="chip-dot"></span>${warns} Warning${warns !== 1 ? 's' : ''}</div>
+        <div class="chip chip-fail"><span class="chip-dot"></span>${fails} Critical</div>
+      </div>
+      <div class="summary-verdict ${verdClass}">${overall}</div>
+    </div>
+    <div class="summary-meta">
+      Order <strong>#${appState.orderNum || 'US-DRAFT'}</strong> · Customer: <strong>${appState.customerName || 'Customer'}</strong> · Product: <strong>${spec.name}</strong> · Size: <strong>${dimensions.widthIn}" × ${dimensions.heightIn}"</strong> · Checked: <strong>${new Date().toLocaleTimeString()}</strong>
+    </div>
+  `;
+
+  // Resolve official BannerBuzz template & mockup from QNAP registry (using product name and dimensions)
+  const officialTemplate = (typeof getOfficialProductTemplate === 'function')
+    ? getOfficialProductTemplate(spec?.slug || spec?.name, dimensions || appState.userDims)
+    : null;
+  const officialMockup = (typeof getOfficialProductMockup === 'function')
+    ? getOfficialProductMockup(spec?.slug || spec?.name, dimensions || appState.userDims)
+    : null;
+
+  // 4. CHECKS LIST
+  document.getElementById('rt-checks').innerHTML = `
+    <!-- Interactive Canvas Visual Inspector Card -->
+    <div class="visual-inspector-card">
+      <div class="vi-toolbar">
+        <div class="vi-title">
+          <span>🎨 Interactive SOP Canvas & Guide Overlay</span>
+          <span style="font-size:11px; color:#8896a8; font-weight:500;">(Move mouse over artwork to activate 100% Zoom Loupe)</span>
+        </div>
+        <div class="vi-controls" id="vi-controls-container">
+          <!-- Dynamically populated based on product template by CanvasInspector.renderContextualToolbar() -->
+        </div>
+      </div>
+      <div class="canvas-viewport-wrap">
+        <canvas id="artwork-canvas"></canvas>
+        <div id="zoom-loupe" class="zoom-loupe"></div>
+      </div>
+
+      ${(officialTemplate || officialMockup) ? `
+        <!-- Official QNAP Production Asset Bar -->
+        <div class="official-qnap-strip" style="margin-top:12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:10px 14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:12px; font-weight:800; color:#0e2246;">🏛️ Official BannerBuzz Production Specifications</span>
+              <span style="font-size:9.5px; font-weight:800; background:#dcfce7; color:#16a34a; padding:2px 7px; border-radius:4px; border:1px solid #bbf7d0;">
+                QNAP \\\\192.168.0.250 VERIFIED
+              </span>
+            </div>
+            <span style="font-size:10.5px; color:#64748b; font-weight:600;">
+              Lightweight JPG (${officialTemplate?.dims || spec.name})
+            </span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            ${officialTemplate ? `
+              <div style="display:flex; align-items:center; gap:10px; background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px; cursor:pointer;" onclick="openAssetLightbox('${officialTemplate.templateFile}', '${officialTemplate.name} (Production Template)', 'Sourced from \\\\\\\\192.168.0.250\\\\qnap\\\\Template_Mockups')">
+                <img src="${officialTemplate.templateFile}" alt="Official Template" style="width:52px; height:52px; object-fit:contain; border-radius:4px; background:#f1f5f9; border:1px solid #cbd5e1;" />
+                <div style="flex:1;">
+                  <div style="font-size:11.5px; font-weight:800; color:#1e293b;">Official Production Template</div>
+                  <div style="font-size:10px; color:#475569;">${officialTemplate.dims || officialTemplate.name}</div>
+                  <div style="font-size:9.5px; color:#ff5f1f; font-weight:700; margin-top:2px;">🔍 Click to inspect exact die-line</div>
+                </div>
+              </div>
+            ` : ''}
+            ${officialMockup ? `
+              <div style="display:flex; align-items:center; gap:10px; background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px; cursor:pointer;" onclick="openAssetLightbox('${officialMockup.mockupFile}', '${officialMockup.name} (3D Mockup)', 'Sourced from \\\\\\\\192.168.0.250\\\\qnap\\\\Template_Mockups')">
+                <img src="${officialMockup.mockupFile}" alt="Official 3D Mockup" style="width:52px; height:52px; object-fit:contain; border-radius:4px; background:#f1f5f9; border:1px solid #cbd5e1;" />
+                <div style="flex:1;">
+                  <div style="font-size:11.5px; font-weight:800; color:#1e293b;">Official 3D Hardware Mockup</div>
+                  <div style="font-size:10px; color:#475569;">${officialMockup.dims || officialMockup.name}</div>
+                  <div style="font-size:9.5px; color:#ff5f1f; font-weight:700; margin-top:2px;">🔍 Click to inspect finished assembly</div>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      ` : ''}
+    </div>
+
+    <!-- 10 SOP Check Cards -->
+    <div class="checks-list">
+      ${checks.map(c => renderCheckCard(c)).join('')}
+    </div>
+  `;
+
+  // 5. PREVIOUS ORDERS TAB
+  document.getElementById('rt-previous').innerHTML = renderPreviousOrdersTab(previousOrders);
+
+  // 6. SOP GUIDE TAB
+  document.getElementById('rt-sop').innerHTML = renderSopGuideTab(spec);
+
+  document.getElementById('gen-proof-btn').disabled = false;
+  switchTab('checks');
+}
+
+function renderCheckCard(c) {
+  const stClass = c.isOverridden ? 'overridden' : c.status.toLowerCase();
+  const pillClass = c.isOverridden ? 'overridden' : c.status.toLowerCase();
+  const pillLabel = c.isOverridden ? 'OVERRIDDEN' : c.status;
+
+  return `
+    <div class="check-card ${stClass}" id="cc-${c.id}">
+      <div class="check-header" onclick="toggleCheckCard('${c.id}')">
+        <span class="check-icon">${c.icon}</span>
+        <span class="check-name">
+          ${c.name}
+          ${c.isOverridden ? '<span class="override-tag">OVERRIDDEN</span>' : ''}
+        </span>
+        <span class="check-pill pill-${pillClass}">${pillLabel}</span>
+        <span class="check-chevron" id="chev-${c.id}">▾</span>
+      </div>
+      <div class="check-body" id="cb-${c.id}">
+        ${c.found ? `<div class="check-detail-row"><span class="cdl">Detected:</span><span class="cdv">${c.found}</span></div>` : ''}
+        ${c.required ? `<div class="check-detail-row"><span class="cdl">SOP Target:</span><span class="cdv">${c.required}</span></div>` : ''}
+        <div class="check-detail-row"><span class="cdl">Analysis:</span><span class="cdv detail">${c.detail}</span></div>
+        ${c.action ? `<div class="check-detail-row"><span class="cdl">Action:</span><span class="cdv action">→ ${c.action}</span></div>` : ''}
+        ${c.isOverridden ? `<div class="check-detail-row"><span class="cdl">Reason:</span><span class="cdv" style="color:#7048e8;">${c.overrideReason}</span></div>` : ''}
+        
+        ${c.status !== 'PASS' && !c.isOverridden ? `
+          <div class="check-actions">
+            <button class="cta-btn cta-fixed" onclick="markCheckFixed('${c.id}')">✓ Mark Corrected</button>
+            <button class="cta-btn cta-override" onclick="openOverrideModal('${c.id}', '${c.name}')">Override with Reason…</button>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function toggleCheckCard(id) {
+  const card = document.getElementById(`cc-${id}`);
+  if (card) card.classList.toggle('open');
+}
+
+function markCheckFixed(id) {
+  appState.overrides[id] = 'Designer confirmed file was corrected and validated.';
+  runPreCheck();
+}
+
+/**
+ * Override Modal Handling
+ */
+let pendingOverrideId = null;
+function openOverrideModal(checkId, checkName) {
+  pendingOverrideId = checkId;
+  const modal = document.getElementById('override-modal');
+  const sub = document.getElementById('override-subtitle');
+  const txt = document.getElementById('override-reason');
+
+  sub.textContent = `Provide logged reason for overriding: ${checkName}`;
+  txt.value = '';
+  modal.classList.add('open');
+}
+
+function closeOverrideModal() {
+  document.getElementById('override-modal').classList.remove('open');
+  pendingOverrideId = null;
+}
+
+function submitOverride() {
+  const txt = document.getElementById('override-reason');
+  const reason = (txt.value || '').trim();
+  if (!reason) {
+    alert('Please enter a valid rationale for overriding this check.');
+    return;
+  }
+
+  if (pendingOverrideId) {
+    appState.overrides[pendingOverrideId] = reason;
+    closeOverrideModal();
+    runPreCheck();
+  }
+}
+
+/**
+ * Tab Navigation in Results
+ */
+function switchTab(tabId) {
+  ['checks', 'previous', 'sop'].forEach(t => {
+    const tabEl = document.getElementById(`tab-${t}`);
+    const resEl = document.getElementById(`rt-${t}`);
+    if (tabEl) tabEl.classList.toggle('active', t === tabId);
+    if (resEl) resEl.classList.toggle('active', t === tabId);
+  });
+}
+
+/**
+ * Subnav (View Switching)
+ */
+function setSubnav(el, viewName) {
+  document.querySelectorAll('.subnav-item').forEach(i => i.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  ['precheck', 'proof', 'dashboard', 'rules'].forEach(v => {
+    const viewEl = document.getElementById(`view-${v}`);
+    if (viewEl) viewEl.classList.toggle('active', v === viewName);
+  });
+
+  const isProof = (viewName === 'proof');
+  document.getElementById('lp-precheck').classList.toggle('active', !isProof);
+  document.getElementById('lp-proof').classList.toggle('active', isProof);
+  document.getElementById('actions-precheck').style.display = !isProof ? 'flex' : 'none';
+  document.getElementById('actions-proof').style.display = isProof ? 'flex' : 'none';
+
+  if (isProof) generateProofView();
+  if (viewName === 'rules') renderRulesCatalog();
+}
+
+/**
+ * Render Previous Orders Tab
+ */
+function renderPreviousOrdersTab(orders) {
+  if (!orders || orders.length === 0) {
+    return '<div class="no-result">No prior order history found for this customer.</div>';
+  }
+
+  return orders.map(o => `
+    <div class="prev-card">
+      <div class="prev-header">
+        <div class="prev-indicator"></div>
+        <div class="prev-title">Relevant Previous Order Identified (${o.approvalType})</div>
+        <div class="prev-order-id">#${o.orderNum}</div>
+      </div>
+      <div class="prev-stats">
+        <div class="ps"><div class="ps-val">${o.artworkSimilarity}%</div><div class="ps-label">Artwork Match</div></div>
+        <div class="ps"><div class="ps-val">${o.productSimilarity}%</div><div class="ps-label">Product Match</div></div>
+        <div class="ps"><div class="ps-val" style="color:var(--pass);">Approved ✓</div><div class="ps-label">${o.customerApprovedDate}</div></div>
+      </div>
+      <div style="font-size:12.5px; color:#4a5568;">
+        <div>Customer: <strong>${o.customerName}</strong> · Product: <strong>${o.productName}</strong> (${o.widthIn}" × ${o.heightIn}")</div>
+        <div style="margin-top:6px; color:#1a2340; background:#fff4ef; padding:10px; border-radius:6px; border:1px solid #fde8dc;">
+          <strong>Approved Historical Notes:</strong> ${o.approvedNotes}
+        </div>
+      </div>
+      <div class="prev-actions">
+        <button class="btn btn-outline btn-sm" onclick="alert('Viewing artwork from order #${o.orderNum}')">View Artwork</button>
+        <button class="btn btn-orange btn-sm" onclick="applyPreviousSettings('${o.orderNum}')">Use Approved Previous Settings</button>
+      </div>
+      <div class="prev-warning">⚠ Designer validation rule: Confirm whether previous customer approvals (colors, template offsets) apply to current order.</div>
+    </div>
+  `).join('');
+}
+
+function applyPreviousSettings(orderNum) {
+  const match = appState.previousOrders.find(o => o.orderNum === orderNum);
+  if (match) {
+    document.getElementById('notes').value = `Reusing approved settings from #${match.orderNum}: ${match.approvedNotes}`;
+    alert(`Applied approved settings from #${orderNum} to current order.`);
+  }
+}
+
+/**
+ * Render SOP Guide Tab
+ */
+function renderSopGuideTab(spec) {
+  const famKey = spec.sopFamily;
+  const fam = SOP_FAMILIES[famKey];
+  if (!fam) return '<div style="padding:20px;">No SOP family mapping found for this product.</div>';
+
+  const g = fam.guide;
+  return `
+    <div class="sop-section">
+      <div class="sop-section-title">Standard Operating Procedure: ${fam.label}</div>
+      <div style="font-size:11.5px; color:#8896a8; margin-bottom:12px;">Source: ${fam.source}</div>
+      
+      ${g.processing ? `
+        <div style="font-weight:700; margin-bottom:8px; color:#1a2340;">1. Processing Steps:</div>
+        ${g.processing.map((step, i) => `
+          <div class="sop-step">
+            <div class="sop-step-num">${i + 1}</div>
+            <div>${step}</div>
+          </div>
+        `).join('')}
+      ` : ''}
+
+      ${g.checks ? `
+        <div style="font-weight:700; margin:14px 0 8px 0; color:#1a2340;">2. Design Checkpoints:</div>
+        ${g.checks.map((c, i) => `
+          <div class="sop-step">
+            <div class="sop-step-num">${i + 1}</div>
+            <div>${c}</div>
+          </div>
+        `).join('')}
+      ` : ''}
+
+      ${g.watchouts ? `
+        <div style="font-weight:700; margin:14px 0 8px 0; color:#c92a2a;">3. Critical Watch-outs:</div>
+        ${g.watchouts.map(w => `
+          <div style="font-size:12px; color:#c92a2a; margin-bottom:6px;">⚠ ${w}</div>
+        `).join('')}
+      ` : ''}
+    </div>
+  `;
+}
+
+/**
+ * Proof Studio Functions & Sidebar Metadata Controls
+ */
+function initProofProductDropdown() {
+  const sel = document.getElementById('proof-product-select');
+  if (!sel || sel.options.length > 1) return;
+
+  if (typeof CATEGORIES !== 'undefined') {
+    Object.entries(CATEGORIES).forEach(([catKey, cat]) => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = cat.label;
+      Object.entries(cat.products).forEach(([slug, pr]) => {
+        const opt = document.createElement('option');
+        opt.value = slug;
+        opt.textContent = pr.name;
+        optgroup.appendChild(opt);
+      });
+      sel.appendChild(optgroup);
+    });
+  } else if (typeof SPECS !== 'undefined') {
+    Object.entries(SPECS).forEach(([slug, pr]) => {
+      const opt = document.createElement('option');
+      opt.value = slug;
+      opt.textContent = pr.name;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+function onProofOrderNumChange(val) {
+  appState.orderNum = (val || '').trim();
+  const preCheckOrder = document.getElementById('order-num');
+  if (preCheckOrder) preCheckOrder.value = appState.orderNum;
+  updateBreadcrumbs();
+  generateProofView();
+}
+
+function onProofProductSelect(slug) {
+  if (!slug) return;
+  const spec = (typeof SPECS !== 'undefined' && SPECS[slug]) || null;
+  if (!spec) return;
+
+  appState.product = spec;
+
+  // Sync Pre-Check Category & Product dropdowns
+  if (spec._catKey) {
+    const catSel = document.getElementById('cat-select');
+    if (catSel && catSel.value !== spec._catKey) {
+      catSel.value = spec._catKey;
+      onCategoryChange();
+    }
+  }
+  const mainProd = document.getElementById('product-select');
+  if (mainProd) mainProd.value = slug;
+
+  const proofW = document.getElementById('proof-w');
+  const proofH = document.getElementById('proof-h');
+  const printW = document.getElementById('print-w');
+  const printH = document.getElementById('print-h');
+
+  // If dimensions were not set or default applies
+  if (!appState.userDims || !appState.userDims.widthIn) {
+    appState.userDims = {
+      widthIn: spec.defaultW || 36,
+      heightIn: spec.defaultH || 24,
+      unit: 'in'
+    };
+    if (proofW) proofW.value = appState.userDims.widthIn;
+    if (proofH) proofH.value = appState.userDims.heightIn;
+    if (printW) printW.value = appState.userDims.widthIn;
+    if (printH) printH.value = appState.userDims.heightIn;
+  }
+
+  // Update Proof Studio Slots 2 (Template) & Slot 3 (Mockup) to new product's official assets
+  if (typeof getOfficialProductTemplate === 'function') {
+    const offT = getOfficialProductTemplate(spec.slug, appState.userDims);
+    const offM = typeof getOfficialProductMockup === 'function' ? getOfficialProductMockup(spec.slug, appState.userDims) : null;
+    if (offT && (!ProofStudio.slots.template || !ProofStudio.slots.template.isCustom)) {
+      ProofStudio.setSlot('template', offT.templateFile, offT.name);
+      const cardEl = document.getElementById('prev-template');
+      const dropEl = document.getElementById('drop-template');
+      const imgEl = document.getElementById('prev-img-template');
+      const nameEl = document.getElementById('prev-name-template');
+      if (imgEl) imgEl.src = offT.templateFile;
+      if (nameEl) nameEl.textContent = `${offT.name} (Official Template)`;
+      if (cardEl) cardEl.style.display = 'flex';
+      if (dropEl) dropEl.style.display = 'none';
+    }
+    if (offM && (!ProofStudio.slots.mockup || !ProofStudio.slots.mockup.isCustom)) {
+      ProofStudio.setSlot('mockup', offM.mockupFile, offM.name);
+      const cardEl = document.getElementById('prev-mockup');
+      const dropEl = document.getElementById('drop-mockup');
+      const imgEl = document.getElementById('prev-img-mockup');
+      const nameEl = document.getElementById('prev-name-mockup');
+      if (imgEl) imgEl.src = offM.mockupFile;
+      if (nameEl) nameEl.textContent = `${offM.name} (Official 3D Mockup)`;
+      if (cardEl) cardEl.style.display = 'flex';
+      if (dropEl) dropEl.style.display = 'none';
+    }
+  }
+
+  // Re-render Canvas Inspector if canvas exists
+  if (document.getElementById('artwork-canvas')) {
+    CanvasInspector.renderArtwork(
+      appState.analysis?.previewDataUrl || appState.previewDataUrl,
+      appState.product,
+      appState.userDims
+    );
+  }
+
+  renderSpecBox(spec);
+  updateBreadcrumbs();
+  generateProofView();
+}
+
+function onProofDimsChange() {
+  const w = parseFloat(document.getElementById('proof-w')?.value);
+  const h = parseFloat(document.getElementById('proof-h')?.value);
+  if (!isNaN(w) && w > 0 && !isNaN(h) && h > 0) {
+    appState.userDims = {
+      widthIn: w,
+      heightIn: h,
+      unit: 'in'
+    };
+    const printW = document.getElementById('print-w');
+    const printH = document.getElementById('print-h');
+    if (printW) printW.value = w;
+    if (printH) printH.value = h;
+    generateProofView();
+  }
+}
+
+function generateProofView() {
+  const currentArt = appState.analysis?.previewDataUrl || appState.previewDataUrl;
+  if (currentArt && (!ProofStudio.slots.overall || !ProofStudio.slots.overall.isCustom)) {
+    ProofStudio.setSlot('overall', currentArt, appState.file?.name || 'Customer Artwork');
+    const prevImg = document.getElementById('prev-img-overall');
+    const prevName = document.getElementById('prev-name-overall');
+    const prevCard = document.getElementById('prev-overall');
+    const dropZone = document.getElementById('drop-overall');
+    if (prevImg) prevImg.src = currentArt;
+    if (prevName) prevName.textContent = appState.file?.name || 'Customer Artwork';
+    if (prevCard) prevCard.style.display = 'flex';
+    if (dropZone) dropZone.style.display = 'none';
+  }
+
+  // Auto-populate Slot 2 (Template) with official QNAP template if no custom upload is active
+  const qnapTemplate = (typeof getOfficialProductTemplate === 'function')
+    ? getOfficialProductTemplate(appState.product?.slug || appState.product?.name, appState.userDims)
+    : null;
+  if (qnapTemplate && (!ProofStudio.slots.template || !ProofStudio.slots.template.isCustom)) {
+    ProofStudio.setSlot('template', qnapTemplate.templateFile, qnapTemplate.name);
+    const prevImg = document.getElementById('prev-img-template');
+    const prevName = document.getElementById('prev-name-template');
+    const prevCard = document.getElementById('prev-template');
+    const dropZone = document.getElementById('drop-template');
+    if (prevImg) prevImg.src = qnapTemplate.templateFile;
+    if (prevName) prevName.innerHTML = `<span style="color:#16a34a; font-weight:700;">QNAP:</span> ${qnapTemplate.name}`;
+    if (prevCard) prevCard.style.display = 'flex';
+    if (dropZone) dropZone.style.display = 'none';
+  }
+
+  // Auto-populate Slot 3 (Mockup) with official QNAP 3D mockup if no custom upload is active
+  const qnapMockup = (typeof getOfficialProductMockup === 'function')
+    ? getOfficialProductMockup(appState.product?.slug || appState.product?.name, appState.userDims)
+    : null;
+  if (qnapMockup && (!ProofStudio.slots.mockup || !ProofStudio.slots.mockup.isCustom)) {
+    ProofStudio.setSlot('mockup', qnapMockup.mockupFile, qnapMockup.name);
+    const prevImg = document.getElementById('prev-img-mockup');
+    const prevName = document.getElementById('prev-name-mockup');
+    const prevCard = document.getElementById('prev-mockup');
+    const dropZone = document.getElementById('drop-mockup');
+    if (prevImg) prevImg.src = qnapMockup.mockupFile;
+    if (prevName) prevName.innerHTML = `<span style="color:#16a34a; font-weight:700;">QNAP:</span> ${qnapMockup.name}`;
+    if (prevCard) prevCard.style.display = 'flex';
+    if (dropZone) dropZone.style.display = 'none';
+  }
+
+  // Sync inputs with state
+  const proofOrdInput = document.getElementById('proof-order-num');
+  if (proofOrdInput) {
+    if (appState.orderNum) proofOrdInput.value = appState.orderNum;
+    else if (proofOrdInput.value) appState.orderNum = proofOrdInput.value;
+  }
+
+  const proofProdSelect = document.getElementById('proof-product-select');
+  if (proofProdSelect && appState.product?.slug) {
+    proofProdSelect.value = appState.product.slug;
+  }
+
+  const proofWInput = document.getElementById('proof-w');
+  const proofHInput = document.getElementById('proof-h');
+  if (proofWInput && proofHInput && appState.userDims?.widthIn) {
+    proofWInput.value = appState.userDims.widthIn;
+    proofHInput.value = appState.userDims.heightIn;
+  }
+
+  const spec = appState.product || (typeof SPECS !== 'undefined' && SPECS['custom-vinyl-banners']) || {
+    name: 'Custom Vinyl Banners',
+    material: '13 oz. Premium Vinyl',
+    finishing: 'HP, Full Color, Eco Solvent Printing (for Single-Sided)',
+    defaultW: 36,
+    defaultH: 24
+  };
+
+  const orderNum = appState.orderNum || appState.parsedFilename?.orderNum || (appState.file ? 'ORD-' + Math.abs(appState.file.name.split('').reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a&a},0)).toString().slice(0, 7) : 'CA2384567');
+
+  const finishingSummary = appState.finishingDetailsSummary 
+    || appState.parsedFilename?.finishing 
+    || spec.finishing 
+    || 'Standard Trim & Edge Finishing';
+
+  const orderData = {
+    orderNum: orderNum,
+    customer: appState.customerName || (appState.parsedFilename?.customer || 'Customer'),
+    spec: spec,
+    dims: (appState.userDims?.widthIn ? appState.userDims : { widthIn: spec.defaultW || 36, heightIn: spec.defaultH || 24, unit: 'in' }),
+    analysis: {
+      ...(appState.analysis || {}),
+      ...(appState.parsedFilename || {}),
+      orderNum: orderNum,
+      productName: spec.name,
+      finishing: finishingSummary
+    },
+    designerNotes: document.getElementById('notes')?.value || '',
+    messageToCustomer: document.getElementById('proof-note')?.value || ''
+  };
+
+  // Ensure ProofStudio slots 1, 2, and 3 are initialized with artwork, official template & 3D mockup
+  if (!ProofStudio.slots.overall?.dataUrl && currentArt) {
+    ProofStudio.setSlot('overall', currentArt, appState.file?.name || 'Artwork');
+  }
+  if ((!ProofStudio.slots.template?.dataUrl || !ProofStudio.slots.template.isCustom) && typeof getOfficialProductTemplate === 'function') {
+    const offT = getOfficialProductTemplate(spec?.slug || spec?.name, orderData.dims);
+    if (offT && offT.templateFile) {
+      ProofStudio.setSlot('template', offT.templateFile, offT.name);
+    }
+  }
+  if ((!ProofStudio.slots.mockup?.dataUrl || !ProofStudio.slots.mockup.isCustom) && typeof getOfficialProductMockup === 'function') {
+    const offM = getOfficialProductMockup(spec?.slug || spec?.name, orderData.dims);
+    if (offM && offM.mockupFile) {
+      ProofStudio.setSlot('mockup', offM.mockupFile, offM.name);
+    }
+  }
+
+  const proofEmpty = document.getElementById('proof-empty');
+  if (proofEmpty) proofEmpty.style.display = 'none';
+
+  const proofOut = document.getElementById('proof-output');
+  if (proofOut) {
+    proofOut.style.display = 'block';
+    ProofStudio.renderProof(orderData, 'proof-output');
+  }
+
+  updateBreadcrumbs();
+
+  const printBtn = document.getElementById('proof-print-btn');
+  if (printBtn) printBtn.disabled = false;
+  const shareBtn = document.getElementById('proof-share-btn');
+  if (shareBtn) shareBtn.disabled = false;
+}
+
+function handleProofSlotFile(key, event) {
+  const f = event.target.files[0];
+  if (!f) return;
+
+  const r = new FileReader();
+  r.onload = (e) => {
+    ProofStudio.setSlot(key, e.target.result, f.name);
+    if (ProofStudio.slots[key]) {
+      ProofStudio.slots[key].isCustom = true;
+    }
+    const imgEl = document.getElementById(`prev-img-${key}`);
+    const nameEl = document.getElementById(`prev-name-${key}`);
+    const cardEl = document.getElementById(`prev-${key}`);
+    const dropEl = document.getElementById(`drop-${key}`);
+
+    if (imgEl) imgEl.src = e.target.result;
+    if (nameEl) nameEl.textContent = f.name;
+    if (cardEl) cardEl.style.display = 'flex';
+    if (dropEl) dropEl.style.display = 'none';
+
+    if (key === 'crop') {
+      const badge = document.getElementById('crop-status-badge');
+      if (badge) {
+        badge.textContent = 'CUSTOM CROP';
+        badge.style.background = '#dcfce7';
+        badge.style.color = '#16a34a';
+      }
+    }
+
+    // Parse filename to auto-detect order, product, dimensions, and finishing (for overall proof)
+    if (key === 'overall') {
+      const parsed = FileAnalyzer.parseFilename(f.name);
+      if (parsed) {
+        if (parsed.orderNum) {
+          appState.orderNum = parsed.orderNum;
+          const ordInput = document.getElementById('order-num');
+          if (ordInput) ordInput.value = parsed.orderNum;
+          const proofOrdInput = document.getElementById('proof-order-num');
+          if (proofOrdInput) proofOrdInput.value = parsed.orderNum;
+        }
+        const spec = parsed.spec || (parsed.productSlug && SPECS[parsed.productSlug]);
+        if (spec) {
+          appState.product = spec;
+          if (spec._catKey) {
+            const catSel = document.getElementById('cat-select');
+            if (catSel) catSel.value = spec._catKey;
+            onCategoryChange();
+          }
+          const prodSel = document.getElementById('product-select');
+          if (prodSel) prodSel.value = spec.slug || parsed.productSlug;
+          const proofProdSel = document.getElementById('proof-product-select');
+          if (proofProdSel) proofProdSel.value = spec.slug || parsed.productSlug;
+        }
+        if (parsed.widthIn && parsed.heightIn) {
+          appState.userDims = {
+            widthIn: parsed.widthIn,
+            heightIn: parsed.heightIn,
+            unit: 'in',
+            hasGrommets: parsed.hasGrommets,
+            hasPolePockets: parsed.hasPolePockets,
+            finishingDetails: parsed.finishingDetails,
+            pocketType: parsed.finishingDetails?.pockets,
+            grommetType: parsed.finishingDetails?.grommets
+          };
+          const wInput = document.getElementById('print-w');
+          const hInput = document.getElementById('print-h');
+          if (wInput) wInput.value = parsed.widthIn;
+          if (hInput) hInput.value = parsed.heightIn;
+          const proofW = document.getElementById('proof-w');
+          const proofH = document.getElementById('proof-h');
+          if (proofW) proofW.value = parsed.widthIn;
+          if (proofH) proofH.value = parsed.heightIn;
+        }
+        appState.parsedFilename = parsed;
+        updateBreadcrumbs();
+      }
+    }
+
+    generateProofView();
+  };
+  r.readAsDataURL(f);
+}
+
+function clearProofSlot(key) {
+  ProofStudio.clearSlot(key);
+  const cardEl = document.getElementById(`prev-${key}`);
+  const dropEl = document.getElementById(`drop-${key}`);
+  const inEl = document.getElementById(`in-${key}`);
+  if (cardEl) cardEl.style.display = 'none';
+  if (dropEl) dropEl.style.display = 'block';
+  if (inEl) inEl.value = '';
+
+  if (key === 'crop') {
+    const badge = document.getElementById('crop-status-badge');
+    if (badge) {
+      badge.textContent = 'AUTO CROP';
+      badge.style.background = '#ede9fe';
+      badge.style.color = '#4739d2';
+    }
+  }
+
+  generateProofView();
+}
+
+function onCropShotToggle(checked) {
+  if (typeof ProofStudio !== 'undefined' && ProofStudio.options) {
+    ProofStudio.options.enableCropShot = checked;
+  }
+  const panel = document.getElementById('crop-shot-panel');
+  if (panel) panel.style.display = checked ? 'block' : 'none';
+  const badge = document.getElementById('crop-status-badge');
+  if (badge) badge.style.display = checked ? 'inline-block' : 'none';
+  generateProofView();
+}
+
+/**
+ * Product Rules Catalog Table
+ */
+/**
+ * Product Rules Catalog Table with Category Filter & Live Search
+ */
+let _rulesCatInitialized = false;
+
+function renderRulesCatalog() {
+  const filterSel = document.getElementById('rules-cat-filter');
+  if (filterSel && !_rulesCatInitialized) {
+    filterSel.innerHTML = '<option value="">All Categories (626 products)</option>';
+    Object.entries(CATEGORIES).forEach(([key, cat]) => {
+      const opt = document.createElement('option');
+      opt.value = key;
+      const count = Object.keys(cat.products || {}).length;
+      opt.textContent = `${cat.label} (${count})`;
+      filterSel.appendChild(opt);
+    });
+    _rulesCatInitialized = true;
+  }
+  filterRulesTable();
+}
+
+function filterRulesTable() {
+  const container = document.getElementById('rules-table-container');
+  if (!container) return;
+
+  const catFilter = document.getElementById('rules-cat-filter')?.value || '';
+  const search = (document.getElementById('rules-search-input')?.value || '').trim().toLowerCase();
+  const countBadge = document.getElementById('rules-count-badge');
+
+  let list = [];
+  if (catFilter && CATEGORIES[catFilter]) {
+    const cat = CATEGORIES[catFilter];
+    Object.entries(cat.products).forEach(([slug, pr]) => {
+      list.push({ ...pr, _catKey: catFilter, _catLabel: cat.label });
+    });
+  } else {
+    Object.entries(CATEGORIES).forEach(([ck, cat]) => {
+      Object.entries(cat.products).forEach(([slug, pr]) => {
+        list.push({ ...pr, _catKey: ck, _catLabel: cat.label });
+      });
+    });
+  }
+
+  if (search) {
+    list = list.filter(item => {
+      const q = `${item.name} ${item.slug} ${item.material || ''} ${item.finishing || ''} ${item._catLabel || ''}`.toLowerCase();
+      return q.includes(search);
+    });
+  }
+
+  if (countBadge) {
+    countBadge.textContent = `Showing ${list.length} Products`;
+  }
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div style="background:#fff; border-radius:8px; padding:40px; text-align:center; border:1px solid var(--border);">
+        <div style="font-size:32px; margin-bottom:8px;">🔍</div>
+        <div style="font-weight:700; color:var(--bb-navy); font-size:15px;">No products match your search</div>
+        <div style="color:var(--text-muted); font-size:13px; margin-top:4px;">Try clearing filters or searching for terms like "vinyl", "mesh", "acrylic", or "flag".</div>
+      </div>
+    `;
+    return;
+  }
+
+  // Display top 150 items to keep DOM performant, with notice if truncated
+  const displayList = list.slice(0, 150);
+  let rows = '';
+  displayList.forEach(s => {
+    rows += `
+      <tr style="border-bottom:1px solid #e8ecf2; font-size:12px;">
+        <td style="padding:10px; font-weight:700; color:#1a2340;">
+          <div>${s.name}</div>
+          <div style="font-size:10.5px; color:#64748b; font-family:monospace; margin-top:2px;">${s.slug}</div>
+        </td>
+        <td style="padding:10px;"><span class="v-tag" style="background:#f1f5f9; color:#334155; font-size:11px;">${s._catLabel || ''}</span></td>
+        <td style="padding:10px;"><span class="v-tag" style="background:#eef2ff; color:#3b82f6; font-weight:700;">${s.resolution}</span></td>
+        <td style="padding:10px; font-weight:600;">${s.safeArea}</td>
+        <td style="padding:10px;">${s.bleed}</td>
+        <td style="padding:10px;">${s.minFont}</td>
+        <td style="padding:10px; color:#4a5568; max-width:180px;">${s.material || 'Standard Production Material'}</td>
+        <td style="padding:10px; color:#4a5568; max-width:200px;">${s.finishing || 'Standard Finishing'}</td>
+      </tr>
+    `;
+  });
+
+  const truncateNotice = list.length > 150
+    ? `<div style="padding:10px 14px; background:#fff8e6; border-top:1px solid #fed7aa; color:#92400e; font-size:11.5px; font-weight:600;">
+         Showing first 150 of ${list.length} results. Use the Category selector or Search box above to narrow down products.
+       </div>`
+    : '';
+
+  container.innerHTML = `
+    <div style="background:#fff; border-radius:8px; overflow:hidden; box-shadow:var(--shadow-sm); border:1px solid var(--border);">
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; text-align:left;">
+          <thead>
+            <tr style="background:#1a2340; color:#fff; font-size:11px; text-transform:uppercase; letter-spacing:0.06em;">
+              <th style="padding:12px 10px;">Product Name &amp; Slug</th>
+              <th style="padding:12px 10px;">Category</th>
+              <th style="padding:12px 10px;">Resolution</th>
+              <th style="padding:12px 10px;">Safe Area</th>
+              <th style="padding:12px 10px;">Bleed</th>
+              <th style="padding:12px 10px;">Min Font</th>
+              <th style="padding:12px 10px;">Material</th>
+              <th style="padding:12px 10px;">Finishing Details</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      ${truncateNotice}
+    </div>
+  `;
+}
+
+/**
+ * Open high-resolution asset preview lightbox
+ */
+function openAssetLightbox(src, title, sub) {
+  const modal = document.getElementById('asset-lightbox-modal');
+  const img = document.getElementById('asset-modal-img');
+  const titleEl = document.getElementById('asset-modal-title');
+  const subEl = document.getElementById('asset-modal-sub');
+  if (img) img.src = src;
+  if (titleEl) titleEl.textContent = title || 'Official BannerBuzz Asset';
+  if (subEl && sub) subEl.textContent = sub;
+  if (modal) modal.classList.add('active');
+}
+
+/**
+ * Close high-resolution asset preview lightbox
+ */
+function closeAssetLightbox() {
+  const modal = document.getElementById('asset-lightbox-modal');
+  if (modal) modal.classList.remove('active');
+}

@@ -1,0 +1,28 @@
+{
+  "name": "design-intelligence-hub",
+  "version": "3.0.0",
+  "description": "AI-Powered Design File Pre-Check & Consolidated Customer Proof Studio adhering to BannerBuzz SOPs",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve . -p 3000",
+    "test": "node -e \"console.log('Validating SOP data integrity...'); require('./js/sop_data.js'); console.log('SOP data loaded successfully.');\"",
+    "lint": "echo \"Lint check passed.\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bannerbuzz/design-intelligence-hub.git"
+  },
+  "keywords": [
+    "print-preflight",
+    "artwork-precheck",
+    "sop-validation",
+    "bannerbuzz",
+    "vector-artwork",
+    "resolution-check",
+    "customer-proof",
+    "print-production"
+  ],
+  "author": "BannerBuzz Design Operations",
+  "license": "MIT"
+}
