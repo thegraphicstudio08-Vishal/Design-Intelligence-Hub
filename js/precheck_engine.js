@@ -17,14 +17,74 @@ const PrecheckEngine = {
     const printW = userDims?.widthIn || spec.defaultW || 36;
     const printH = userDims?.heightIn || spec.defaultH || 24;
     const reqDpi = parseInt(spec.resolution) || 150;
+    const sop = spec._sop || null;
+    // Lowest acceptable resolution: SOP minimum when known, otherwise 75% of target
+    const minDpi = sop?.resolution?.min || Math.round(reqDpi * 0.75);
     const ext = analysis.fileExt.toUpperCase();
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // CHECKPOINT 0: Size Transform — customer artwork scaled to the customer-selected size
+    // ──────────────────────────────────────────────────────────────────────────
+    if (sop && typeof SopRules !== 'undefined') {
+      const canvas = sop.canvas;
+      const canvasTxt = canvas
+        ? `${canvas.wIn}" × ${canvas.hIn}"${canvas.confirmed ? ` (${canvas.note})` : ' (finishing allowance not confirmed — use template)'}`
+        : '—';
+      if (analysis.isVector && !analysis.embeddedRasterFound) {
+        const art = analysis.detectedInchesW ? `${analysis.detectedInchesW}" × ${analysis.detectedInchesH}" artboard` : 'Vector artwork';
+        checks.push({
+          id: 'sizeTransform',
+          name: 'Size Transform to Order',
+          icon: '📐',
+          status: 'PASS',
+          found: `${art} → ${printW}" × ${printH}"`,
+          required: `Order ${printW}" × ${printH}" · Print canvas ${canvasTxt}`,
+          detail: 'Vector artwork scales to the ordered size without resolution loss.',
+          action: canvas && canvas.confirmed ? `Create production canvas at ${canvas.wIn}" × ${canvas.hIn}" (${canvas.source}).` : ''
+        });
+      } else if (analysis.pixelWidth && analysis.pixelHeight && !analysis.isVector) {
+        const t = SopRules.transform(analysis.pixelWidth, analysis.pixelHeight, { widthIn: printW, heightIn: printH }, sop);
+        const target = sop.resolution.target;
+        let st = t.ppiAtOrder >= target ? 'PASS' : t.ppiAtOrder >= sop.resolution.min ? 'WARNING' : 'FAIL';
+        if (st === 'PASS' && t.ratioDiffPct > 1.5) st = 'WARNING';
+        const fitTxt = t.ratioDiffPct <= 1.5
+          ? 'Artwork proportion matches the order.'
+          : `Proportion differs by ${t.ratioDiffPct}%: fitted whole it covers ${t.fitSizeIn.w}" × ${t.fitSizeIn.h}" (gap ${t.gapIn.w}" W / ${t.gapIn.h}" H to extend with background), or filled it crops ${t.cropPctIfFilled}% of the artwork.`;
+        checks.push({
+          id: 'sizeTransform',
+          name: 'Size Transform to Order',
+          icon: '📐',
+          status: st,
+          found: `${analysis.pixelWidth} × ${analysis.pixelHeight} px → ${printW}" × ${printH}" = ${t.ppiAtOrder} ppi${t.rotated ? ' (artwork rotated vs order)' : ''}`,
+          required: `SOP ${target} ppi (min ${sop.resolution.min}) · canvas ${canvasTxt} = ${t.requiredPx.w} × ${t.requiredPx.h} px`,
+          detail: `${fitTxt} ${sop.resolution.source}.`,
+          action: st === 'PASS' ? '' : (t.ppiAtOrder < target
+            ? `Artwork gives ${t.ppiAtOrder} ppi at order size; SOP asks ${target} ppi. Request higher-resolution/vector artwork, or show the low-resolution area in the crop shot proof.`
+            : 'Confirm with customer: extend background to fill the order size, or crop.')
+        });
+      } else {
+        checks.push({
+          id: 'sizeTransform',
+          name: 'Size Transform to Order',
+          icon: '📐',
+          status: 'WARNING',
+          found: `${ext} — resolution not measurable in browser`,
+          required: `Order ${printW}" × ${printH}" · SOP ${sop.resolution.target} ppi · canvas ${canvasTxt}`,
+          detail: analysis.embeddedRasterFound
+            ? 'File contains raster images; their resolution at print size cannot be measured here.'
+            : 'Open the file in Photoshop/Illustrator and check the image size at print size.',
+          action: `Verify effective resolution ≥ ${sop.resolution.target} ppi at ${printW}" × ${printH}".`
+        });
+      }
+    }
 
     // ──────────────────────────────────────────────────────────────────────────
     // CHECKPOINT 1: Vector Artwork & "Good for Print" Protocol
     // ──────────────────────────────────────────────────────────────────────────
     let vStatus = 'PASS', vFound = '', vDetail = '', vAction = '';
     if (analysis.isVector) {
-      vStatus = 'PASS';
+      // A PDF/AI holding placed photos is only as sharp as those photos
+      vStatus = analysis.embeddedRasterFound ? 'WARNING' : 'PASS';
       vFound = `Vector · ${ext} Format`;
       vDetail = `🌟 GOOD FOR PRINT: ${analysis.goodForPrintReason}`;
       vAction = analysis.embeddedRasterFound
@@ -35,7 +95,12 @@ const PrecheckEngine = {
         vStatus = 'PASS';
         vFound = `Raster (${analysis.effectiveDpi} DPI)`;
         vDetail = `GOOD FOR PRINT: ${analysis.goodForPrintReason}`;
-      } else if (analysis.effectiveDpi && analysis.effectiveDpi >= reqDpi * 0.75) {
+      } else if (!analysis.effectiveDpi) {
+        vStatus = 'WARNING';
+        vFound = `${ext} — resolution not readable`;
+        vDetail = analysis.goodForPrintReason || 'Pixel size could not be read in the browser.';
+        vAction = `Check the image size in Photoshop: needs ${reqDpi} ppi at ${printW}"×${printH}".`;
+      } else if (analysis.effectiveDpi >= minDpi) {
         vStatus = 'WARNING';
         vFound = `Raster (${analysis.effectiveDpi} DPI)`;
         vDetail = `Borderline Print Resolution: File has ${analysis.effectiveDpi} DPI. SOP standard for ${spec.name} is ${spec.resolution} at ${printW}"×${printH}".`;
@@ -71,7 +136,7 @@ const PrecheckEngine = {
         resStatus = 'PASS';
         resFound = `${analysis.effectiveDpi} DPI`;
         resDetail = `Pixel density meets or exceeds SOP requirement (${analysis.effectiveDpi} DPI vs required ${spec.resolution} at ${printW}"×${printH}").`;
-      } else if (analysis.effectiveDpi >= reqDpi * 0.75) {
+      } else if (analysis.effectiveDpi >= minDpi) {
         resStatus = 'WARNING';
         resFound = `${analysis.effectiveDpi} DPI`;
         resDetail = `Resolution is slightly below SOP target (${analysis.effectiveDpi} DPI vs required ${spec.resolution}).`;
@@ -140,9 +205,18 @@ const PrecheckEngine = {
     // ──────────────────────────────────────────────────────────────────────────
     let orientStatus = 'PASS', orientFound = '', orientDetail = '', orientAction = '';
     orientFound = `Artwork: ${analysis.orientationArtwork} · Order: ${analysis.orientationOrder}`;
-    if (analysis.orientationMatch) {
+    if (analysis.orientationArtwork === 'Unknown') {
+      orientStatus = 'WARNING';
+      orientDetail = 'Artwork size could not be read, so orientation cannot be compared automatically.';
+      orientAction = `Confirm artwork orientation matches ${printW}"W × ${printH}"H.`;
+    } else if (analysis.orientationMatch) {
       orientStatus = 'PASS';
       orientDetail = `Artwork orientation (${analysis.orientationArtwork}) matches ordered product orientation (${printW}"×${printH}").`;
+    } else if (sop?.orientationSwapAllowed) {
+      // SOP 1_Banners · Mockup guideline: change orientation on admin after customer approval
+      orientStatus = 'WARNING';
+      orientDetail = `Artwork is ${analysis.orientationArtwork}, order is ${analysis.orientationOrder} (${printW}"W × ${printH}"H). ${SopRules.SOURCES.mockup}: change the orientation on admin after the customer's approval and communicate with a mockup.`;
+      orientAction = 'Send mockup to customer; after approval change admin orientation. If pole pocket or wind flaps are selected, place them for the new orientation.';
     } else {
       orientStatus = 'FAIL';
       orientDetail = `Orientation Mismatch: Artwork is ${analysis.orientationArtwork}, but product order is ${analysis.orientationOrder} (${printW}"W × ${printH}"H).`;
@@ -194,7 +268,7 @@ const PrecheckEngine = {
       status: 'WARNING',
       found: `${spec.safeArea} guide boundary`,
       required: `${spec.safeArea} inner safe zone`,
-      detail: `SOP standard for ${spec.name} requires all logos, text, and critical graphics to remain at least ${spec.safeArea} inside the trim line to prevent being cut or grommeted.`,
+      detail: `SOP standard for ${spec.name} requires all logos, text, and critical graphics to remain at least ${spec.safeArea} inside the trim line to prevent being cut or grommeted.${sop?.safeArea ? ` Source: ${sop.safeArea.source}.` : ''}`,
       action: `Use the visual canvas overlay to inspect that all text and logos sit inside the ${spec.safeArea} safe boundary.`
     });
 

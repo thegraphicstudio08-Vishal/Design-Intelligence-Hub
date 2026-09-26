@@ -166,19 +166,31 @@ function renderSpecBox(spec) {
   const box = document.getElementById('spec-box');
   if (!box) return;
 
+  // Values come from the SOP rules for this exact order (size + finishing); catalog values only as fallback
+  const req = (typeof SopRules !== 'undefined')
+    ? SopRules.requirements(spec, appState.userDims, Object.assign({}, appState.parsedFilename || {}, {
+        finishing: appState.parsedFilename?.finishing || appState.finishingDetailsSummary || ''
+      }))
+    : null;
+  const resTxt = req ? `${req.resolution.target} ppi (min ${req.resolution.min})` : spec.resolution;
+  const safeTxt = req && req.safeArea.inches != null ? `${req.safeArea.inches}"${req.safeArea.confirmed ? '' : ' (catalog)'}` : spec.safeArea;
+  const canvasTxt = req && req.canvas
+    ? `${req.canvas.wIn}" × ${req.canvas.hIn}"${req.canvas.confirmed ? '' : ' + template'}`
+    : spec.bleed;
+
   box.innerHTML = `
     <div class="spec-grid">
       <div class="spec-item">
         <span class="spec-label">SOP Resolution</span>
-        <span class="spec-value">${spec.resolution}</span>
+        <span class="spec-value" title="${req ? req.resolution.source.replace(/"/g, '') : ''}">${resTxt}</span>
       </div>
       <div class="spec-item">
         <span class="spec-label">Safe Zone</span>
-        <span class="spec-value">${spec.safeArea}</span>
+        <span class="spec-value" title="${req ? req.safeArea.source.replace(/"/g, '') : ''}">${safeTxt}</span>
       </div>
       <div class="spec-item">
-        <span class="spec-label">Bleed Margin</span>
-        <span class="spec-value">${spec.bleed}</span>
+        <span class="spec-label">${req ? 'Print Canvas' : 'Bleed Margin'}</span>
+        <span class="spec-value" title="${req && req.canvas ? req.canvas.note.replace(/"/g, '') : ''}">${canvasTxt}</span>
       </div>
       <div class="spec-item">
         <span class="spec-label">Min Font Size</span>
@@ -223,10 +235,27 @@ function onUnitChange() {
   }
 }
 
+/**
+ * One-line SOP requirement for the filename banner (resolution, safe area, production canvas)
+ */
+function sopSummaryText(spec, parsed) {
+  if (typeof SopRules === 'undefined') {
+    return `SOP Requirement: ${spec.resolution} · Safe Area: ${spec.safeArea} · Bleed: ${spec.bleed}`;
+  }
+  const dims = parsed?.hasSize ? { widthIn: parsed.widthIn, heightIn: parsed.heightIn } : appState.userDims;
+  const req = SopRules.requirements(spec, dims, parsed);
+  const safe = req.safeArea.inches != null ? `${req.safeArea.inches}"${req.safeArea.confirmed ? '' : ' (catalog)'}` : 'per template';
+  const canvas = req.canvas
+    ? (req.canvas.confirmed ? `${req.canvas.wIn}" × ${req.canvas.hIn}" (${req.canvas.note})` : `${req.canvas.wIn}" × ${req.canvas.hIn}" + template allowance`)
+    : '—';
+  return `SOP: ${req.resolution.target} ppi (min ${req.resolution.min}) · Safe area ${safe} · Print canvas ${canvas}`;
+}
+
 function onDimensionInput() {
   const w = parseFloat(document.getElementById('print-w').value) || 36;
   const h = parseFloat(document.getElementById('print-h').value) || 24;
   const unit = document.getElementById('dim-unit').value;
+  if (!appState.userDims) appState.userDims = { unit: 'in' };
 
   if (unit === 'ft') {
     appState.userDims.widthIn = +(w * 12).toFixed(2);
@@ -267,6 +296,22 @@ function setupEventListeners() {
     });
   }
 
+  // Proof Studio slots: drag & drop (the boxes say "Click or drop")
+  ['overall', 'template', 'mockup', 'crop'].forEach(key => {
+    const zone = document.getElementById(`drop-${key}`);
+    if (!zone) return;
+    zone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      zone.classList.add('drag-over');
+    });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      zone.classList.remove('drag-over');
+      if (e.dataTransfer.files.length) handleProofSlotFile(key, { target: { files: e.dataTransfer.files } });
+    });
+  });
+
   // Inputs for order info
   const ordInput = document.getElementById('order-num');
   if (ordInput) ordInput.addEventListener('input', (e) => {
@@ -305,11 +350,13 @@ function handleFile(file) {
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px 10px; font-size:11.5px; background:#fff; padding:10px; border-radius:6px; border:1px solid #fed7aa;">
           <div><span style="color:#64748b;">Product Name:</span> <strong style="color:#111c38;">${parsed.productName}</strong></div>
           <div><span style="color:#64748b;">Order No:</span> <strong style="color:#111c38;">${parsed.orderNum || 'N/A'}</strong></div>
-          <div><span style="color:#64748b;">Parsed Size:</span> <strong style="color:#111c38;">${parsed.rawDim || (parsed.widthIn + '" × ' + parsed.heightIn + '"')} (${parsed.widthIn}" × ${parsed.heightIn}")</strong></div>
+          <div><span style="color:#64748b;">Parsed Size:</span> <strong style="color:#111c38;">${parsed.hasSize ? `${parsed.rawDim} (${parsed.widthIn}" × ${parsed.heightIn}")` : 'Not in filename — using entered size'}</strong></div>
           <div><span style="color:#64748b;">Side:</span> <strong style="color:#111c38;">${parsed.side}</strong></div>
+          <div><span style="color:#64748b;">Material:</span> <strong style="color:#111c38;">${parsed.material || '—'}${parsed.location ? ' · ' + parsed.location : ''}</strong></div>
+          <div><span style="color:#64748b;">Line / Qty:</span> <strong style="color:#111c38;">${parsed.lineItem || '—'} / ${parsed.qty}${parsed.designerCode ? ' · (' + parsed.designerCode + ')' : ''}</strong></div>
           <div style="grid-column:span 2;"><span style="color:#64748b;">Finishing Details:</span> <strong style="color:#111c38;">${parsed.finishing}</strong></div>
           <div style="grid-column:span 2; color:#1d4ed8; font-weight:700; background:#eff6ff; padding:4px 8px; border-radius:4px; margin-top:2px;">
-            SOP Requirement: ${spec.resolution} · Safe Area: ${spec.safeArea} · Bleed: ${spec.bleed}
+            ${sopSummaryText(spec, parsed)}
           </div>
         </div>
       `;
@@ -405,30 +452,33 @@ function applyParsedMetadata(parsed) {
   }
 
   // 2. Exact Dimensions & Unit Synchronization (SET BEFORE onProductChange to avoid default overwrite)
-  const unit = parsed.detectedUnit || 'in';
-  const uSel = document.getElementById('dim-unit');
-  if (uSel) uSel.value = unit;
+  // Only when the filename really carries a size — otherwise keep the order size the designer entered.
+  if (parsed.hasSize) {
+    const unit = parsed.detectedUnit || 'in';
+    const uSel = document.getElementById('dim-unit');
+    if (uSel) uSel.value = unit;
 
-  const wInput = document.getElementById('print-w');
-  const hInput = document.getElementById('print-h');
-  const proofW = document.getElementById('proof-w');
-  const proofH = document.getElementById('proof-h');
+    const wInput = document.getElementById('print-w');
+    const hInput = document.getElementById('print-h');
+    const proofW = document.getElementById('proof-w');
+    const proofH = document.getElementById('proof-h');
 
-  const displayW = parsed.rawW !== undefined ? parsed.rawW : parsed.widthIn;
-  const displayH = parsed.rawH !== undefined ? parsed.rawH : parsed.heightIn;
+    const displayW = parsed.rawW != null ? parsed.rawW : parsed.widthIn;
+    const displayH = parsed.rawH != null ? parsed.rawH : parsed.heightIn;
 
-  if (wInput) wInput.value = displayW;
-  if (hInput) hInput.value = displayH;
-  if (proofW) proofW.value = parsed.widthIn;
-  if (proofH) proofH.value = parsed.heightIn;
+    if (wInput) wInput.value = displayW;
+    if (hInput) hInput.value = displayH;
+    if (proofW) proofW.value = parsed.widthIn;
+    if (proofH) proofH.value = parsed.heightIn;
 
-  appState.userDims = {
-    widthIn: parsed.widthIn,
-    heightIn: parsed.heightIn,
-    unit: unit,
-    rawW: displayW,
-    rawH: displayH
-  };
+    appState.userDims = {
+      widthIn: parsed.widthIn,
+      heightIn: parsed.heightIn,
+      unit: unit,
+      rawW: displayW,
+      rawH: displayH
+    };
+  }
 
   // 3. Category & Product Selection
   const spec = parsed.spec || (parsed.productSlug && SPECS[parsed.productSlug]);
@@ -595,7 +645,7 @@ function loadExampleFilename(fname) {
         <div><span style="color:#64748b;">Side:</span> <strong style="color:#111c38;">${parsed.side}</strong></div>
         <div style="grid-column:span 2;"><span style="color:#64748b;">Finishing Details:</span> <strong style="color:#111c38;">${parsed.finishing}</strong></div>
         <div style="grid-column:span 2; color:#1d4ed8; font-weight:700; background:#eff6ff; padding:4px 8px; border-radius:4px; margin-top:2px;">
-          SOP Requirement: ${spec.resolution} · Safe Area: ${spec.safeArea} · Bleed: ${spec.bleed}
+          ${sopSummaryText(spec, parsed)}
         </div>
       </div>
     `;
@@ -684,8 +734,24 @@ async function runPreCheck() {
   onDimensionInput();
 
   try {
+    // 0. SOP requirements for this exact order (size + finishing + product)
+    const sopContext = Object.assign({}, appState.parsedFilename || {}, {
+      finishing: appState.parsedFilename?.finishing || appState.finishingDetailsSummary || ''
+    });
+    const sopReq = (typeof SopRules !== 'undefined')
+      ? SopRules.requirements(appState.product, appState.userDims, sopContext)
+      : null;
+    renderSpecBox(appState.product);
+    const effectiveSpec = sopReq
+      ? Object.assign({}, appState.product, {
+          resolution: `${sopReq.resolution.target} PPI`,
+          safeArea: sopReq.safeArea.inches != null ? `${sopReq.safeArea.inches}"` : appState.product.safeArea,
+          _sop: sopReq
+        })
+      : appState.product;
+
     // 1. Analyze File
-    const analysis = await FileAnalyzer.analyze(appState.file, appState.product, appState.userDims);
+    const analysis = await FileAnalyzer.analyze(appState.file, effectiveSpec, appState.userDims);
     appState.analysis = analysis;
 
     if (analysis?.parsedFilename) {
@@ -700,7 +766,7 @@ async function runPreCheck() {
     }
 
     // 2. Evaluate SOP Checkpoints
-    const report = PrecheckEngine.evaluate(analysis, appState.product, appState.userDims, appState.overrides);
+    const report = PrecheckEngine.evaluate(analysis, effectiveSpec, appState.userDims, appState.overrides);
     appState.report = report;
 
     // 3. Search Previous Orders

@@ -1381,3 +1381,8 @@ body {
   }
 }
 
+
+/* Proof Studio: upload boxes stay available even when an official template/mockup
+   is auto-filled, so the designer can always replace it with the real die-line / mockup. */
+#drop-overall, #drop-template, #drop-mockup { display: block !important; }
+.upload-zone.drag-over { border-color: var(--bb-orange, #ff5f1f); background: #fff7ed; }

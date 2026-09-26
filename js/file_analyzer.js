@@ -155,11 +155,7 @@ const FileAnalyzer = {
       console.warn('PDF header parse exception:', e);
     }
 
-    if (!res.pixelWidth) {
-      res.pixelWidth = Math.round(targetW * 150);
-      res.pixelHeight = Math.round(targetH * 150);
-    }
-
+    // No page size found → leave dimensions unknown (never assume the order size, that would fake a PASS)
     this._evaluateMeasurementsAndOrientation(res, targetW, targetH);
     res.previewDataUrl = this._generateVectorPreviewSvg(res, file.name, targetW, targetH);
     return res;
@@ -336,13 +332,13 @@ const FileAnalyzer = {
    * Generic / PSD / TIFF / Production file fallback analyzer
    */
   _analyzeGeneric(file, res, targetW, targetH) {
+    // The browser cannot read PSD/CDR pixels — report "manual check", never an assumed resolution
     res.isVector = false;
-    res.isGoodForPrint = true;
-    res.goodForPrintReason = `${res.fileExt.toUpperCase()} Production Source File. File detected and queued for automated pre-press RIP rasterization.`;
-    res.pixelWidth = Math.round(targetW * 150);
-    res.pixelHeight = Math.round(targetH * 150);
-    res.effectiveDpi = 150;
-    this._evaluateMeasurementsAndOrientation(res, targetW, targetH);
+    res.isGoodForPrint = false;
+    res.goodForPrintReason = `${res.fileExt.toUpperCase()} file: pixel size cannot be read in the browser. Check image size at print size in Photoshop.`;
+    res.pixelWidth = null;
+    res.pixelHeight = null;
+    res.effectiveDpi = null;
     res.previewDataUrl = this._generateVectorPreviewSvg(res, file.name, targetW, targetH);
     return res;
   },
@@ -359,10 +355,10 @@ const FileAnalyzer = {
     let w, h;
     if (aspect >= 1) {
       w = 900;
-      h = Math.max(80, Math.round(900 / aspect));
+      h = Math.max(20, Math.round(900 / aspect));
     } else {
       h = 800;
-      w = Math.max(80, Math.round(800 * aspect));
+      w = Math.max(20, Math.round(800 * aspect));
     }
 
     const isAi = ext === 'AI';
@@ -457,7 +453,7 @@ const FileAnalyzer = {
     const clean = fname.replace(/\.[^/.]+$/, '');
 
     // 1. Order Number: US2396245, BS2310454, AU2396585, CA..., UK...
-    const orderMatch = fname.match(/(US|BS|AU|CA|UK|ORD)[\-_]?\d{6,8}/i) || fname.match(/\b\d{6,8}\b/);
+    const orderMatch = fname.match(/(?:PR)?(US|BS|AU|CA|UK|ORD)[\-_]?\d{6,8}/i);
     const orderNum = orderMatch ? orderMatch[0].toUpperCase() : null;
 
     // Quantity extraction: _1_50_qty_, _3_2_qty_, _1_1_qty_, 300_piece_, 1pc
@@ -465,8 +461,33 @@ const FileAnalyzer = {
     const qtyMatch = clean.match(/_(\d+)_qty_/i) || clean.match(/_(\d+)_piece_/i) || clean.match(/_(\d+)pc\b/i);
     if (qtyMatch) qty = parseInt(qtyMatch[1], 10);
 
+    // 1b. Internal production prefix: MATERIAL_Loc-ORDER_line_qty_qty_...
+    // e.g. "POLYESTER_FABRIC_Atla-US2382836_3_2_qty_..." → material POLYESTER FABRIC, location Atla, line 3, qty 2
+    let material = null, location = null, lineItem = null;
+    const prefixMatch = clean.match(/^(.*?)[_\-]([A-Za-z]{3,5})[_\-](?:PR)?(?:US|BS|AU|CA|UK)\d{6,8}/i);
+    if (prefixMatch) {
+      material = prefixMatch[1].replace(/_+/g, ' ').trim();
+      location = prefixMatch[2];
+    }
+    const lineQtyMatch = clean.match(/(?:US|BS|AU|CA|UK)\d{6,8}_(\d+)(?:\(\d+\))?_(\d+)_qty_/i);
+    if (lineQtyMatch) {
+      lineItem = parseInt(lineQtyMatch[1], 10);
+      qty = parseInt(lineQtyMatch[2], 10);
+    }
+    // Designer code is the last "(XX)" token that is not a unit, e.g. (PO), (SS), (ES), (4E)
+    const designerCode = [...clean.matchAll(/_\(([A-Z0-9]{1,3})\)(?=_|\s|$)/g)]
+      .map(m => m[1])
+      .filter(c => !/^(FT|MM|CM|IN)$/i.test(c))
+      .pop() || null;
+    const fileRole = /print_file/i.test(clean) ? 'Print File'
+      : /cropshot|crop_shot|_cop\b|cop$/i.test(clean) ? 'Crop Shot Proof'
+      : /overall/i.test(clean) ? 'Overall Proof'
+      : /mockup/i.test(clean) ? 'Mockup'
+      : 'Artwork';
+
     // 2. Extract dimensions: (FT), (MM), (Inch)
-    let rawW = 36, rawH = 24, widthIn = 36, heightIn = 24, rawDim = '', detectedUnit = 'in';
+    // No size in the filename → dimensions stay null so the designer's entered order size is never overwritten.
+    let rawW = null, rawH = null, widthIn = null, heightIn = null, rawDim = '', detectedUnit = 'in';
 
     // (FT)
     const ftMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:_Ft)?_x_(\d+(?:\.\d+)?)\s*(?:_Ft)?_\(FT\)/i) ||
@@ -494,11 +515,23 @@ const FileAnalyzer = {
       }
     }
 
+    // (CM)  e.g. "Teardrop_Flags_-_Graphic_61_cm_x_152_cm_(CM)"
+    const cmMatch = !ftMatch && clean.match(/(\d+(?:\.\d+)?)\s*(?:_cm)?_x_(\d+(?:\.\d+)?)\s*(?:_cm)?_\(CM\)/i);
+    if (cmMatch) {
+      rawW = parseFloat(cmMatch[1]);
+      rawH = parseFloat(cmMatch[2]);
+      widthIn = +(rawW / 2.54).toFixed(2);
+      heightIn = +(rawH / 2.54).toFixed(2);
+      rawDim = `${rawW}_cm_x_${rawH}_cm_(CM)`;
+      detectedUnit = 'cm';
+    }
+
     // (Inch)
-    if (!ftMatch && !clean.match(/\(MM\)/i)) {
+    if (!ftMatch && !cmMatch && !clean.match(/\(MM\)/i)) {
       const inMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:_Inch)?_x_(\d+(?:\.\d+)?)\s*(?:_Inch)?_\(Inch\)/i) ||
-                      clean.match(/(\d+(?:\.\d+)?)\s*(?:_x_)\s*(\d+(?:\.\d+)?)/i) ||
-                      clean.match(/(\d+(?:\.\d+)?)\s*(?:x|by|X)\s*(\d+(?:\.\d+)?)\s*(?:in|inch)?/i);
+                      // Loose "W_x_H" only for real production names (with an order number):
+                      // a stray "3x5" in a customer's filename must never become the order size.
+                      (orderNum && clean.match(/(\d+(?:\.\d+)?)\s*(?:_x_)\s*(\d+(?:\.\d+)?)/i));
       if (inMatch) {
         rawW = parseFloat(inMatch[1]);
         rawH = parseFloat(inMatch[2]);
@@ -566,6 +599,8 @@ const FileAnalyzer = {
       'desk-flags': 'desk-flags-blade',
       'desk-flag': 'desk-flags-blade',
       'truck-magnetic-signs': 'vehicle-magnetic-signs',
+      'car-magnetic-signs': 'vehicle-magnetic-signs',
+      'arrow-yard-signs': 'die-cut-yard-signs',
       'magnetic-signs': 'vehicle-magnetic-signs',
       'truck-magnetic': 'vehicle-magnetic-signs',
       'car-magnets': 'vehicle-magnetic-signs',
@@ -669,12 +704,25 @@ const FileAnalyzer = {
 
     // Stakes & Mounting
     if (/metal_stakes/i.test(clean)) {
-      finishingTokens.push('Single Side Metal Stakes (H-Stakes)');
+      finishingTokens.push('Metal Stakes (H-Stakes)');
       stakeType = 'Metal Step Stakes (9-Gauge H-Stake)';
     }
 
+    if (/adhesive_tabs/i.test(clean)) {
+      finishingTokens.push('Adhesive Tabs');
+    }
+    if (/wind_?flaps?/i.test(clean)) {
+      finishingTokens.push('Wind Flaps');
+    }
+    if (/die[_\-]cut/i.test(clean)) {
+      finishingTokens.push('Die-Cut');
+    }
+    if (/white_ink/i.test(clean)) {
+      finishingTokens.push(/no_white_ink/i.test(clean) ? 'No White Ink' : 'White Ink Layer');
+    }
+
     // Edges / Finish
-    if (/stitched_edges/i.test(clean)) {
+    if (/stitched_edges/i.test(clean) && edgeType !== 'Stitched Edges') {
       finishingTokens.push('Stitched Edges');
       edgeType = 'Stitched Edges';
     }
@@ -691,6 +739,10 @@ const FileAnalyzer = {
       printTreatment = 'Gloss Finish';
     }
 
+    const hasSize = widthIn > 0 && heightIn > 0;
+    // Not a production filename at all (no order number, no size, no known product) → nothing to apply.
+    if (!orderNum && !hasSize && !matchedSpec) return null;
+
     // Sides
     let side = 'Single-Sided';
     const isDoubleSided = /double_sided|front_and_back/i.test(clean);
@@ -704,6 +756,12 @@ const FileAnalyzer = {
       fname,
       orderNum,
       qty,
+      lineItem,
+      material,
+      location,
+      designerCode,
+      fileRole,
+      hasSize,
       productName: humanProductName || (matchedSpec ? matchedSpec.name : null),
       productSlug: matchedSlug || slug,
       spec: matchedSpec,

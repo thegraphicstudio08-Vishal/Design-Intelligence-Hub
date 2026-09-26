@@ -197,10 +197,10 @@ const CanvasInspector = {
     let cleanWPx, cleanHPx;
     if (aspect >= 1) {
       cleanWPx = 840;
-      cleanHPx = Math.max(80, Math.round(840 / aspect));
+      cleanHPx = Math.max(20, Math.round(840 / aspect));
     } else {
       cleanHPx = 760;
-      cleanWPx = Math.max(80, Math.round(760 * aspect));
+      cleanWPx = Math.max(20, Math.round(760 * aspect));
     }
 
     const tType = this.getTemplateType(spec, dims);
@@ -1012,9 +1012,10 @@ const CanvasInspector = {
       if (this.currentRotation !== 0) {
         ctx.translate(w / 2, h / 2);
         ctx.rotate((this.currentRotation * Math.PI) / 180);
-        const destW = isRotated ? h : w;
-        const destH = isRotated ? w : h;
-        ctx.drawImage(img, -destW / 2, -destH / 2, destW, destH);
+        const boxW = isRotated ? h : w;
+        const boxH = isRotated ? w : h;
+        const r = this._fitRect(img.naturalWidth, img.naturalHeight, boxW, boxH);
+        ctx.drawImage(img, r.x - boxW / 2, r.y - boxH / 2, r.w, r.h);
       } else {
         const naturalAspect = img.naturalWidth / img.naturalHeight;
         const canvasAspect = w / h;
@@ -1086,7 +1087,9 @@ const CanvasInspector = {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(12, 12, w - 24, h - 24);
       if (this.currentImg) {
-        ctx.drawImage(this.currentImg, 24, 24, w - 48, h - 48);
+        const ci = this.currentImg;
+        const r = this._fitRect(ci.naturalWidth || w, ci.naturalHeight || h, Math.max(1, w - 48), Math.max(1, h - 48));
+        ctx.drawImage(ci, 24 + r.x, 24 + r.y, r.w, r.h);
       }
     }
 
@@ -1121,6 +1124,15 @@ const CanvasInspector = {
   },
 
   /**
+   * Centre-fit a source of srcW×srcH inside a box, keeping its proportions
+   */
+  _fitRect(srcW, srcH, boxW, boxH) {
+    const s = Math.min(boxW / srcW, boxH / srcH);
+    const w = srcW * s, h = srcH * s;
+    return { x: (boxW - w) / 2, y: (boxH - h) / 2, w, h };
+  },
+
+  /**
    * Redraw the canvas, artwork, and product template overlays
    */
   redraw() {
@@ -1140,7 +1152,8 @@ const CanvasInspector = {
     // Viewport scaling strictly preserving physical product aspect ratio (never squeeze or stretch!)
     const maxViewportW = 860;
     const maxViewportH = 480;
-    const targetAspect = Math.max(0.10, Math.min(8.0, viewW / viewH));
+    // Real banner proportions go well past 8:1 (e.g. 20' x 2' = 10:1), so only guard against absurd values
+    const targetAspect = Math.max(0.02, Math.min(50.0, viewW / viewH));
 
     let w, h;
     if (targetAspect >= maxViewportW / maxViewportH) {
@@ -1178,41 +1191,28 @@ const CanvasInspector = {
     this.ctx.fillRect(0, 0, w, h);
 
     // 2. Draw artwork image with aspect ratio preservation (never distorted or stretched)
+    // Always fit (never stretch): any gap left over is the real area the artwork does not cover at order size
     this.ctx.save();
     if (this.currentRotation !== 0) {
       this.ctx.translate(w / 2, h / 2);
       this.ctx.rotate((this.currentRotation * Math.PI) / 180);
-      const destW = isRotated ? h : w;
-      const destH = isRotated ? w : h;
-      this.ctx.drawImage(img, -destW / 2, -destH / 2, destW, destH);
+      const boxW = isRotated ? h : w;
+      const boxH = isRotated ? w : h;
+      const r = this._fitRect(img.naturalWidth || boxW, img.naturalHeight || boxH, boxW, boxH);
+      this.ctx.drawImage(img, r.x - boxW / 2, r.y - boxH / 2, r.w, r.h);
     } else {
-      const imgAspect = (img.naturalWidth && img.naturalHeight) ? (img.naturalWidth / img.naturalHeight) : (w / h);
-      const canvasAspect = w / h;
-      let drawW = w;
-      let drawH = h;
-      let drawX = 0;
-      let drawY = 0;
-
-      if (Math.abs(imgAspect - canvasAspect) / canvasAspect > 0.04) {
-        if (imgAspect > canvasAspect) {
-          drawW = w;
-          drawH = w / imgAspect;
-          drawY = (h - drawH) / 2;
-        } else {
-          drawH = h;
-          drawW = h * imgAspect;
-          drawX = (w - drawW) / 2;
-        }
-      }
-      this.ctx.drawImage(img, drawX, drawY, drawW, drawH);
+      const r = this._fitRect(img.naturalWidth || w, img.naturalHeight || h, w, h);
+      this.ctx.drawImage(img, r.x, r.y, r.w, r.h);
     }
     this.ctx.restore();
 
-    // 2.5 Draw Official QNAP Template Overlay if enabled
+    // 2.5 Draw Official QNAP Template Overlay if enabled (fitted, not stretched to the order shape)
     if (this.guides.officialOverlay && this.officialTemplateImg && this.officialTemplateImg.complete) {
+      const t = this.officialTemplateImg;
+      const r = this._fitRect(t.naturalWidth || w, t.naturalHeight || h, w, h);
       this.ctx.save();
       this.ctx.globalAlpha = 0.50;
-      this.ctx.drawImage(this.officialTemplateImg, 0, 0, w, h);
+      this.ctx.drawImage(t, r.x, r.y, r.w, r.h);
       this.ctx.restore();
     }
 

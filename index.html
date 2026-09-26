@@ -283,7 +283,7 @@
           <div class="slot" style="margin-bottom:12px;">
             <div style="font-size:11.5px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">1. Product Overall Proof (Required)</div>
             <div class="upload-zone" style="padding:14px;" id="drop-overall" onclick="document.getElementById('in-overall').click()">
-              <div style="font-size:11.5px; font-weight:600;">Click or drop Entire Artwork</div>
+              <div style="font-size:11.5px; font-weight:600;">Click or drop artwork proof to upload / replace</div>
             </div>
             <input type="file" id="in-overall" class="hidden-input" accept="image/*,.pdf" onchange="handleProofSlotFile('overall', event)" />
             <div class="preview-card" id="prev-overall" style="margin-top:6px;">
@@ -297,27 +297,27 @@
           <div class="slot" style="margin-bottom:12px;">
             <div style="font-size:11.5px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">2. Product Template / Die-Line (Optional)</div>
             <div class="upload-zone" style="padding:14px;" id="drop-template" onclick="document.getElementById('in-template').click()">
-              <div style="font-size:11.5px; font-weight:600;">Click or drop Template Overlay</div>
+              <div style="font-size:11.5px; font-weight:600;">Click or drop your template / die-line to replace</div>
             </div>
             <input type="file" id="in-template" class="hidden-input" accept="image/*,.pdf" onchange="handleProofSlotFile('template', event)" />
             <div class="preview-card" id="prev-template" style="margin-top:6px;">
               <div class="preview-thumb-wrap"><img id="prev-img-template" class="preview-img" src="" alt="" /></div>
               <div class="preview-meta"><div class="preview-name" id="prev-name-template"></div></div>
-              <div class="preview-remove" onclick="clearProofSlot('template')">✕</div>
+              <div class="preview-remove" onclick="clearProofSlot('template')" title="Remove upload (reverts to official template)">✕</div>
             </div>
           </div>
 
           <!-- Slot 3: 3D Mockup -->
           <div class="slot" style="margin-bottom:12px;">
-            <div style="font-size:11.5px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">3. 3D Product Mockup (Recommended)</div>
+            <div style="font-size:11.5px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">3. 3D Physical Finished Mockup (Optional)</div>
             <div class="upload-zone" style="padding:14px;" id="drop-mockup" onclick="document.getElementById('in-mockup').click()">
-              <div style="font-size:11.5px; font-weight:600;">Click or drop 3D Mockup Render</div>
+              <div style="font-size:11.5px; font-weight:600;">Click or drop your 3D mockup to replace</div>
             </div>
             <input type="file" id="in-mockup" class="hidden-input" accept="image/*,.pdf" onchange="handleProofSlotFile('mockup', event)" />
             <div class="preview-card" id="prev-mockup" style="margin-top:6px;">
               <div class="preview-thumb-wrap"><img id="prev-img-mockup" class="preview-img" src="" alt="" /></div>
               <div class="preview-meta"><div class="preview-name" id="prev-name-mockup"></div></div>
-              <div class="preview-remove" onclick="clearProofSlot('mockup')">✕</div>
+              <div class="preview-remove" onclick="clearProofSlot('mockup')" title="Remove upload (reverts to official mockup)">✕</div>
             </div>
           </div>
 
@@ -567,6 +567,7 @@
 
   <!-- ── SCRIPTS ── -->
   <script src="js/sop_data.js"></script>
+  <script src="js/sop_rules.js"></script>
   <script src="js/template_registry.js"></script>
   <script src="js/file_analyzer.js"></script>
   <script src="js/precheck_engine.js"></script>
