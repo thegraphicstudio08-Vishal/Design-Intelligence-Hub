@@ -748,7 +748,7 @@ const ProofStudio = {
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <div style="font-size:11px; font-weight:800; color:#111c38;">Official Product Template / Die-Line</div>
                 <span style="font-size:8.5px; font-weight:800; color:#16a34a; background:#dcfce7; padding:1px 5px; border-radius:3px; border:1px solid #bbf7d0;">
-                  QNAP VERIFIED
+                  REFERENCE ONLY
                 </span>
               </div>
               <div style="height:125px; display:flex; align-items:center; justify-content:center; background:#ffffff; border:1px solid #cbd5e1; border-radius:4px; padding:4px; overflow:hidden; cursor:pointer;" onclick="if(typeof openAssetLightbox==='function') openAssetLightbox('${templateSrc}', 'Official BannerBuzz Template', '${officialTemplate ? officialTemplate.name : spec.name}')" title="Click to enlarge">
@@ -765,7 +765,7 @@ const ProofStudio = {
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <div style="font-size:11px; font-weight:800; color:#111c38;">3D Physical Finished Mockup</div>
                 <span style="font-size:8.5px; font-weight:800; color:#16a34a; background:#dcfce7; padding:1px 5px; border-radius:3px; border:1px solid #bbf7d0;">
-                  QNAP VERIFIED
+                  REFERENCE ONLY
                 </span>
               </div>
               <div style="height:125px; display:flex; align-items:center; justify-content:center; background:#ffffff; border:1px solid #cbd5e1; border-radius:4px; padding:4px; overflow:hidden; cursor:pointer;" onclick="if(typeof openAssetLightbox==='function') openAssetLightbox('${mockupSrc}', 'Official BannerBuzz 3D Mockup', '${officialMockup ? officialMockup.name : spec.name}')" title="Click to enlarge">

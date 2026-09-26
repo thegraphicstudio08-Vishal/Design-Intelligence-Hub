@@ -779,205 +779,205 @@ const CanvasInspector = {
 
     if (tType === 'die-cut') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Contour Cutline</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.5")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('stakes', this.checked)"> 🔩 Metal Step Stakes</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('flutes', this.checked)"> || Flute Direction</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Contour Cutline</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.5")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.stakes ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('stakes', this.checked)"> 🔩 Metal Step Stakes</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.flutes ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('flutes', this.checked)"> || Flute Direction</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'yard-sign') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Finished Trim</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.5")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('stakes', this.checked)"> 🔩 Metal Step Stakes</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('flutes', this.checked)"> || Corflute Flutes</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Finished Trim</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.5")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.stakes ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('stakes', this.checked)"> 🔩 Metal Step Stakes</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.flutes ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('flutes', this.checked)"> || Corflute Flutes</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'flag-rectangle') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('sleeve', this.checked)"> 🚩 Left Pole Sleeve</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ Sleeve Clips / Grommets</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (1.5")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Hem Stitch Lines</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.5")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.sleeve ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('sleeve', this.checked)"> 🚩 Left Pole Sleeve</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.grommets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ Sleeve Clips / Grommets</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (1.5")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Hem Stitch Lines</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.5")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'magnet-rounded') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Rounded Cutline (R 0.5")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (0.5")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🧲 30-Mil Magnetic Backing</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Rounded Cutline (R 0.5")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (0.5")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🧲 30-Mil Magnetic Backing</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'x-banner') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim Line</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (1.5")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ 4 Corner Eyelets</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> ✖️ X-Frame Tension Arms</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim Line</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (1.5")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.grommets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ 4 Corner Eyelets</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> ✖️ X-Frame Tension Arms</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'l-banner') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim Line</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🔩 Top & Bottom Clamp Bars</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim Line</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🔩 Top & Bottom Clamp Bars</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'canvas-wrap') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🖼️ Face Safe Area</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Canvas Fold Lines</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 1.5" Gallery Wrap Border</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🖼️ Face Safe Area</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Canvas Fold Lines</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 1.5" Gallery Wrap Border</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'perforated-window') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🪟 Micro-Perforation Mesh (60/40)</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim Line</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (0.5")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🪟 Micro-Perforation Mesh (60/40)</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim Line</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (0.5")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'desk-flags-blade' || tType === 'desk-flags-teardrop') {
       const isBlade = tType === 'desk-flags-blade';
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Desk ${isBlade ? 'Blade' : 'Teardrop'} Cutline</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.5")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.25")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('sleeve', this.checked)"> 🚩 Desk Pole Sleeve</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Desk ${isBlade ? 'Blade' : 'Teardrop'} Cutline</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.5")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.25")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.sleeve ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('sleeve', this.checked)"> 🚩 Desk Pole Sleeve</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'teardrop-flag') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (1.0")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Teardrop Cutline</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.5")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('sleeve', this.checked)"> 🚩 Pole Sleeve (Left)</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (1.0")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Teardrop Cutline</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.5")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.sleeve ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('sleeve', this.checked)"> 🚩 Pole Sleeve (Left)</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'feather-flag' || tType === 'blade-flag') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (1.0")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Feather Contour</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.5")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('sleeve', this.checked)"> 🚩 Pole Sleeve (Left)</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (1.0")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Feather Contour</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.5")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.sleeve ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('sleeve', this.checked)"> 🚩 Pole Sleeve (Left)</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'roll-up') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Finished Trim</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 📦 Cassette Margin (>6" Base)</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Finished Trim</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 📦 Cassette Margin (>6" Base)</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'table-cover') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Hem Line</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('seams', this.checked)"> 🧵 Panel Seams</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Hem Line</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.seams ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('seams', this.checked)"> 🧵 Panel Seams</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'circle') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Circle</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Circle Cutline</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Circle</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Circle Cutline</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'aluminum-sign') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ 0.5" Rounded Corners</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.5")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🔩 4 Pre-Drilled Holes (3/8")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ 0.5" Rounded Corners</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.5")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🔩 4 Pre-Drilled Holes (3/8")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'acrylic-sign') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Polished Acrylic Trim</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.75")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🔩 Standoff Hardware Mounts</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Polished Acrylic Trim</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.75")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🔩 Standoff Hardware Mounts</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'mesh-banner') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (1.5")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim & Reinforced Webbing</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ Brass Grommets @ 24"</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🌬️ 70/30 Mesh Airflow</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (1.5")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim & Reinforced Webbing</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.grommets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ Brass Grommets @ 24"</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🌬️ 70/30 Mesh Airflow</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'safety-parking-sign') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ 0.5" Rounded Corners</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.5")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🔩 Top & Bottom Post Holes</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ 0.5" Rounded Corners</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.5")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🔩 Top & Bottom Post Holes</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'a-frame') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ 24" × 36" Board Insert</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.75")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🪝 Handle & Hinge Clearance</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ 24" × 36" Board Insert</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.75")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🪝 Handle & Hinge Clearance</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'decal-sticker') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Kiss-Cut Contour Line</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.125")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Kiss-Cut Contour Line</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.125")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'apparel') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> 👕 Chest Print Zone (12" × 14")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Margin</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('seams', this.checked)"> 🧵 Collar Reference Arc</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> 👕 Chest Print Zone (12" × 14")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Margin</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.seams ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('seams', this.checked)"> 🧵 Collar Reference Arc</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'marketing-flyer') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim Line (8.5" × 11")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.25")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim Line (8.5" × 11")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.25")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else if (tType === 'pole-banner') {
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim Line</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('polePockets', this.checked)"> 🎗️ Top & Bottom Pockets (3")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim Line</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.polePockets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('polePockets', this.checked)"> 🎗️ Top & Bottom Pockets (3")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     } else {
@@ -985,13 +985,13 @@ const CanvasInspector = {
       const hasPolePockets = this.currentDims?.hasPolePockets || this.currentDims?.pocketType?.includes('Top Pole Pocket') || this.currentDims?.pocketType?.includes('Pocket');
       const hasGrommets = this.currentDims?.hasGrommets !== false && this.currentDims?.grommetType !== 'None' && !hasPolePockets;
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (1.25")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim Line</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('seams', this.checked)"> 🧵 1.25" Hem Fold Lines</label>
-        ${hasPolePockets ? `<label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('polePockets', this.checked)"> 🎗️ 3" Top Pole Pocket</label>` : ''}
-        ${hasGrommets ? `<label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ Brass Grommets @ 24"</label>` : ''}
-        <label class="vi-toggle active"><input type="checkbox" checked onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (1.25")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim Line</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.seams ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('seams', this.checked)"> 🧵 1.25" Hem Fold Lines</label>
+        ${hasPolePockets ? `<label class="vi-toggle active"><input type="checkbox" ${this.guides.polePockets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('polePockets', this.checked)"> 🎗️ 3" Top Pole Pocket</label>` : ''}
+        ${hasGrommets ? `<label class="vi-toggle active"><input type="checkbox" ${this.guides.grommets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ Brass Grommets @ 24"</label>` : ''}
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
     }
