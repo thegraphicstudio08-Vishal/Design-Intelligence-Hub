@@ -554,13 +554,16 @@ const ProofStudio = {
       ? getOfficialProductMockup(spec?.slug || spec?.name || analysis?.productName, dims)
       : null;
 
-    const templateSrc = this.slots.template?.dataUrl 
-      || (officialTemplate ? officialTemplate.templateFile : null) 
-      || this.generateProductTemplateSvg(spec, dims);
+    // Only real or designer-uploaded files; generated pictures are no longer shown as templates/mockups
+    const placeholder = (label) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180"><rect width="320" height="180" fill="#f8fafc" stroke="#cbd5e1" stroke-dasharray="6 4"/><text x="160" y="86" font-family="Arial" font-size="14" font-weight="700" fill="#64748b" text-anchor="middle">${label}</text><text x="160" y="108" font-family="Arial" font-size="11" fill="#94a3b8" text-anchor="middle">Upload it in the Proof Studio slot</text></svg>`);
+    const templateSrc = this.slots.template?.dataUrl
+      || (officialTemplate ? officialTemplate.templateFile : null)
+      || placeholder('Real template not added yet');
 
-    const mockupSrc = this.slots.mockup?.dataUrl 
-      || (officialMockup ? officialMockup.mockupFile : null) 
-      || this.generateProductMockupSvg(spec, dims, artworkSrc);
+    const mockupSrc = this.slots.mockup?.dataUrl
+      || (officialMockup ? officialMockup.mockupFile : null)
+      || placeholder('Real mockup not added yet');
 
     // Material & Finishing Resolution
     let graphicMaterial = spec.material || '13 oz. Premium Vinyl';

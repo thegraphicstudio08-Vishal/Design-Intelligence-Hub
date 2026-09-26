@@ -609,22 +609,17 @@ function getRealTemplate(slugOrName) {
 
 function getOfficialProductTemplate(slugOrName, dims) {
   const real = getRealTemplate(slugOrName);
-  if (real) return real;
-  const pKey = resolveProductKey(slugOrName, dims);
-  if (!pKey) return null;
-  const item = BANNERBUZZ_QNAP_REGISTRY.products[pKey];
-  return (item && item.templateFile) ? item : null;
+  // Only REAL templates are shown. The generated images in BANNERBUZZ_QNAP_REGISTRY are not
+  // BannerBuzz templates, so they stay hidden until the real file is added to REAL_TEMPLATES.
+  return real || null;
 }
 
 /**
- * Return official BannerBuzz 3D mockup image path if available
- * Identifies correct mockup based on product name/slug AND file dimensions
+ * Return the real BannerBuzz 3D mockup, if one has been provided.
+ * No real mockups have been added yet — the generated ones are hidden (add real ones one by one).
  */
 function getOfficialProductMockup(slugOrName, dims) {
-  const pKey = resolveProductKey(slugOrName, dims);
-  if (!pKey) return null;
-  const item = BANNERBUZZ_QNAP_REGISTRY.products[pKey];
-  return (item && item.mockupFile) ? item : null;
+  return null;
 }
 
 if (typeof module !== 'undefined' && module.exports) {

@@ -142,7 +142,7 @@ const CanvasInspector = {
     if (this.officialTemplate && this.officialTemplate.templateFile) {
       this.officialTemplateImg = new Image();
       this.officialTemplateImg.onload = () => {
-        if (this.inspectorMode === 'template' || this.guides.officialOverlay) this.redraw();
+        if (this.inspectorMode === 'template' || this.guides.officialOverlay || this.officialTemplate?.real) this.redraw();
       };
       this.officialTemplateImg.src = this.officialTemplate.templateFile;
     } else {
@@ -1035,8 +1035,12 @@ const CanvasInspector = {
       }
       ctx.restore();
     } else {
-      const tType = this.getTemplateType(spec, dims);
-      this._drawProductTemplate(w, h, tType);
+      // No real template supplied for this product yet — never draw an invented shape
+      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 13px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Real template not added yet', w / 2, h / 2);
+      ctx.textAlign = 'start';
     }
 
     ctx.save();
@@ -1124,6 +1128,117 @@ const CanvasInspector = {
   },
 
   /**
+   * Banner production layout per SOP + real print files (Desktop/Print):
+   *  - canvas = order + 1.25" hem each side when grommets / stitched edges (US2382447 4x3 ft, US2395381 8x3 ft)
+   *  - top pole pocket: +5.25" band on top, no side hem (US2382836 36x136 in)
+   *  - grommet centres 1" inside the finished edge, at every corner, evenly spaced ≤ 48" apart
+   *    (4 ft edge = corners only, 8 ft edge = corners + middle; exact rule lives in "Banners finishing.xls")
+   *  - safe area 1.25" inside the finished edge (SOP 1_Banners · Important design checks)
+   * Returns null for non-banners or when finishing is unknown to the SOP data.
+   */
+  _bannerSop(spec, dims) {
+    if (typeof SopRules === 'undefined' || !dims?.widthIn || !dims?.heightIn) return null;
+    if (this.inspectorMode !== 'artwork' && this.inspectorMode) return null;
+    const st = (typeof appState !== 'undefined') ? appState : {};
+    const fd = st.userDims?.finishingDetails || st.finishingDetails || {};
+    const fin = [st.parsedFilename?.finishing, st.finishingDetailsSummary, fd.grommets, fd.pockets, fd.edges]
+      .filter(v => v && v !== 'None').join(' ');
+    if (SopRules.family(spec, st.parsedFilename) !== 'banner') return null;
+    const c = SopRules.canvas(spec, dims, { finishing: fin });
+    if (!c) return null;
+    const W = dims.widthIn, H = dims.heightIn;
+    const pocket = /pole pocket/i.test(fin) && c.confirmed && c.hIn > H && c.wIn === W;
+    const grommets = /grommet/i.test(fin);
+    return {
+      orderW: W, orderH: H, canvasW: c.wIn, canvasH: c.hIn, confirmed: c.confirmed, note: c.note,
+      hemX: pocket ? 0 : (c.wIn - W) / 2, hemTop: pocket ? (c.hIn - H) : (c.hIn - H) / 2, hemBottom: pocket ? 0 : (c.hIn - H) / 2,
+      pocket, grommets, safeIn: 1.25
+    };
+  },
+
+  _drawBannerSop(img, w, h, b) {
+    const ctx = this.ctx;
+    const s = w / b.canvasW; // px per inch
+    const tx = b.hemX * s, ty = b.hemTop * s, tw = b.orderW * s, th = b.orderH * s;
+
+    // Artwork fitted into the finished (order) size — never stretched
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    const r = this._fitRect(img.naturalWidth || tw, img.naturalHeight || th, tw, th);
+    ctx.drawImage(img, tx + r.x, ty + r.y, r.w, r.h);
+
+    // Hem / pole-pocket band (production area outside the finished size)
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
+    ctx.beginPath();
+    ctx.rect(0, 0, w, h);
+    ctx.rect(tx, ty, tw, th);
+    ctx.fill('evenodd');
+    ctx.restore();
+
+    // Finished size (trim / fold line)
+    if (this.guides.cutLine !== false) {
+      ctx.save();
+      ctx.strokeStyle = '#fb7b48';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(tx, ty, tw, th);
+      ctx.restore();
+    }
+
+    // Safe area 1.25" inside the finished edge
+    if (this.guides.safeArea !== false) {
+      const si = b.safeIn * s;
+      ctx.save();
+      ctx.strokeStyle = '#16a34a';
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([7, 5]);
+      ctx.strokeRect(tx + si, ty + si, tw - 2 * si, th - 2 * si);
+      ctx.restore();
+    }
+
+    // Grommet marks: 1" inside the finished edge, corners + evenly spaced ≤ 48"
+    if (b.grommets && this.guides.grommets !== false) {
+      const inset = 1 * s;
+      const pts = [];
+      const along = (lenIn) => {
+        const run = lenIn - 2; // between corner grommet centres
+        const n = Math.max(1, Math.ceil(run / 48));
+        return Array.from({ length: n + 1 }, (_, i) => 1 + (run * i) / n);
+      };
+      along(b.orderW).forEach(x => { pts.push([tx + x * s, ty + inset]); pts.push([tx + x * s, ty + th - inset]); });
+      along(b.orderH).forEach(y => { pts.push([tx + inset, ty + y * s]); pts.push([tx + tw - inset, ty + y * s]); });
+      const seen = new Set();
+      const rad = Math.max(3, 0.5 * s);
+      pts.forEach(([x, y]) => {
+        const k = Math.round(x) + ',' + Math.round(y);
+        if (seen.has(k)) return;
+        seen.add(k);
+        ctx.save();
+        ctx.fillStyle = '#e5e7eb';
+        ctx.strokeStyle = '#111827';
+        ctx.lineWidth = Math.max(1.5, rad * 0.45);
+        ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.restore();
+      });
+      b.grommetCount = seen.size;
+    }
+
+    // Labels
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    ctx.fillRect(4, 4, Math.min(w - 8, 420), 34);
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 10px Inter, sans-serif';
+    ctx.fillText(`SOP BANNER · finished ${b.orderW}" × ${b.orderH}" · canvas ${b.canvasW}" × ${b.canvasH}"`, 10, 17);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '9.5px Inter, sans-serif';
+    const parts = [b.pocket ? 'Top pole pocket 5.25"' : (b.hemX ? 'Hem 1.25" each side' : 'No hem allowance confirmed'),
+      'Safe 1.25"', b.grommets ? `Grommets 1" in, ≤48" apart (${b.grommetCount || 0})` : 'No grommets'];
+    ctx.fillText(parts.join(' · '), 10, 31);
+    ctx.restore();
+  },
+
+  /**
    * Centre-fit a source of srcW×srcH inside a box, keeping its proportions
    */
   _fitRect(srcW, srcH, boxW, boxH) {
@@ -1146,6 +1261,17 @@ const CanvasInspector = {
     let printH = parseFloat(dims.heightIn) || spec.defaultH || 24;
 
     const isRotated = (this.currentRotation === 90 || this.currentRotation === 270);
+    // Real template: the canvas is the template's own bleed size
+    if (this.officialTemplate?.real) {
+      printW = this.officialTemplate.bleedIn[0];
+      printH = this.officialTemplate.bleedIn[1];
+    }
+    // Banner: the canvas is the SOP production canvas (order + hem / pole pocket), as in the real print files
+    const bannerSop = this._bannerSop(spec, { widthIn: printW, heightIn: printH });
+    if (bannerSop) {
+      printW = bannerSop.canvasW;
+      printH = bannerSop.canvasH;
+    }
     const viewW = isRotated ? printH : printW;
     const viewH = isRotated ? printW : printH;
 
@@ -1186,6 +1312,11 @@ const CanvasInspector = {
       return;
     }
 
+    if (bannerSop) {
+      this._drawBannerSop(img, w, h, bannerSop);
+      return;
+    }
+
     // 1. Draw solid white substrate
     this.ctx.fillStyle = '#ffffff';
     this.ctx.fillRect(0, 0, w, h);
@@ -1205,6 +1336,39 @@ const CanvasInspector = {
       this.ctx.drawImage(img, r.x, r.y, r.w, r.h);
     }
     this.ctx.restore();
+
+    // 2.4 REAL template (from Template_Mockups): lay the real file over the artwork and stop —
+    //     its red (bleed), white (visible) and lavender (safe) bands ARE the guides. No code-drawn shapes.
+    if (this.officialTemplate?.real && this.officialTemplateImg && this.officialTemplateImg.complete && this.officialTemplateImg.naturalWidth) {
+      const t = this.officialTemplateImg;
+      const r = this._fitRect(t.naturalWidth, t.naturalHeight, w, h);
+      this.ctx.save();
+      this.ctx.globalCompositeOperation = 'multiply';
+      this.ctx.globalAlpha = 0.85;
+      this.ctx.drawImage(t, r.x, r.y, r.w, r.h);
+      this.ctx.restore();
+      this.ctx.save();
+      this.ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      this.ctx.fillRect(4, h - 22, Math.min(w - 8, 330), 18);
+      this.ctx.fillStyle = '#fbbf24';
+      this.ctx.font = 'bold 10px Inter, sans-serif';
+      this.ctx.fillText(`REAL TEMPLATE · ${this.officialTemplate.name}`, 8, h - 9);
+      this.ctx.restore();
+      return;
+    }
+
+    // 2.45 No real template for this product yet: show the artwork at true size only.
+    //      The old code-drawn product shapes were invented and are not shown.
+    if (!this.officialTemplate?.real) {
+      this.ctx.save();
+      this.ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      this.ctx.fillRect(4, 4, Math.min(w - 8, 300), 18);
+      this.ctx.fillStyle = '#fbbf24';
+      this.ctx.font = 'bold 10px Inter, sans-serif';
+      this.ctx.fillText('NO REAL TEMPLATE YET · artwork at order size', 8, 17);
+      this.ctx.restore();
+      return;
+    }
 
     // 2.5 Draw Official QNAP Template Overlay if enabled (fitted, not stretched to the order shape)
     if (this.guides.officialOverlay && this.officialTemplateImg && this.officialTemplateImg.complete) {
