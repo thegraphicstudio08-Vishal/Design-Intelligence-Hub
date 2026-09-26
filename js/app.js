@@ -198,7 +198,7 @@ function renderSpecBox(spec) {
       </div>
     </div>
     <div style="margin-top:8px; font-size:11px; color:#8b4513; border-top:1px dashed var(--bb-orange-mid); padding-top:6px;">
-      <strong>Material:</strong> ${spec.material} · ${spec.finishing}
+      <strong>Material:</strong> ${spec.material} · ${req && req.family === 'banner' ? 'Hem 1.25&quot; each side · grommets 1&quot; inside edge, ≤48&quot; apart (real print files)' : spec.finishing}
     </div>
   `;
   box.classList.add('visible');
@@ -915,7 +915,7 @@ function renderResults(report, previousOrders) {
             <div style="display:flex; align-items:center; gap:8px;">
               <span style="font-size:12px; font-weight:800; color:#0e2246;">🏛️ Official BannerBuzz Production Specifications</span>
               <span style="font-size:9.5px; font-weight:800; background:#fef3c7; color:#b45309; padding:2px 7px; border-radius:4px; border:1px solid #fde68a;" title="Generated reference images, not the real QNAP templates">
-                REFERENCE ONLY · NOT FROM QNAP
+                ${officialTemplate && officialTemplate.real ? "REAL TEMPLATE · TEMPLATE_MOCKUPS" : "REFERENCE ONLY · NOT FROM QNAP"}
               </span>
             </div>
             <span style="font-size:10.5px; color:#64748b; font-weight:600;">

@@ -566,7 +566,50 @@ function resolveProductKey(slugOrName, dims) {
  * Return official BannerBuzz template image path if available
  * Identifies correct template based on product name/slug AND file dimensions
  */
+/**
+ * REAL BannerBuzz templates exported from Template_Mockups (SharePoint/QNAP), not generated.
+ * Sizes are copied from the text printed on each template (inches).
+ * Colour code on every template: RED = size with bleed, WHITE = visible size, LAVENDER = safe area.
+ */
+const REAL_TEMPLATES = [
+  { key: 'backpack-flags-blade', test: t => /backpack/.test(t) && /blade/.test(t), name: 'Backpack Flag (Blade)',
+    single: 'assets/templates/real/backpack-flags-blade-single-side.jpg', double: 'assets/templates/real/backpack-flags-blade-double-side.jpg',
+    safe: [18.0901, 45.8841], visible: [19.0904, 46.9849], bleed: [20.0906, 48.0315] },
+  { key: 'backpack-flags-rectangle', test: t => /backpack/.test(t) && /rectangle/.test(t), name: 'Backpack Flag (Rectangle)',
+    single: 'assets/templates/real/backpack-flags-rectangle-single-side.jpg', double: 'assets/templates/real/backpack-flags-rectangle-double-side.jpg',
+    safe: [14.7323, 29.4961], visible: [15.7323, 30.4961], bleed: [16.7323, 31.4961] },
+  { key: 'backpack-flags-teardrop', test: t => /backpack/.test(t) && /teardrop/.test(t), name: 'Backpack Flag (Teardrop)',
+    single: 'assets/templates/real/backpack-flags-teardrop-single-side.jpg', double: 'assets/templates/real/backpack-flags-teardrop-double-side.jpg',
+    safe: [18.3651, 36.1029], visible: [19.4136, 38.3295], bleed: [19.4136, 38.3295] },
+  { key: 'backpack-flags-u-shape', test: t => /backpack/.test(t) && /u[\s_-]?shape/.test(t), name: 'Backpack Flag (U-Shape)',
+    single: 'assets/templates/real/backpack-flags-u-shape-single-side.jpg', double: 'assets/templates/real/backpack-flags-u-shape-double-side.jpg',
+    safe: [17.89, 37.9105], visible: [18.89, 39.6395], bleed: [19.89, 41.4691] }
+];
+
+/**
+ * Real template for this product, matched on the product slug/name plus the production filename.
+ * Returns null when no real template has been provided yet (never guesses a shape).
+ */
+function getRealTemplate(slugOrName) {
+  const fname = (typeof appState !== 'undefined' && appState.parsedFilename && appState.parsedFilename.fname) || '';
+  const t = (String(slugOrName || '') + ' ' + fname).toLowerCase();
+  const r = REAL_TEMPLATES.find(x => x.test(t));
+  if (!r) return null;
+  const f = (n) => +n.toFixed(2);
+  return {
+    slug: r.key,
+    name: r.name,
+    real: true,
+    templateFile: r.single,
+    doubleSideFile: r.double,
+    dims: `Visible ${f(r.visible[0])}" × ${f(r.visible[1])}" · Bleed ${f(r.bleed[0])}" × ${f(r.bleed[1])}" · Safe ${f(r.safe[0])}" × ${f(r.safe[1])}"`,
+    safeIn: r.safe, visibleIn: r.visible, bleedIn: r.bleed
+  };
+}
+
 function getOfficialProductTemplate(slugOrName, dims) {
+  const real = getRealTemplate(slugOrName);
+  if (real) return real;
   const pKey = resolveProductKey(slugOrName, dims);
   if (!pKey) return null;
   const item = BANNERBUZZ_QNAP_REGISTRY.products[pKey];
