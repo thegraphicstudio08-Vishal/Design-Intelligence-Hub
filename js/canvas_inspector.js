@@ -746,7 +746,7 @@ const CanvasInspector = {
         <div style="display:flex; align-items:center; justify-content:space-between; width:100%; background:#f0fdf4; border:1px solid #86efac; border-radius:6px; padding:6px 12px; font-size:12px; color:#15803d; font-weight:700;">
           <div style="display:flex; align-items:center; gap:8px;">
             <span>🏛️</span>
-            <span>${tName} · QNAP Production Verified</span>
+            <span>${tName} · Reference template (not from QNAP)</span>
           </div>
           <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()" style="font-size:11px;">🔄 Rotate 90°</button>
         </div>
@@ -1051,13 +1051,13 @@ const CanvasInspector = {
 
     ctx.fillStyle = '#f97316';
     ctx.font = 'bold 11.5px Inter, sans-serif';
-    ctx.fillText('🏛️ OFFICIAL BANNERBUZZ PRODUCTION TEMPLATE', 20, 26);
+    ctx.fillText('🏛️ REFERENCE TEMPLATE — NOT FROM QNAP', 20, 26);
 
     ctx.fillStyle = '#cbd5e1';
     ctx.font = '500 10px Inter, sans-serif';
     const tName = this.officialTemplate?.name || spec?.name || 'Production Template';
     const tDims = this.officialTemplate?.dims || `${dims?.widthIn || spec?.defaultW || 36}" × ${dims?.heightIn || spec?.defaultH || 24}"`;
-    ctx.fillText(`${tName} · ${tDims} · SOP Compliant`, 20, 42);
+    ctx.fillText(`${tName} · ${tDims} · replace with real die-line`, 20, 42);
     ctx.restore();
   },
 
@@ -2020,11 +2020,15 @@ const CanvasInspector = {
     const padBottom = 12;
     const padRight = 8;
 
+    // Single-sided desk blade (real proof US2395878): curve at TOP-LEFT, pole sleeve on the RIGHT.
+    // Outline spans from the left edge to the sleeve: rounded corner away from the pole.
+    const labelX = padRight + 6;
+
     // 1. High-contrast waste mask outside desk blade flag contour
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, w, h);
-    this._traceDeskBladePath(ctx, sleeveW, padTop, w - padRight, h - padBottom);
+    this._traceDeskBladePath(ctx, padRight, padTop, w - sleeveW, h - padBottom);
     ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
     ctx.fill('evenodd');
     ctx.restore();
@@ -2036,12 +2040,14 @@ const CanvasInspector = {
       ctx.lineWidth = 3;
       ctx.setLineDash([]);
       ctx.beginPath();
-      this._traceDeskBladePath(ctx, sleeveW, padTop, w - padRight, h - padBottom);
+      this._traceDeskBladePath(ctx, padRight, padTop, w - sleeveW, h - padBottom);
       ctx.stroke();
+      ctx.restore();
 
+      ctx.save();
       ctx.fillStyle = '#fb7b48';
       ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.fillText(`✂️ DESK BLADE CUTLINE: ${printW}" × ${printH}" (Horizontal Base)`, sleeveW + 10, padTop + 24);
+      ctx.fillText(`✂️ DESK BLADE CUTLINE: ${printW}" × ${printH}"`, labelX, padTop + 24);
       ctx.restore();
     }
 
@@ -2052,12 +2058,14 @@ const CanvasInspector = {
       ctx.lineWidth = 2.2;
       ctx.setLineDash([8, 5]);
       ctx.beginPath();
-      this._traceDeskBladeSafePath(ctx, sleeveW, padTop, w - padRight, h - padBottom, safeX, safeY);
+      this._traceDeskBladeSafePath(ctx, padRight, padTop, w - sleeveW, h - padBottom, safeX, safeY);
       ctx.stroke();
+      ctx.restore();
 
+      ctx.save();
       ctx.fillStyle = '#16a34a';
       ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.fillText(`🛡️ SAFE ZONE: 0.50" inside cutline`, sleeveW + 12, padTop + 42);
+      ctx.fillText(`🛡️ SAFE ZONE: 0.50" inside cutline`, labelX, padTop + 42);
       ctx.restore();
     }
 
@@ -2070,27 +2078,27 @@ const CanvasInspector = {
       ctx.strokeRect(1, 1, w - 2, h - 2);
       ctx.fillStyle = '#3b82f6';
       ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.fillText(`📐 Bleed: 0.25" on all sides`, sleeveW + 10, h - 6);
+      ctx.fillText(`📐 Bleed: 0.25" on all sides`, labelX, h - 6);
       ctx.restore();
     }
 
-    // 5. Left Pole Sleeve (Fabric sleeve channel for mini tabletop desk flag pole)
+    // 5. Right Pole Sleeve (Fabric sleeve channel for mini tabletop desk flag pole)
     if (this.guides.sleeve) {
       ctx.save();
       ctx.fillStyle = 'rgba(26, 32, 44, 0.88)';
-      ctx.fillRect(0, 0, sleeveW, h);
+      ctx.fillRect(w - sleeveW, 0, sleeveW, h);
 
       ctx.strokeStyle = '#fbbf24';
       ctx.lineWidth = 1.8;
       ctx.setLineDash([5, 4]);
       ctx.beginPath();
-      ctx.moveTo(sleeveW - 3, 0);
-      ctx.lineTo(sleeveW - 3, h);
+      ctx.moveTo(w - sleeveW + 3, 0);
+      ctx.lineTo(w - sleeveW + 3, h);
       ctx.stroke();
 
       ctx.save();
-      ctx.translate(sleeveW / 2 + 2, h / 2);
-      ctx.rotate(-Math.PI / 2);
+      ctx.translate(w - sleeveW / 2 - 2, h / 2);
+      ctx.rotate(Math.PI / 2);
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 9.5px Inter, sans-serif';
       ctx.textAlign = 'center';
@@ -2107,9 +2115,9 @@ const CanvasInspector = {
     // Start at bottom-left corner
     ctx.moveTo(x1, y1 + h);
     // Vertical left edge along pole spine
-    ctx.lineTo(x1, y1 + h * 0.22);
+    ctx.lineTo(x1, y1 + h * 0.32);
     // Smooth dome arch curving to top-right
-    ctx.bezierCurveTo(x1, y1, x1 + w * 0.35, y1, x2, y1 + h * 0.04);
+    ctx.bezierCurveTo(x1, y1 + h * 0.06, x1 + w * 0.45, y1, x2, y1);
     // Straight vertical right edge all the way to bottom
     ctx.lineTo(x2, y1 + h);
     // Flat horizontal bottom cutline
@@ -2131,8 +2139,8 @@ const CanvasInspector = {
     const nh = ny2 - ny1;
 
     ctx.moveTo(nx1, ny1 + nh);
-    ctx.lineTo(nx1, ny1 + nh * 0.22);
-    ctx.bezierCurveTo(nx1, ny1, nx1 + nw * 0.35, ny1, nx2, ny1 + nh * 0.04);
+    ctx.lineTo(nx1, ny1 + nh * 0.32);
+    ctx.bezierCurveTo(nx1, ny1 + nh * 0.06, nx1 + nw * 0.45, ny1, nx2, ny1);
     ctx.lineTo(nx2, ny1 + nh);
     ctx.lineTo(nx1, ny1 + nh);
     ctx.closePath();
