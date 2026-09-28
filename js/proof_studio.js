@@ -76,8 +76,10 @@ const ProofStudio = {
 
   /**
    * Calculate exact Photoshop Print Size zoom scale per BannerBuzz SOP:
-   * - Max dimension > 72": 100% scale (scale ratio 1.0)
-   * - Max dimension <= 72": 114.4% scale zoom (scale ratio 1.144)
+   * Calibrated with Photoshop Preferences (Screen Resolution = 143 PPI, Print SOP = 125 PPI)
+   * Rule:
+   * - Both dimensions >= 72" (w >= 72 && h >= 72): 100% scale (scale ratio 1.0)
+   * - Otherwise (either dimension < 72"): 114.4% scale zoom (scale ratio 143/125 = 1.144) Print Preview
    * Converts physical print inches to screen CSS pixels at standard 96 PPI.
    */
   calculateCropScale(printW, printH, spec) {
@@ -90,17 +92,28 @@ const ProofStudio = {
       h = spec.bleed[1];
     }
 
-    const maxDim = Math.max(w, h);
     // User / BannerBuzz SOP Rule:
-    // Above 72" -> 100% scale (1.0)
-    // Below or equal to 72" -> 114.4% scale zoom (1.144)
-    let sopScale = (maxDim > 72) ? 1.0 : 1.144;
-    let percentText = (maxDim > 72) ? '100%' : '114.4%';
-    let ruleText = (maxDim > 72) ? '>72" SOP: 100% Scale' : '≤72" SOP: 114.4% Scale Zoom';
+    // "need 72" both side for 100% zoom othervice we consider print previu"
+    // Both sides >= 72" -> 100% scale (1.0)
+    // If either side < 72" -> 114.4% scale zoom (1.144) Photoshop Print Size Preview (143 PPI Screen / 125 PPI Banner Print)
+    const isBoth72 = (w >= 72 && h >= 72);
+    let sopScale = isBoth72 ? 1.0 : 1.144;
+    let percentText = isBoth72 ? '100%' : '114.4%';
+    let badgeText = isBoth72 ? 'AUTO 100% SCALE CROP' : 'AUTO 114.4% PRINT PREVIEW CROP';
+    let buttonText = isBoth72 ? '🔍 Crop Shot (100%)' : '🔍 Print Preview (114.4%)';
+    let subtitleDetail = isBoth72 ? '100% Actual Scale Detail Inspection' : 'Photoshop Print Size Preview · 114.4% Scale';
+    let modeText = isBoth72
+      ? '100% Actual Scale Detail Inspection · SOP Sharpness Verified'
+      : 'Photoshop Print Size Preview (114.4% Scale at 143 PPI Screen) · SOP Verified';
+    let ruleText = isBoth72 ? '≥72" Both Sides: 100% Scale' : '<72" Dimension: 114.4% Print Preview';
 
     if (this.options.cropZoomManual) {
       sopScale = this.options.cropZoomManual;
       percentText = `${Math.round(sopScale * 100)}%`;
+      badgeText = `MANUAL ${percentText} CROP`;
+      buttonText = `🔍 Crop Shot (${percentText})`;
+      subtitleDetail = `Manual Scale Inspection (${percentText})`;
+      modeText = `Manual Scale Inspection (${percentText}) · SOP Verified`;
       ruleText = `Manual: ${percentText}`;
     }
 
@@ -111,10 +124,16 @@ const ProofStudio = {
     return {
       sopScale,
       percentText,
+      badgeText,
+      buttonText,
+      subtitleDetail,
+      modeText,
       ruleText,
+      isBoth72,
       physicalW,
       physicalH,
-      maxDim,
+      minDim: Math.min(w, h),
+      maxDim: Math.max(w, h),
       w,
       h
     };
@@ -198,9 +217,9 @@ const ProofStudio = {
         badge.style.color = '#16a34a';
       } else {
         const lastDims = this._lastOrderData?.dims || {};
-        const maxD = Math.max(parseFloat(lastDims.widthIn) || 36, parseFloat(lastDims.heightIn) || 24);
-        const pText = maxD > 72 ? '100%' : '114.4%';
-        badge.textContent = `AUTO ${pText} CROP`;
+        const lastSpec = this._lastOrderData?.spec || {};
+        const cropInfo = this.calculateCropScale(lastDims.widthIn, lastDims.heightIn, lastSpec);
+        badge.textContent = cropInfo.badgeText;
         badge.style.background = '#ede9fe';
         badge.style.color = '#4739d2';
       }
@@ -776,7 +795,7 @@ const ProofStudio = {
               <div style="width:24px; height:24px; border-radius:50%; background:#4739d2; color:#ffffff; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">2</div>
               <div>
                 <h2 style="font-size:13.5px; font-weight:800; color:#111c38; margin:0;">Print Quality Proof</h2>
-                <div style="font-size:10.5px; color:#64748b;">This is a zoomed-in view to help you review the print quality and detail (${cropScaleInfo.percentText} Photoshop Print Size Inspection).</div>
+                <div style="font-size:10.5px; color:#64748b;">This is a zoomed-in view to help you review the print quality and detail (${cropScaleInfo.subtitleDetail}).</div>
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
@@ -786,12 +805,12 @@ const ProofStudio = {
                 </span>
               ` : `
                 <span style="font-size:9.5px; font-weight:800; color:#4739d2; background:#ede9fe; padding:3px 8px; border-radius:4px; border:1px solid #ddd6fe;">
-                  AUTO ${cropScaleInfo.percentText} SCALE CROP
+                  ${cropScaleInfo.badgeText}
                 </span>
               `}
               <div class="no-print" style="display:inline-flex; border:1px solid #cbd5e1; border-radius:4px; overflow:hidden;">
                 <button type="button" class="btn btn-sm" onclick="ProofStudio.setSection2View('crop')" style="background:#ff5f1f; color:#ffffff; border:none; padding:3px 8px; font-size:10px; font-weight:700; cursor:pointer;">
-                  🔍 Crop Shot (${cropScaleInfo.percentText})
+                  ${cropScaleInfo.buttonText}
                 </button>
                 <button type="button" class="btn btn-sm" onclick="ProofStudio.setSection2View('mockup')" style="background:#ffffff; color:#334155; border:none; border-left:1px solid #cbd5e1; padding:3px 8px; font-size:10px; font-weight:700; cursor:pointer;" title="Switch to Official QNAP Product Template & 3D Mockup">
                   📐 Official Template &amp; Mockup
@@ -819,7 +838,7 @@ const ProofStudio = {
                 " />
               </div>
               <div class="no-print" style="position:absolute; bottom:8px; right:10px; background:rgba(15,23,42,0.88); color:#ffffff; font-size:10px; font-weight:700; padding:4px 12px; border-radius:4px; display:flex; align-items:center; gap:8px; box-shadow:0 2px 6px rgba(0,0,0,0.3); backdrop-filter:blur(4px); z-index:2; pointer-events:none;">
-                <span>🔍 ${cropScaleInfo.percentText} Actual Scale Inspection (${cropScaleInfo.ruleText})</span>
+                <span>🔍 ${cropScaleInfo.modeText}</span>
                 <span style="color:#4ade80;">● Photoshop Print Size Verified</span>
               </div>
               <div class="no-print" style="position:absolute; top:8px; left:10px; background:rgba(255,255,255,0.92); color:#475569; font-size:9.5px; font-weight:600; padding:2px 8px; border-radius:4px; border:1px solid #cbd5e1; box-shadow:0 1px 3px rgba(0,0,0,0.08); pointer-events:none;">
