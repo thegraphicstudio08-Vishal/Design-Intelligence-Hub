@@ -575,10 +575,49 @@ const FileAnalyzer = {
       }
     }
 
-    const humanProductName = rawProdName ? rawProdName.replace(/_/g, ' ') : null;
+    let humanProductName = rawProdName ? rawProdName.replace(/_/g, ' ') : null;
     let slug = rawProdName ? rawProdName.toLowerCase().replace(/_/g, '-').replace(/[^\w\-]/g, '') : null;
     if (slug) {
       slug = slug.replace(/-(?:graphic|display-graphic)$/, '').replace(/-+$/, '');
+    }
+
+    // Sub-product variation & shaped product detection (Table Covers, Flags, Stands, Signs)
+    const isTableCover = /table[-_ ]?(?:cover|throw)/i.test(clean) || (rawProdName && /table/i.test(rawProdName));
+    const isStretch = /stretch/i.test(clean) || (rawProdName && /stretch/i.test(rawProdName));
+    const isFitted = /fitted/i.test(clean) || (rawProdName && /fitted/i.test(rawProdName));
+
+    const is3Sided = /3[-_ ]?side|open[-_ ]?back/i.test(clean);
+    const isZipper = /zipper/i.test(clean);
+    const is4Sided = /4[-_ ]?side|closed[-_ ]?back/i.test(clean);
+
+    let isShapedTemplate = false;
+    let templateAspect = null;
+    let tableCoverShape = null;
+
+    if (isTableCover) {
+      isShapedTemplate = true;
+      const isStretchType = isStretch || !isFitted;
+      const prefix = isStretchType ? 'Stretch Table Covers' : 'Fitted Table Covers';
+      const prefixSlug = isStretchType ? 'stretch-table-covers' : 'fitted-table-covers';
+
+      let shapeVar = '3 Sided Open Back';
+      let shapeSlug = '3-sided';
+      if (isZipper) {
+        shapeVar = '4 Sided with Zipper Back';
+        shapeSlug = 'zipper';
+      } else if (is4Sided) {
+        shapeVar = '4 Sided Closed Back';
+        shapeSlug = '4-sided';
+      } else if (is3Sided) {
+        shapeVar = '3 Sided Open Back';
+        shapeSlug = '3-sided';
+      }
+
+      tableCoverShape = `${isStretchType ? 'stretch' : 'fitted'}-${shapeSlug}`;
+      slug = `${prefixSlug}-${shapeSlug}`;
+      const dimLabel = rawW && rawH ? `${rawW} x ${rawH} Ft ` : (widthIn ? `${Math.round(widthIn / 12)} x ${(heightIn / 12).toFixed(1)} Ft ` : '6 x 2.5 Ft ');
+      humanProductName = `${prefix} ${dimLabel}(${shapeVar})`;
+      templateAspect = isStretchType ? (shapeSlug === '3-sided' ? 1.3974 : 1.3487) : 1.4719;
     }
 
     // Size-based refinement: If small tabletop size (<= 10" x 25"), accurately classify flag as desk flag
@@ -627,6 +666,13 @@ const FileAnalyzer = {
       'feather-flag': 'feather-flags',
       'blade-flags': 'blade-flags',
       'blade-flag': 'blade-flags',
+      'stretch-table-covers': 'stretch-table-covers',
+      'stretch-table-covers-3-sided': 'stretch-table-covers',
+      'stretch-table-covers-4-sided': 'stretch-table-covers',
+      'stretch-table-covers-zipper': 'stretch-table-covers',
+      'fitted-table-covers-3-sided': 'fitted-table-covers',
+      'fitted-table-covers-4-sided': 'fitted-table-covers',
+      'fitted-table-covers-zipper': 'fitted-table-covers',
       'custom-table-covers': 'fitted-table-covers',
       'table-covers': 'fitted-table-covers',
       'table-cover': 'fitted-table-covers',
@@ -791,7 +837,10 @@ const FileAnalyzer = {
       isBackSide,
       hasGrommets: grommetType !== 'None' || /grommet/i.test(clean),
       hasPolePockets: pocketType !== 'None' || /pole_pocket|pole_sleeve/i.test(clean),
-      isProof: /script_overall|crop|mockup|render/i.test(clean)
+      isProof: /script_overall|crop|mockup|render/i.test(clean),
+      isShapedTemplate,
+      templateAspect,
+      tableCoverShape
     };
   }
 };

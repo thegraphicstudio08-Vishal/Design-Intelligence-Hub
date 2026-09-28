@@ -22,15 +22,17 @@ const ProofStudio = {
   options: {
     enableCropShot: true, // Checkbox toggle for Print Preview Crop Shot
     section2View: 'crop', // 'crop' or 'mockup'
-    cropX: 50,
-    cropY: 50,
-    cropZoom: 2.2,
+    cropX: null,          // Default null -> dynamically centered based on product orientation
+    cropY: null,          // Default null -> dynamically centered based on product orientation
+    cropZoomManual: null, // Optional manual override, default null (uses SOP auto calculation)
     includeSpecs: true,
     includeApproval: true
   },
 
   _lastOrderData: null,
   _lastTargetId: null,
+  _boundCropMouseMove: null,
+  _boundCropMouseUp: null,
 
   setSlot(key, fileOrDataUrl, name) {
     if (this.slots[key] !== undefined) {
@@ -60,27 +62,129 @@ const ProofStudio = {
   },
 
   setCropZoom(zoom) {
-    this.options.cropZoom = parseFloat(zoom) || 2.2;
+    this.options.cropZoomManual = zoom ? parseFloat(zoom) : null;
     this.refreshCurrentProof();
     this.updateSidebarControls();
   },
 
   setCropFocus(xPercent, yPercent) {
-    this.options.cropX = Math.max(5, Math.min(95, xPercent));
-    this.options.cropY = Math.max(5, Math.min(95, yPercent));
+    this.options.cropX = Math.max(0, Math.min(100, xPercent));
+    this.options.cropY = Math.max(0, Math.min(100, yPercent));
     this.refreshCurrentProof();
     this.updateSidebarControls();
+  },
+
+  /**
+   * Calculate exact Photoshop Print Size zoom scale per BannerBuzz SOP:
+   * - Max dimension > 72": 100% scale (scale ratio 1.0)
+   * - Max dimension <= 72": 114.4% scale zoom (scale ratio 1.144)
+   * Converts physical print inches to screen CSS pixels at standard 96 PPI.
+   */
+  calculateCropScale(printW, printH, spec) {
+    let w = parseFloat(printW) || 36;
+    let h = parseFloat(printH) || 24;
+
+    // If template has specific bleed dimensions (e.g. Desk Flags Blade [6.74, 17.71]):
+    if (spec?.bleed && Array.isArray(spec.bleed) && spec.bleed.length >= 2) {
+      w = spec.bleed[0];
+      h = spec.bleed[1];
+    }
+
+    const maxDim = Math.max(w, h);
+    // User / BannerBuzz SOP Rule:
+    // Above 72" -> 100% scale (1.0)
+    // Below or equal to 72" -> 114.4% scale zoom (1.144)
+    let sopScale = (maxDim > 72) ? 1.0 : 1.144;
+    let percentText = (maxDim > 72) ? '100%' : '114.4%';
+    let ruleText = (maxDim > 72) ? '>72" SOP: 100% Scale' : '≤72" SOP: 114.4% Scale Zoom';
+
+    if (this.options.cropZoomManual) {
+      sopScale = this.options.cropZoomManual;
+      percentText = `${Math.round(sopScale * 100)}%`;
+      ruleText = `Manual: ${percentText}`;
+    }
+
+    // 96 CSS pixels per inch
+    const physicalW = Math.round(w * 96 * sopScale);
+    const physicalH = Math.round(h * 96 * sopScale);
+
+    return {
+      sopScale,
+      percentText,
+      ruleText,
+      physicalW,
+      physicalH,
+      maxDim,
+      w,
+      h
+    };
   },
 
   handleArtworkClick(e) {
     if (!this.options.enableCropShot || this.slots.crop?.dataUrl) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.max(5, Math.min(95, ((e.clientX - rect.left) / rect.width) * 100));
-    const y = Math.max(5, Math.min(95, ((e.clientY - rect.top) / rect.height) * 100));
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
     this.options.cropX = Math.round(x);
     this.options.cropY = Math.round(y);
     this.refreshCurrentProof();
     this.updateSidebarControls();
+  },
+
+  initCropPan(viewportEl, physicalW, physicalH) {
+    if (!viewportEl || this.slots.crop?.dataUrl) return;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let startCropX = (this.options.cropX !== null && this.options.cropX !== undefined) ? this.options.cropX : 50;
+    let startCropY = (this.options.cropY !== null && this.options.cropY !== undefined) ? this.options.cropY : 50;
+
+    viewportEl.onmousedown = (e) => {
+      if (this.slots.crop?.dataUrl) return;
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      startCropX = (this.options.cropX !== null && this.options.cropX !== undefined) ? this.options.cropX : 50;
+      startCropY = (this.options.cropY !== null && this.options.cropY !== undefined) ? this.options.cropY : 50;
+      viewportEl.style.cursor = 'grabbing';
+      e.preventDefault();
+    };
+
+    const onMouseMove = (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      const deltaXPercent = (dx / physicalW) * 100;
+      const deltaYPercent = (dy / physicalH) * 100;
+      const newX = Math.max(0, Math.min(100, Math.round(startCropX - deltaXPercent)));
+      const newY = Math.max(0, Math.min(100, Math.round(startCropY - deltaYPercent)));
+      this.options.cropX = newX;
+      this.options.cropY = newY;
+      const img = document.getElementById('proof-crop-img');
+      if (img) {
+        img.style.left = `calc(50% - ${Math.round(physicalW * (newX / 100))}px)`;
+        img.style.top = `calc(50% - ${Math.round(physicalH * (newY / 100))}px)`;
+      }
+      const reticle = document.querySelector('.crop-reticle');
+      if (reticle) {
+        reticle.style.left = `${newX}%`;
+        reticle.style.top = `${newY}%`;
+      }
+    };
+
+    const onMouseUp = () => {
+      if (isDragging) {
+        isDragging = false;
+        viewportEl.style.cursor = 'grab';
+      }
+    };
+
+    if (this._boundCropMouseMove) window.removeEventListener('mousemove', this._boundCropMouseMove);
+    if (this._boundCropMouseUp) window.removeEventListener('mouseup', this._boundCropMouseUp);
+    this._boundCropMouseMove = onMouseMove;
+    this._boundCropMouseUp = onMouseUp;
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
   },
 
   updateSidebarControls() {
@@ -93,7 +197,10 @@ const ProofStudio = {
         badge.style.background = '#dcfce7';
         badge.style.color = '#16a34a';
       } else {
-        badge.textContent = 'AUTO CROP';
+        const lastDims = this._lastOrderData?.dims || {};
+        const maxD = Math.max(parseFloat(lastDims.widthIn) || 36, parseFloat(lastDims.heightIn) || 24);
+        const pText = maxD > 72 ? '100%' : '114.4%';
+        badge.textContent = `AUTO ${pText} CROP`;
         badge.style.background = '#ede9fe';
         badge.style.color = '#4739d2';
       }
@@ -612,15 +719,27 @@ const ProofStudio = {
     const section2View = this.options.section2View || (enableCropShot ? 'crop' : 'mockup');
     const isMockupView = (section2View === 'mockup' || !enableCropShot);
     const hasCustomCrop = Boolean(this.slots.crop?.dataUrl);
-    const cropZoom = this.options.cropZoom || 2.2;
-    const cropX = this.options.cropX !== undefined ? this.options.cropX : 50;
-    const cropY = this.options.cropY !== undefined ? this.options.cropY : 50;
+
+    // Calculate SOP Crop Scale: >72" -> 100%, <=72" -> 114.4%
+    const cropScaleInfo = this.calculateCropScale(printW, printH, spec);
+
+    // Auto-center default focus if not explicitly set
+    let cropX = (this.options.cropX !== null && this.options.cropX !== undefined) ? this.options.cropX : 50;
+    let cropY = (this.options.cropY !== null && this.options.cropY !== undefined) ? this.options.cropY : 50;
+    if (this.options.cropY === null || this.options.cropY === undefined) {
+      // Tall vertical items (flags, roll-ups, banners taller than wide): default focus on upper third (character face / primary logo)
+      cropY = (cropScaleInfo.h > cropScaleInfo.w * 1.2) ? 34 : 50;
+    }
+
+    // Reticle dimensions for Section 1 (indicates visible viewport on the artwork)
+    const reticleW = Math.max(8, Math.min(100, Math.round((750 / cropScaleInfo.physicalW) * 100)));
+    const reticleH = Math.max(8, Math.min(100, Math.round((240 / cropScaleInfo.physicalH) * 100)));
 
     let visualSectionsHtml = '';
     let specSectionNum = 3;
 
     if (!isMockupView) {
-      // ── BB Proof.png Official Layout: Section 1 Entire Artwork + Section 2 Print Quality Proof (100% Crop Shot) ──
+      // ── BB Proof.png Official Layout: Section 1 Entire Artwork + Section 2 Print Quality Proof (100% / 114.4% Crop Shot) ──
       specSectionNum = 3;
       visualSectionsHtml = `
         <!-- Section 1: Entire Artwork Proof -->
@@ -643,8 +762,8 @@ const ProofStudio = {
             <div style="position:relative; max-width:100%; max-height:100%; display:inline-flex; align-items:center; justify-content:center; ${!hasCustomCrop ? 'cursor:crosshair;' : ''}" ${!hasCustomCrop ? 'onclick="ProofStudio.handleArtworkClick(event)" title="Click to move Print Quality Crop Shot focus"' : ''}>
               <img src="${artworkSrc}" alt="Entire Artwork Proof" class="proof-slot-img" style="max-width:100%; max-height:165px; object-fit:contain; display:block;" />
               ${!hasCustomCrop ? `
-                <!-- Focus Reticle Box indicating auto crop position -->
-                <div class="crop-reticle no-print" style="left:${cropX}%; top:${cropY}%; width:${Math.max(14, Math.round(36 / cropZoom))}%; height:${Math.max(18, Math.round(44 / cropZoom))}%;"></div>
+                <!-- Focus Reticle Box indicating exact auto crop inspection window -->
+                <div class="crop-reticle no-print" style="position:absolute; left:${cropX}%; top:${cropY}%; width:${reticleW}%; height:${reticleH}%; transform:translate(-50%, -50%); border:2px dashed #ff5f1f; background:rgba(255,95,31,0.18); box-shadow:0 0 0 1px rgba(0,0,0,0.25); pointer-events:none; box-sizing:border-box; transition:left 0.12s ease, top 0.12s ease;"></div>
               ` : ''}
             </div>
           </div>
@@ -657,7 +776,7 @@ const ProofStudio = {
               <div style="width:24px; height:24px; border-radius:50%; background:#4739d2; color:#ffffff; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">2</div>
               <div>
                 <h2 style="font-size:13.5px; font-weight:800; color:#111c38; margin:0;">Print Quality Proof</h2>
-                <div style="font-size:10.5px; color:#64748b;">This is a zoomed-in view to help you review the print quality and detail.</div>
+                <div style="font-size:10.5px; color:#64748b;">This is a zoomed-in view to help you review the print quality and detail (${cropScaleInfo.percentText} Photoshop Print Size Inspection).</div>
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
@@ -667,12 +786,12 @@ const ProofStudio = {
                 </span>
               ` : `
                 <span style="font-size:9.5px; font-weight:800; color:#4739d2; background:#ede9fe; padding:3px 8px; border-radius:4px; border:1px solid #ddd6fe;">
-                  AUTO 100% SCALE CROP
+                  AUTO ${cropScaleInfo.percentText} SCALE CROP
                 </span>
               `}
               <div class="no-print" style="display:inline-flex; border:1px solid #cbd5e1; border-radius:4px; overflow:hidden;">
                 <button type="button" class="btn btn-sm" onclick="ProofStudio.setSection2View('crop')" style="background:#ff5f1f; color:#ffffff; border:none; padding:3px 8px; font-size:10px; font-weight:700; cursor:pointer;">
-                  🔍 Crop Shot
+                  🔍 Crop Shot (${cropScaleInfo.percentText})
                 </button>
                 <button type="button" class="btn btn-sm" onclick="ProofStudio.setSection2View('mockup')" style="background:#ffffff; color:#334155; border:none; border-left:1px solid #cbd5e1; padding:3px 8px; font-size:10px; font-weight:700; cursor:pointer;" title="Switch to Official QNAP Product Template & 3D Mockup">
                   📐 Official Template &amp; Mockup
@@ -681,15 +800,30 @@ const ProofStudio = {
             </div>
           </div>
 
-          <!-- 100% Scale Crop Shot View -->
-          <div style="border:1px solid #cbd5e1; border-radius:4px; height:125px; overflow:hidden; position:relative; background:#ffffff; display:flex; align-items:center; justify-content:center;">
+          <!-- SOP Scale Crop Shot Viewport -->
+          <div id="proof-crop-viewport" style="border:1px solid #cbd5e1; border-radius:4px; height:240px; overflow:hidden; position:relative; background:#f8fafc; display:flex; align-items:center; justify-content:center; cursor:${!hasCustomCrop ? 'grab' : 'default'}; user-select:none;">
             ${hasCustomCrop ? `
               <img src="${this.slots.crop.dataUrl}" alt="Custom Print Quality Crop Shot" class="proof-zoom-img" style="max-width:100%; max-height:100%; object-fit:contain;" />
             ` : `
-              <img src="${artworkSrc}" alt="Print Quality Zoom" class="proof-zoom-img" style="width:100%; height:100%; object-fit:contain; transform-origin:${cropX}% ${cropY}%; transform:scale(${cropZoom}); transition:transform 0.2s ease;" />
-              <div class="no-print" style="position:absolute; bottom:6px; right:8px; background:rgba(15,23,42,0.85); color:#ffffff; font-size:9.5px; font-weight:700; padding:3px 10px; border-radius:4px; display:flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.3);">
-                <span>🔍 100% Actual Scale Detail Inspection</span>
-                <span style="color:#4ade80;">● SOP Sharpness Verified</span>
+              <div style="position:relative; width:100%; height:100%; overflow:hidden; pointer-events:none;">
+                <img id="proof-crop-img" src="${artworkSrc}" alt="Print Quality Zoom" class="proof-zoom-img" style="
+                  position: absolute;
+                  width: ${cropScaleInfo.physicalW}px;
+                  height: ${cropScaleInfo.physicalH}px;
+                  max-width: none !important;
+                  max-height: none !important;
+                  left: calc(50% - ${Math.round(cropScaleInfo.physicalW * (cropX / 100))}px);
+                  top: calc(50% - ${Math.round(cropScaleInfo.physicalH * (cropY / 100))}px);
+                  transition: left 0.12s ease, top 0.12s ease;
+                  display: block;
+                " />
+              </div>
+              <div class="no-print" style="position:absolute; bottom:8px; right:10px; background:rgba(15,23,42,0.88); color:#ffffff; font-size:10px; font-weight:700; padding:4px 12px; border-radius:4px; display:flex; align-items:center; gap:8px; box-shadow:0 2px 6px rgba(0,0,0,0.3); backdrop-filter:blur(4px); z-index:2; pointer-events:none;">
+                <span>🔍 ${cropScaleInfo.percentText} Actual Scale Inspection (${cropScaleInfo.ruleText})</span>
+                <span style="color:#4ade80;">● Photoshop Print Size Verified</span>
+              </div>
+              <div class="no-print" style="position:absolute; top:8px; left:10px; background:rgba(255,255,255,0.92); color:#475569; font-size:9.5px; font-weight:600; padding:2px 8px; border-radius:4px; border:1px solid #cbd5e1; box-shadow:0 1px 3px rgba(0,0,0,0.08); pointer-events:none;">
+                ✋ Drag to pan or click Section 1 to reposition
               </div>
             `}
           </div>
@@ -945,6 +1079,9 @@ const ProofStudio = {
 
     setTimeout(() => {
       this.updateSidebarControls();
+      if (!isMockupView && !hasCustomCrop) {
+        this.initCropPan(document.getElementById('proof-crop-viewport'), cropScaleInfo.physicalW, cropScaleInfo.physicalH);
+      }
     }, 10);
   },
 

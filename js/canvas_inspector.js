@@ -132,11 +132,12 @@ const CanvasInspector = {
     this.currentRotation = 0;
 
     // Resolve official BannerBuzz template & mockup from QNAP registry (using spec AND dimensions)
+    const lookupSlug = (typeof appState !== 'undefined' && appState.parsedFilename && appState.parsedFilename.productSlug) || spec?.slug || spec?.name;
     this.officialTemplate = (typeof getOfficialProductTemplate === 'function')
-      ? getOfficialProductTemplate(spec?.slug || spec?.name, dims)
+      ? getOfficialProductTemplate(lookupSlug, dims)
       : null;
     this.officialMockup = (typeof getOfficialProductMockup === 'function')
-      ? getOfficialProductMockup(spec?.slug || spec?.name, dims)
+      ? getOfficialProductMockup(lookupSlug, dims)
       : null;
 
     if (this.officialTemplate && this.officialTemplate.templateFile) {
@@ -1300,6 +1301,15 @@ const CanvasInspector = {
         // If artwork includes template bleed artboard (e.g. 0.380 vs nominal 0.311), align canvas
         if (Math.abs(artAspect - nominalAspect) / nominalAspect > 0.05 && artAspect < 1.0) {
           printW = +(printH * artAspect).toFixed(2);
+        }
+      } else if (tType === 'table-cover' || spec?.isShapedTemplate || (typeof appState !== 'undefined' && appState.parsedFilename?.isShapedTemplate)) {
+        // Table covers: nominal order size is e.g. 72" x 30" (aspect 2.4), but the flat print template is ~1.397
+        const artAspect = img.naturalWidth / img.naturalHeight;
+        const targetAspect = this.officialTemplate?.aspect || spec?.templateAspect || (typeof appState !== 'undefined' && appState.parsedFilename?.templateAspect) || 1.3974;
+        if (artAspect > 1.05 && artAspect < 1.95) {
+          printW = +(printH * artAspect).toFixed(2);
+        } else {
+          printW = +(printH * targetAspect).toFixed(2);
         }
       }
     }
@@ -2799,61 +2809,217 @@ const CanvasInspector = {
   },
 
   /**
-   * 🪑 TABLE COVER TEMPLATE
+   * 🪑 TABLE COVER DIE-LINE & SILHOUETTE ENGINE
+   * Exact CAD contours extracted from BannerBuzz QNAP Template_Mockups (6ft / 4ft / 8ft)
    */
+  _trace3SidedTableCover(ctx, w, h) {
+    ctx.moveTo(0.73497 * w, 0.00634 * h);
+    ctx.lineTo(0.72925 * w, 0.00634 * h);
+    ctx.bezierCurveTo(0.69386 * w, 0.18136 * h, 0.6453 * w, 0.27872 * h, 0.49988 * w, 0.27872 * h);
+    ctx.bezierCurveTo(0.36281 * w, 0.27872 * h, 0.30334 * w, 0.18342 * h, 0.26945 * w, 0.00634 * h);
+    ctx.lineTo(0.26373 * w, 0.00634 * h);
+    ctx.lineTo(0.25374 * w, 0.31916 * h);
+    ctx.lineTo(0.02952 * w, 0.36053 * h);
+    ctx.lineTo(0.02952 * w, 0.60295 * h);
+    ctx.lineTo(0.25374 * w, 0.64433 * h);
+    ctx.lineTo(0.26373 * w, 0.95752 * h);
+    ctx.lineTo(0.73497 * w, 0.95752 * h);
+    ctx.lineTo(0.74496 * w, 0.64433 * h);
+    ctx.lineTo(0.97047 * w, 0.60295 * h);
+    ctx.lineTo(0.97047 * w, 0.36053 * h);
+    ctx.lineTo(0.74495 * w, 0.31916 * h);
+    ctx.closePath();
+  },
+
+  _trace4SidedTableCover(ctx, w, h) {
+    ctx.moveTo(0.73497 * w, 0.04099 * h);
+    ctx.lineTo(0.26373 * w, 0.04099 * h);
+    ctx.lineTo(0.25374 * w, 0.3429 * h);
+    ctx.lineTo(0.02952 * w, 0.38283 * h);
+    ctx.lineTo(0.02952 * w, 0.6168 * h);
+    ctx.lineTo(0.25374 * w, 0.65673 * h);
+    ctx.lineTo(0.26373 * w, 0.959 * h);
+    ctx.lineTo(0.73497 * w, 0.959 * h);
+    ctx.lineTo(0.74496 * w, 0.65673 * h);
+    ctx.lineTo(0.97047 * w, 0.6168 * h);
+    ctx.lineTo(0.97047 * w, 0.38283 * h);
+    ctx.lineTo(0.74495 * w, 0.3429 * h);
+    ctx.closePath();
+  },
+
+  _traceFittedTableCover(ctx, w, h, is3Sided) {
+    if (is3Sided) {
+      // 3-Sided Fitted with open back cutout
+      ctx.moveTo(0.745 * w, 0.02 * h);
+      ctx.lineTo(0.68 * w, 0.02 * h);
+      ctx.lineTo(0.68 * w, 0.30 * h);
+      ctx.lineTo(0.32 * w, 0.30 * h);
+      ctx.lineTo(0.32 * w, 0.02 * h);
+      ctx.lineTo(0.255 * w, 0.02 * h);
+      ctx.lineTo(0.255 * w, 0.34 * h);
+      ctx.lineTo(0.03 * w, 0.34 * h);
+      ctx.lineTo(0.03 * w, 0.68 * h);
+      ctx.lineTo(0.255 * w, 0.68 * h);
+      ctx.lineTo(0.255 * w, 0.98 * h);
+      ctx.lineTo(0.745 * w, 0.98 * h);
+      ctx.lineTo(0.745 * w, 0.68 * h);
+      ctx.lineTo(0.97 * w, 0.68 * h);
+      ctx.lineTo(0.97 * w, 0.34 * h);
+      ctx.lineTo(0.745 * w, 0.34 * h);
+      ctx.closePath();
+    } else {
+      // 4-Sided Fitted full cross
+      ctx.moveTo(0.745 * w, 0.02 * h);
+      ctx.lineTo(0.255 * w, 0.02 * h);
+      ctx.lineTo(0.255 * w, 0.34 * h);
+      ctx.lineTo(0.03 * w, 0.34 * h);
+      ctx.lineTo(0.03 * w, 0.68 * h);
+      ctx.lineTo(0.255 * w, 0.68 * h);
+      ctx.lineTo(0.255 * w, 0.98 * h);
+      ctx.lineTo(0.745 * w, 0.98 * h);
+      ctx.lineTo(0.745 * w, 0.68 * h);
+      ctx.lineTo(0.97 * w, 0.68 * h);
+      ctx.lineTo(0.97 * w, 0.34 * h);
+      ctx.lineTo(0.745 * w, 0.34 * h);
+      ctx.closePath();
+    }
+  },
+
   _drawTableCoverTemplate(w, h, printW, printH, safeX, safeY) {
     const ctx = this.ctx;
-    const topPanelH = h * 0.35;
-    const sideW = w * 0.22;
+    const spec = this.currentSpec || {};
+    const official = this.officialTemplate || {};
+    const fname = (typeof appState !== 'undefined' && appState.parsedFilename && appState.parsedFilename.fname) || '';
+    const combined = (String(spec.slug || '') + ' ' + (spec.name || '') + ' ' + (official.slug || '') + ' ' + (official.name || '') + ' ' + fname).toLowerCase();
 
-    // 1. Cutline
+    const isFitted = combined.includes('fitted');
+    const isZipper = combined.includes('zipper');
+    const is4Sided = isZipper || combined.includes('4-side') || combined.includes('closed-back') || combined.includes('4sided');
+    const is3Sided = !is4Sided || combined.includes('3-side') || combined.includes('open-back') || combined.includes('3side');
+
+    const traceFn = (c) => {
+      if (isFitted) {
+        this._traceFittedTableCover(c, w, h, is3Sided);
+      } else if (is4Sided) {
+        this._trace4SidedTableCover(c, w, h);
+      } else {
+        this._trace3SidedTableCover(c, w, h);
+      }
+    };
+
+    // 1. Authentic Gray Shape Waste Mask outside die-cut contour
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, w, h);
+    traceFn(ctx);
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+    ctx.fill('evenodd');
+    ctx.restore();
+
+    // 2. Cutline (Orange solid 2.5px along contour)
     if (this.guides.cutLine) {
       ctx.save();
       ctx.strokeStyle = '#fb7b48';
       ctx.lineWidth = 2.5;
-      ctx.strokeRect(1, 1, w - 2, h - 2);
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      traceFn(ctx);
+      ctx.stroke();
+
       ctx.fillStyle = '#fb7b48';
       ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.fillText(`✂️ TABLE COVER FLAT TRIM: ${printW}" × ${printH}"`, 12, 20);
+      const label = isFitted
+        ? `✂️ FITTED TABLE COVER DIE-LINE (${is3Sided ? '3-SIDED OPEN BACK' : '4-SIDED CLOSED BACK'})`
+        : (isZipper
+          ? `✂️ STRETCH TABLE COVER DIE-LINE: 4-SIDED WITH ZIPPER BACK`
+          : (is4Sided
+            ? `✂️ STRETCH TABLE COVER DIE-LINE: 4-SIDED CLOSED BACK`
+            : `✂️ STRETCH TABLE COVER DIE-LINE: 3-SIDED OPEN BACK (TOP ARCH CUTOUT)`));
+      ctx.fillText(label, 12, 22);
       ctx.restore();
     }
 
-    // 2. Seam Lines & Panel Separation
+    // 3. Panel Seams & Fold Lines (Purple dashed)
     if (this.guides.seams) {
       ctx.save();
       ctx.strokeStyle = '#8b5cf6';
       ctx.lineWidth = 1.8;
       ctx.setLineDash([5, 4]);
 
-      // Table Top Surface boundary
-      ctx.strokeRect(sideW, 0, w - sideW * 2, topPanelH);
+      const topX = 0.254 * w;
+      const topY = (is4Sided ? 0.343 : 0.319) * h;
+      const topW = (0.745 - 0.254) * w;
+      const topH = ((is4Sided ? 0.657 : 0.644) - topY) * h;
 
-      ctx.fillStyle = 'rgba(139, 92, 246, 0.08)';
-      ctx.fillRect(sideW, 0, w - sideW * 2, topPanelH);
+      ctx.strokeRect(topX, topY, topW, topH);
+      ctx.fillStyle = 'rgba(139, 92, 246, 0.06)';
+      ctx.fillRect(topX, topY, topW, topH);
 
       ctx.fillStyle = '#6d28d9';
       ctx.font = 'bold 10px Inter, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('TABLE TOP SURFACE (Flat)', w / 2, topPanelH / 2);
-      ctx.fillText('FRONT DRAPE PANEL (Visible Front Display)', w / 2, topPanelH + (h - topPanelH) / 2);
+      ctx.fillText('TABLE TOP SURFACE (6 FT × 2.5 FT)', topX + topW / 2, topY + topH / 2);
+      ctx.fillText('FRONT DRAPE (Visible Display)', topX + topW / 2, topY + topH + 35);
+      if (isZipper) {
+        ctx.fillText('BACK DRAPE (Zipper Closure)', topX + topW / 2, topY - 20);
+      } else if (is4Sided) {
+        ctx.fillText('BACK DRAPE', topX + topW / 2, topY - 20);
+      } else {
+        ctx.fillText('OPEN BACK (Arched Cutout)', topX + topW / 2, topY - 20);
+      }
+      ctx.fillText('LEFT DRAPE', topX / 2, topY + topH / 2);
+      ctx.fillText('RIGHT DRAPE', topX + topW + (w - (topX + topW)) / 2, topY + topH / 2);
 
-      // Left & Right Drapes
-      ctx.fillText('LEFT DRAPE', sideW / 2, h / 2);
-      ctx.fillText('RIGHT DRAPE', w - sideW / 2, h / 2);
+      // Zipper line indicator if zipper back
+      if (isZipper) {
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(w / 2, 0.041 * h);
+        ctx.lineTo(w / 2, topY);
+        ctx.stroke();
+        ctx.fillStyle = '#ef4444';
+        ctx.fillText('16" ZIPPER SLIT', w / 2, (0.041 * h + topY) / 2);
+      }
       ctx.restore();
     }
 
-    // 3. Safe Area
+    // 4. Safe Area (Green dashed & safe zone box on front display)
     if (this.guides.safeArea) {
       ctx.save();
       ctx.strokeStyle = '#16a34a';
       ctx.lineWidth = 2;
       ctx.setLineDash([7, 4]);
-      ctx.strokeRect(sideW + safeX, topPanelH + safeY, w - sideW * 2 - safeX * 2, h - topPanelH - safeY * 2);
+
+      const safeBoxW = 0.28 * w;
+      const safeBoxH = 0.22 * h;
+      const safeBoxX = (w - safeBoxW) / 2;
+      const safeBoxY = (is4Sided ? 0.68 : 0.67) * h;
+
+      ctx.strokeRect(safeBoxX, safeBoxY, safeBoxW, safeBoxH);
+      ctx.fillStyle = 'rgba(22, 163, 74, 0.08)';
+      ctx.fillRect(safeBoxX, safeBoxY, safeBoxW, safeBoxH);
+
       ctx.fillStyle = '#16a34a';
       ctx.font = 'bold 10px Inter, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🛡️ FRONT SAFE ZONE', w / 2, topPanelH + safeY + 16);
+      ctx.fillText('🛡️ FRONT SAFE ZONE (Main Graphics / Logo)', w / 2, safeBoxY + 16);
+      ctx.restore();
+    }
+
+    // 5. Bleed Area (3" Bleed strips)
+    if (this.guides.bleed) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(249, 115, 22, 0.35)';
+      const btmY = (is4Sided ? 0.959 : 0.9575) * h;
+      ctx.fillRect(0.264 * w, btmY, (0.735 - 0.264) * w, h - btmY);
+      ctx.fillRect(0, 0.36 * h, 0.03 * w, 0.24 * h);
+      ctx.fillRect(0.97 * w, 0.36 * h, 0.03 * w, 0.24 * h);
+      ctx.fillStyle = '#ea580c';
+      ctx.font = 'bold 9px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('3" BLEED', w / 2, h - 3);
       ctx.restore();
     }
   },

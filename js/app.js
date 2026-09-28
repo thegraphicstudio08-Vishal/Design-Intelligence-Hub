@@ -1610,7 +1610,10 @@ function clearProofSlot(key) {
   if (key === 'crop') {
     const badge = document.getElementById('crop-status-badge');
     if (badge) {
-      badge.textContent = 'AUTO CROP';
+      const w = parseFloat(appState.userDims?.widthIn) || 36;
+      const h = parseFloat(appState.userDims?.heightIn) || 24;
+      const pText = Math.max(w, h) > 72 ? '100%' : '114.4%';
+      badge.textContent = `AUTO ${pText} CROP`;
       badge.style.background = '#ede9fe';
       badge.style.color = '#4739d2';
     }

@@ -325,16 +325,64 @@ const BANNERBUZZ_QNAP_REGISTRY = {
       "slug": "fitted-table-covers",
       "name": "Fitted Table Covers",
       "dims": "4 x 2.5 Ft / 6 Ft / 8 Ft Fitted Table Cover",
-      "aspect": 1.6,
-      "templateFile": "assets/templates/fitted-table-covers-template.jpg",
+      "aspect": 1.4719,
+      "templateFile": "assets/templates/real/fitted-table-covers-6ft-4sided.jpg",
+      "mockupFile": "assets/mockups/table-runners-mockup.jpg"
+    },
+    "fitted-table-covers-3-sided": {
+      "slug": "fitted-table-covers-3-sided",
+      "name": "Fitted Table Covers 6 x 2.5 Ft (3 Sided Open Back)",
+      "dims": "6 Ft Fitted Table Throw (Open Back)",
+      "aspect": 1.4719,
+      "templateFile": "assets/templates/real/fitted-table-covers-6ft-3sided.jpg",
+      "mockupFile": "assets/mockups/table-runners-mockup.jpg"
+    },
+    "fitted-table-covers-4-sided": {
+      "slug": "fitted-table-covers-4-sided",
+      "name": "Fitted Table Covers 6 x 2.5 Ft (4 Sided Closed Back)",
+      "dims": "6 Ft Fitted Table Throw (4 Sided Closed Back)",
+      "aspect": 1.4719,
+      "templateFile": "assets/templates/real/fitted-table-covers-6ft-4sided.jpg",
+      "mockupFile": "assets/mockups/table-runners-mockup.jpg"
+    },
+    "fitted-table-covers-zipper": {
+      "slug": "fitted-table-covers-zipper",
+      "name": "Fitted Table Covers 6 x 2.5 Ft (4 Sided with Zipper Back)",
+      "dims": "6 Ft Fitted Table Throw (Zipper Back)",
+      "aspect": 1.4719,
+      "templateFile": "assets/templates/real/fitted-table-covers-6ft-zipper.jpg",
       "mockupFile": "assets/mockups/table-runners-mockup.jpg"
     },
     "stretch-table-covers": {
       "slug": "stretch-table-covers",
       "name": "Stretch Table Covers",
-      "dims": "4 x 2.5 Ft / 6 Ft Stretch Table Cover",
-      "aspect": 1.6,
-      "templateFile": "assets/templates/stretch-table-covers-template.jpg",
+      "dims": "6 x 2.5 Ft Stretch Table Cover (3 Sided Open Back)",
+      "aspect": 1.3974,
+      "templateFile": "assets/templates/real/stretch-table-covers-6ft-3sided.jpg",
+      "mockupFile": "assets/mockups/table-runners-mockup.jpg"
+    },
+    "stretch-table-covers-3-sided": {
+      "slug": "stretch-table-covers-3-sided",
+      "name": "Stretch Table Covers 6 x 2.5 Ft (3 Sided Open Back)",
+      "dims": "6 Ft Stretch Table Throw (Open Back Arched Cutout)",
+      "aspect": 1.3974,
+      "templateFile": "assets/templates/real/stretch-table-covers-6ft-3sided.jpg",
+      "mockupFile": "assets/mockups/table-runners-mockup.jpg"
+    },
+    "stretch-table-covers-4-sided": {
+      "slug": "stretch-table-covers-4-sided",
+      "name": "Stretch Table Covers 6 x 2.5 Ft (4 Sided Closed Back)",
+      "dims": "6 Ft Stretch Table Throw (4 Sided Closed Back)",
+      "aspect": 1.3487,
+      "templateFile": "assets/templates/real/stretch-table-covers-6ft-4sided.jpg",
+      "mockupFile": "assets/mockups/table-runners-mockup.jpg"
+    },
+    "stretch-table-covers-zipper": {
+      "slug": "stretch-table-covers-zipper",
+      "name": "Stretch Table Covers 6 x 2.5 Ft (4 Sided with Zipper Back)",
+      "dims": "6 Ft Stretch Table Throw (Zipper Back)",
+      "aspect": 1.3487,
+      "templateFile": "assets/templates/real/stretch-table-covers-6ft-zipper.jpg",
       "mockupFile": "assets/mockups/table-runners-mockup.jpg"
     },
     "table-runners": {
@@ -578,8 +626,17 @@ function resolveProductKey(slugOrName, dims) {
 
   // 9. Table Covers
   if (key.includes('table-runner')) return 'table-runners';
-  if (key.includes('stretch-table')) return 'stretch-table-covers';
-  if (key.includes('table') || key.includes('throw')) return 'fitted-table-covers';
+  if (key.includes('stretch-table') || (key.includes('table') && key.includes('stretch'))) {
+    if (key.includes('zipper')) return 'stretch-table-covers-zipper';
+    if (key.includes('4-side') || key.includes('closed-back') || key.includes('4side')) return 'stretch-table-covers-4-sided';
+    return 'stretch-table-covers-3-sided';
+  }
+  if (key.includes('fitted-table') || (key.includes('table') && key.includes('fitted'))) {
+    if (key.includes('3-side') || key.includes('open-back') || key.includes('3side')) return 'fitted-table-covers-3-sided';
+    if (key.includes('zipper')) return 'fitted-table-covers-zipper';
+    return 'fitted-table-covers-4-sided';
+  }
+  if (key.includes('table') || key.includes('throw')) return 'stretch-table-covers-3-sided';
 
   // 10. Apparel
   if (key.includes('shirt') || key.includes('hoodie') || key.includes('apparel') || key.includes('polo') || key.includes('jacket') || key.includes('sweatshirt')) return 'custom-apparel';
@@ -609,6 +666,63 @@ function resolveProductKey(slugOrName, dims) {
  * Colour code on every template: RED = size with bleed, WHITE = visible size, LAVENDER = safe area.
  */
 const REAL_TEMPLATES = [
+  // 1. Table Covers (Official QNAP Templates from Template_Mockups\Table Covers & Displays)
+  { key: 'stretch-table-covers-3-sided',
+    test: t => /stretch/.test(t) && (/3[-_ ]?side/.test(t) || /open[-_ ]?back/.test(t) || (!/4[-_ ]?side/.test(t) && !/closed[-_ ]?back/.test(t) && !/zipper/.test(t))),
+    name: 'Stretch Table Covers 6 x 2.5 Ft (3 Sided Open Back)',
+    single: 'assets/templates/real/stretch-table-covers-6ft-3sided.jpg',
+    double: 'assets/templates/real/stretch-table-covers-6ft-3sided.jpg',
+    aspect: 1.3974,
+    safe: [57.0, 26.0], visible: [109.0, 77.0], bleed: [116.0, 83.0],
+    shape: 'stretch-3sided'
+  },
+  { key: 'stretch-table-covers-zipper',
+    test: t => /stretch/.test(t) && /zipper/.test(t),
+    name: 'Stretch Table Covers 6 x 2.5 Ft (4 Sided with Zipper Back)',
+    single: 'assets/templates/real/stretch-table-covers-6ft-zipper.jpg',
+    double: 'assets/templates/real/stretch-table-covers-6ft-zipper.jpg',
+    aspect: 1.3487,
+    safe: [57.0, 26.0], visible: [109.0, 80.0], bleed: [116.0, 86.0],
+    shape: 'stretch-zipper'
+  },
+  { key: 'stretch-table-covers-4-sided',
+    test: t => /stretch/.test(t) && (/4[-_ ]?side/.test(t) || /closed[-_ ]?back/.test(t)),
+    name: 'Stretch Table Covers 6 x 2.5 Ft (4 Sided Closed Back)',
+    single: 'assets/templates/real/stretch-table-covers-6ft-4sided.jpg',
+    double: 'assets/templates/real/stretch-table-covers-6ft-4sided.jpg',
+    aspect: 1.3487,
+    safe: [57.0, 26.0], visible: [109.0, 80.0], bleed: [116.0, 86.0],
+    shape: 'stretch-4sided'
+  },
+  { key: 'fitted-table-covers-3-sided',
+    test: t => /fitted/.test(t) && (/3[-_ ]?side/.test(t) || /open[-_ ]?back/.test(t)),
+    name: 'Fitted Table Covers 6 x 2.5 Ft (3 Sided Open Back)',
+    single: 'assets/templates/real/fitted-table-covers-6ft-3sided.jpg',
+    double: 'assets/templates/real/fitted-table-covers-6ft-3sided.jpg',
+    aspect: 1.4719,
+    safe: [60.0, 26.0], visible: [124.0, 83.0], bleed: [130.0, 89.0],
+    shape: 'fitted-3sided'
+  },
+  { key: 'fitted-table-covers-4-sided',
+    test: t => /fitted/.test(t) && (/4[-_ ]?side/.test(t) || /closed[-_ ]?back/.test(t) || !/3[-_ ]?side/.test(t)),
+    name: 'Fitted Table Covers 6 x 2.5 Ft (4 Sided Closed Back)',
+    single: 'assets/templates/real/fitted-table-covers-6ft-4sided.jpg',
+    double: 'assets/templates/real/fitted-table-covers-6ft-4sided.jpg',
+    aspect: 1.4719,
+    safe: [60.0, 26.0], visible: [124.0, 82.0], bleed: [130.0, 88.0],
+    shape: 'fitted-4sided'
+  },
+  { key: 'fitted-table-covers-zipper',
+    test: t => /fitted/.test(t) && /zipper/.test(t),
+    name: 'Fitted Table Covers 6 x 2.5 Ft (4 Sided with Zipper Back)',
+    single: 'assets/templates/real/fitted-table-covers-6ft-zipper.jpg',
+    double: 'assets/templates/real/fitted-table-covers-6ft-zipper.jpg',
+    aspect: 1.4719,
+    safe: [60.0, 26.0], visible: [124.0, 82.0], bleed: [130.0, 88.0],
+    shape: 'fitted-zipper'
+  },
+
+  // 2. Flags & Displays
   { key: 'backpack-flags-blade', test: t => /backpack/.test(t) && /blade/.test(t), name: 'Backpack Flag (Blade)',
     single: 'assets/templates/real/backpack-flags-blade-single-side.jpg', double: 'assets/templates/real/backpack-flags-blade-double-side.jpg',
     safe: [18.0901, 45.8841], visible: [19.0904, 46.9849], bleed: [20.0906, 48.0315] },
@@ -645,6 +759,8 @@ function getRealTemplate(slugOrName) {
     real: true,
     templateFile: r.single,
     doubleSideFile: r.double,
+    aspect: r.aspect,
+    shape: r.shape,
     dims: `Visible ${f(r.visible[0])}" × ${f(r.visible[1])}" · Bleed ${f(r.bleed[0])}" × ${f(r.bleed[1])}" · Safe ${f(r.safe[0])}" × ${f(r.safe[1])}"`,
     safeIn: r.safe, visibleIn: r.visible, bleedIn: r.bleed
   };
