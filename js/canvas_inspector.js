@@ -1292,6 +1292,16 @@ const CanvasInspector = {
     if (this.officialTemplate?.real && Array.isArray(this.officialTemplate.bleedIn)) {
       printW = this.officialTemplate.bleedIn[0];
       printH = this.officialTemplate.bleedIn[1];
+    } else if (img && img.naturalWidth && img.naturalHeight) {
+      const tType = this.getTemplateType(spec, dims);
+      if (tType.startsWith('desk-flag') || tType.includes('blade') || tType.includes('teardrop') || tType.includes('feather')) {
+        const artAspect = img.naturalWidth / img.naturalHeight;
+        const nominalAspect = printW / printH;
+        // If artwork includes template bleed artboard (e.g. 0.380 vs nominal 0.311), align canvas
+        if (Math.abs(artAspect - nominalAspect) / nominalAspect > 0.05 && artAspect < 1.0) {
+          printW = +(printH * artAspect).toFixed(2);
+        }
+      }
     }
     // Banner: the canvas is the SOP production canvas (order + hem / pole pocket), as in the real print files
     let bannerSop = this._bannerSop(spec, { widthIn: printW, heightIn: printH });
@@ -2320,14 +2330,13 @@ const CanvasInspector = {
   _traceDeskBladePath(ctx, x1, y1, x2, y2, sleeveSide = 'right') {
     const w = x2 - x1;
     const h = y2 - y1;
-    const cornerH = Math.min(w * 0.85, h * 0.16);
-    const cornerW = Math.min(w * 0.88, cornerH * 1.25);
 
     if (sleeveSide === 'right') {
       // Sleeve on right: curve at top-left, flat bottom, straight right pole edge
+      // Verified mathematical curve matching BannerBuzz Desktop Blade Flag SF.psdt
       ctx.moveTo(x1, y1 + h);
-      ctx.lineTo(x1, y1 + cornerH);
-      ctx.bezierCurveTo(x1, y1 + cornerH * 0.35, x1 + cornerW * 0.35, y1, x1 + cornerW, y1);
+      ctx.lineTo(x1, y1 + h * 0.298);
+      ctx.bezierCurveTo(x1, y1 + h * 0.125, x1 + w * 0.515, y1, x1 + w * 0.780, y1);
       ctx.lineTo(x2, y1);
       ctx.lineTo(x2, y1 + h);
       ctx.lineTo(x1, y1 + h);
@@ -2335,8 +2344,8 @@ const CanvasInspector = {
       // Sleeve on left: curve at top-right, flat bottom, straight left pole edge
       ctx.moveTo(x1, y1 + h);
       ctx.lineTo(x1, y1);
-      ctx.lineTo(x2 - cornerW, y1);
-      ctx.bezierCurveTo(x2 - cornerW * 0.35, y1, x2, y1 + cornerH * 0.35, x2, y1 + cornerH);
+      ctx.lineTo(x1 + w * 0.220, y1);
+      ctx.bezierCurveTo(x1 + w * 0.485, y1, x2, y1 + h * 0.125, x2, y1 + h * 0.298);
       ctx.lineTo(x2, y1 + h);
       ctx.lineTo(x1, y1 + h);
     }
@@ -2357,21 +2366,19 @@ const CanvasInspector = {
     const ny2 = y2 - sy;
     const nw = nx2 - nx1;
     const nh = ny2 - ny1;
-    const cornerH = Math.min(nw * 0.85, nh * 0.16);
-    const cornerW = Math.min(nw * 0.88, cornerH * 1.25);
 
     if (sleeveSide === 'right') {
       ctx.moveTo(nx1, ny1 + nh);
-      ctx.lineTo(nx1, ny1 + cornerH);
-      ctx.bezierCurveTo(nx1, ny1 + cornerH * 0.35, nx1 + cornerW * 0.35, ny1, nx1 + cornerW, ny1);
+      ctx.lineTo(nx1, ny1 + nh * 0.298);
+      ctx.bezierCurveTo(nx1, ny1 + nh * 0.125, nx1 + nw * 0.515, ny1, nx1 + nw * 0.780, ny1);
       ctx.lineTo(nx2, ny1);
       ctx.lineTo(nx2, ny1 + nh);
       ctx.lineTo(nx1, ny1 + nh);
     } else {
       ctx.moveTo(nx1, ny1 + nh);
       ctx.lineTo(nx1, ny1);
-      ctx.lineTo(nx2 - cornerW, ny1);
-      ctx.bezierCurveTo(nx2 - cornerW * 0.35, ny1, nx2, ny1 + cornerH * 0.35, nx2, ny1 + cornerH);
+      ctx.lineTo(nx1 + nw * 0.220, ny1);
+      ctx.bezierCurveTo(nx1 + nw * 0.485, ny1, nx2, ny1 + nh * 0.125, nx2, ny1 + nh * 0.298);
       ctx.lineTo(nx2, ny1 + nh);
       ctx.lineTo(nx1, ny1 + nh);
     }

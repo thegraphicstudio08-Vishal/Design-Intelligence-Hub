@@ -101,7 +101,7 @@ const BANNERBUZZ_QNAP_REGISTRY = {
       "slug": "desk-flags-blade",
       "name": "Desk Flags Blade",
       "dims": "5.51 x 17.71 Inch (14 x 45 cm)",
-      "aspect": 0.31,
+      "aspect": 0.3808,
       "templateFile": "assets/templates/desk-flags-blade-template.jpg",
       "mockupFile": "assets/mockups/desk-flags-blade-mockup.jpg"
     },
@@ -109,7 +109,7 @@ const BANNERBUZZ_QNAP_REGISTRY = {
       "slug": "desk-flags-teardrop",
       "name": "Desk Flags Teardrop",
       "dims": "5.51 x 17.71 Inch (14 x 45 cm)",
-      "aspect": 0.31,
+      "aspect": 0.4319,
       "templateFile": "assets/templates/desk-flags-teardrop-template.jpg",
       "mockupFile": "assets/mockups/desk-flags-teardrop-mockup.jpg"
     },
@@ -620,7 +620,13 @@ const REAL_TEMPLATES = [
     safe: [18.3651, 36.1029], visible: [19.4136, 38.3295], bleed: [19.4136, 38.3295] },
   { key: 'backpack-flags-u-shape', test: t => /backpack/.test(t) && /u[\s_-]?shape/.test(t), name: 'Backpack Flag (U-Shape)',
     single: 'assets/templates/real/backpack-flags-u-shape-single-side.jpg', double: 'assets/templates/real/backpack-flags-u-shape-double-side.jpg',
-    safe: [17.89, 37.9105], visible: [18.89, 39.6395], bleed: [19.89, 41.4691] }
+    safe: [17.89, 37.9105], visible: [18.89, 39.6395], bleed: [19.89, 41.4691] },
+  { key: 'desk-flags-blade', test: t => /desk/.test(t) && /blade/.test(t), name: 'Desk Flags Blade',
+    single: 'assets/templates/desk-flags-blade-template.jpg', double: 'assets/templates/desk-flags-blade-template.jpg',
+    safe: [4.91, 16.51], visible: [5.51, 17.71], bleed: [6.74, 17.71] },
+  { key: 'desk-flags-teardrop', test: t => /desk/.test(t) && /teardrop/.test(t), name: 'Desk Flags Teardrop',
+    single: 'assets/templates/desk-flags-teardrop-template.jpg', double: 'assets/templates/desk-flags-teardrop-template.jpg',
+    safe: [4.91, 16.51], visible: [5.51, 17.71], bleed: [7.65, 17.71] }
 ];
 
 /**
