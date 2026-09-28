@@ -1001,11 +1001,29 @@ const CanvasInspector = {
 
   _drawTemplateMode(w, h, spec, dims) {
     const ctx = this.ctx;
-    ctx.fillStyle = '#ffffff';
+    const isRotated = (this.currentRotation === 90 || this.currentRotation === 270);
+    const tType = this.getTemplateType(spec, dims);
+    const printW = dims?.widthIn || spec?.defaultW || 36;
+    const printH = dims?.heightIn || spec?.defaultH || 24;
+
+    // 1. Clean print substrate background
+    ctx.fillStyle = '#f8fafc';
     ctx.fillRect(0, 0, w, h);
 
-    const isRotated = (this.currentRotation === 90 || this.currentRotation === 270);
+    // Subtle substrate measurement grid
+    ctx.save();
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    const gridStep = Math.max(20, Math.round(w / 12));
+    for (let gx = gridStep; gx < w; gx += gridStep) {
+      ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, h); ctx.stroke();
+    }
+    for (let gy = gridStep; gy < h; gy += gridStep) {
+      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+    }
+    ctx.restore();
 
+    // 2. Draw official template image if loaded
     if (this.officialTemplateImg && this.officialTemplateImg.complete && this.officialTemplateImg.naturalWidth > 0) {
       const img = this.officialTemplateImg;
       ctx.save();
@@ -1019,50 +1037,45 @@ const CanvasInspector = {
       } else {
         const naturalAspect = img.naturalWidth / img.naturalHeight;
         const canvasAspect = w / h;
-        let drawW, drawH, drawX, drawY;
-        if (naturalAspect > canvasAspect) {
-          drawW = w - 8;
-          drawH = drawW / naturalAspect;
-          drawX = 4;
-          drawY = (h - drawH) / 2;
+        // For solid template silhouettes (e.g. 61x160 flags), fill canvas to eliminate bottom gaps!
+        const isSilhouette = img.naturalWidth <= 120 && img.naturalHeight <= 300;
+        if (isSilhouette) {
+          ctx.drawImage(img, 0, 0, w, h);
         } else {
-          drawH = h - 8;
-          drawW = drawH * naturalAspect;
-          drawY = 4;
-          drawX = (w - drawW) / 2;
+          const r = this._fitRect(img.naturalWidth, img.naturalHeight, w, h);
+          ctx.drawImage(img, r.x, r.y, r.w, r.h);
         }
-        ctx.drawImage(img, drawX, drawY, drawW, drawH);
       }
       ctx.restore();
-    } else {
-      // No real template supplied for this product yet — never draw an invented shape
-      ctx.fillStyle = '#64748b';
-      ctx.font = 'bold 13px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Real template not added yet', w / 2, h / 2);
-      ctx.textAlign = 'start';
     }
 
+    // 3. Render exact official die-line guides: Cutline (orange), Safe Zone (green), Bleed (blue)
+    this._drawProductTemplate(w, h, tType);
+
+    // 4. Official BannerBuzz Production Die-Line Legend Card
     ctx.save();
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+    const cardW = Math.min(w - 20, 520);
     if (ctx.roundRect) {
       ctx.beginPath();
-      ctx.roundRect(10, 10, Math.min(w - 20, 520), 40, 6);
+      ctx.roundRect(10, 10, cardW, 44, 6);
       ctx.fill();
     } else {
-      ctx.fillRect(10, 10, Math.min(w - 20, 520), 40);
+      ctx.fillRect(10, 10, cardW, 44);
     }
 
     const isQnap = this.officialTemplate?.real || (this.officialTemplate?.templateFile && !this.officialTemplate.templateFile.includes('placeholder'));
     ctx.fillStyle = isQnap ? '#22c55e' : '#f97316';
-    ctx.font = 'bold 11.5px Inter, sans-serif';
-    ctx.fillText(isQnap ? '🏛️ OFFICIAL BANNERBUZZ TEMPLATE (QNAP)' : '🏛️ REFERENCE TEMPLATE', 20, 26);
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.fillText(isQnap ? '🏛️ OFFICIAL BANNERBUZZ PRODUCTION DIE-LINE TEMPLATE' : '🏛️ REFERENCE TEMPLATE', 20, 26);
 
     ctx.fillStyle = '#cbd5e1';
     ctx.font = '500 10px Inter, sans-serif';
     const tName = this.officialTemplate?.name || spec?.name || 'Production Template';
-    const tDims = this.officialTemplate?.dims || `${dims?.widthIn || spec?.defaultW || 36}" × ${dims?.heightIn || spec?.defaultH || 24}"`;
-    ctx.fillText(`${tName} · ${tDims} · Official Production Die-Line`, 20, 42);
+    const tDims = `${printW}" × ${printH}"`;
+    const safeTxt = spec?.safeArea || '0.50"';
+    const bleedTxt = spec?.bleed || '0.25"';
+    ctx.fillText(`${tName} · Order: ${tDims} · Bleed: ${bleedTxt} · Safe Zone: ${safeTxt}`, 20, 42);
     ctx.restore();
   },
 
@@ -2165,27 +2178,56 @@ const CanvasInspector = {
   },
 
   /**
+   * Helper to detect flag sleeve side (left vs right)
+   */
+  _detectFlagSleeveSide(img, dims, spec) {
+    const fname = ((typeof appState !== 'undefined' && appState.parsedFilename?.fname) || '').toLowerCase();
+    if (fname.includes('sleeve_right') || fname.includes('sleeve-right') || fname.includes('right_sleeve')) return 'right';
+    if (fname.includes('sleeve_left') || fname.includes('sleeve-left') || fname.includes('left_sleeve')) return 'left';
+
+    // If single-sided desk blade flag (like US2395878): sleeve is on the right
+    const isSingleSided = fname.includes('single_sided') || fname.includes('single-sided') || fname.includes('sf');
+    const isDeskFlag = fname.includes('desk') || (dims?.widthIn <= 10 && dims?.heightIn <= 25);
+    if (isSingleSided && isDeskFlag) return 'right';
+
+    // Image inspection fallback if in browser DOM
+    if (img && img.naturalWidth && img.naturalHeight && typeof document !== 'undefined') {
+      try {
+        const c = document.createElement('canvas');
+        c.width = 32; c.height = 32;
+        const cx = c.getContext('2d');
+        if (cx) {
+          cx.drawImage(img, 0, 0, 32, 32);
+          const leftPix = cx.getImageData(1, 16, 2, 2).data;
+          const rightPix = cx.getImageData(29, 16, 2, 2).data;
+          const leftLuma = (leftPix[0] + leftPix[1] + leftPix[2]) / 3;
+          const rightLuma = (rightPix[0] + rightPix[1] + rightPix[2]) / 3;
+          if (rightLuma < 40 && leftLuma > 65) return 'right';
+          if (leftLuma < 40 && rightLuma > 65) return 'left';
+        }
+      } catch (e) {}
+    }
+    return isDeskFlag ? 'right' : 'left';
+  },
+
+  /**
    * 🚩 DESK FLAGS BLADE TEMPLATE (Tabletop Mini Blade Flag ~5.51" x 17.71")
    * Sourced directly from official BannerBuzz Desktop Blade Flag SF.psdt
-   * Smooth rounded dome top arch, straight pole spine on left with sleeve, straight right edge,
-   * and completely flat horizontal bottom base cutline.
+   * Flat horizontal bottom base, straight vertical fly edge, smooth top curve spanning only top ~16%,
+   * and clean semi-transparent pole sleeve guide with stitch line.
    */
   _drawDeskBladeTemplate(w, h, printW, printH, safeX, safeY) {
     const ctx = this.ctx;
     const sleeveW = Math.max(16, Math.min(26, Math.round(w * 0.08)));
-    const padTop = 14;
-    const padBottom = 12;
-    const padRight = 8;
-
-    // Single-sided desk blade (real proof US2395878): curve at TOP-LEFT, pole sleeve on the RIGHT.
-    // Outline spans from the left edge to the sleeve: rounded corner away from the pole.
-    const labelX = padRight + 6;
+    const dims = this.currentDims || {};
+    const spec = this.currentSpec || {};
+    const sleeveSide = this._detectFlagSleeveSide(this.currentImg, dims, spec);
 
     // 1. High-contrast waste mask outside desk blade flag contour
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, w, h);
-    this._traceDeskBladePath(ctx, padRight, padTop, w - sleeveW, h - padBottom);
+    this._traceDeskBladePath(ctx, 0, 0, w, h, sleeveSide);
     ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
     ctx.fill('evenodd');
     ctx.restore();
@@ -2197,14 +2239,15 @@ const CanvasInspector = {
       ctx.lineWidth = 3;
       ctx.setLineDash([]);
       ctx.beginPath();
-      this._traceDeskBladePath(ctx, padRight, padTop, w - sleeveW, h - padBottom);
+      this._traceDeskBladePath(ctx, 0, 0, w, h, sleeveSide);
       ctx.stroke();
       ctx.restore();
 
       ctx.save();
       ctx.fillStyle = '#fb7b48';
       ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.fillText(`✂️ DESK BLADE CUTLINE: ${printW}" × ${printH}"`, labelX, padTop + 24);
+      const labelX = sleeveSide === 'right' ? 14 : sleeveW + 14;
+      ctx.fillText(`✂️ DESK BLADE CUTLINE: ${printW}" × ${printH}"`, labelX, 24);
       ctx.restore();
     }
 
@@ -2215,18 +2258,19 @@ const CanvasInspector = {
       ctx.lineWidth = 2.2;
       ctx.setLineDash([8, 5]);
       ctx.beginPath();
-      this._traceDeskBladeSafePath(ctx, padRight, padTop, w - sleeveW, h - padBottom, safeX, safeY);
+      this._traceDeskBladeSafePath(ctx, 0, 0, w, h, safeX, safeY, sleeveSide, sleeveW);
       ctx.stroke();
       ctx.restore();
 
       ctx.save();
       ctx.fillStyle = '#16a34a';
       ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.fillText(`🛡️ SAFE ZONE: 0.50" inside cutline`, labelX, padTop + 42);
+      const labelX = sleeveSide === 'right' ? 14 : sleeveW + 14;
+      ctx.fillText(`🛡️ SAFE ZONE: 0.50" inside cutline`, labelX, 42);
       ctx.restore();
     }
 
-    // 4. Bleed (0.25" / 0.50" boundary)
+    // 4. Bleed (0.25" boundary)
     if (this.guides.bleed) {
       ctx.save();
       ctx.strokeStyle = '#3b82f6';
@@ -2235,71 +2279,102 @@ const CanvasInspector = {
       ctx.strokeRect(1, 1, w - 2, h - 2);
       ctx.fillStyle = '#3b82f6';
       ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.fillText(`📐 Bleed: 0.25" on all sides`, labelX, h - 6);
+      const labelX = sleeveSide === 'right' ? 14 : sleeveW + 14;
+      ctx.fillText(`📐 Bleed: 0.25" on all sides`, labelX, h - 10);
       ctx.restore();
     }
 
-    // 5. Right Pole Sleeve (Fabric sleeve channel for mini tabletop desk flag pole)
+    // 5. Pole Sleeve Channel (Clean semi-transparent guide with stitch line, NOT opaque black)
     if (this.guides.sleeve) {
       ctx.save();
-      ctx.fillStyle = 'rgba(26, 32, 44, 0.88)';
-      ctx.fillRect(w - sleeveW, 0, sleeveW, h);
+      const slX = sleeveSide === 'right' ? w - sleeveW : 0;
+      const stitchX = sleeveSide === 'right' ? w - sleeveW + 2 : sleeveW - 2;
 
-      ctx.strokeStyle = '#fbbf24';
+      // Soft semi-transparent sleeve overlay so artwork remains 100% visible
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.14)';
+      ctx.fillRect(slX, 0, sleeveW, h);
+
+      // Gold dashed stitch line
+      ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 1.8;
       ctx.setLineDash([5, 4]);
       ctx.beginPath();
-      ctx.moveTo(w - sleeveW + 3, 0);
-      ctx.lineTo(w - sleeveW + 3, h);
+      ctx.moveTo(stitchX, 0);
+      ctx.lineTo(stitchX, h);
       ctx.stroke();
 
+      // Vertical text
       ctx.save();
-      ctx.translate(w - sleeveW / 2 - 2, h / 2);
-      ctx.rotate(Math.PI / 2);
-      ctx.fillStyle = '#ffffff';
+      ctx.translate(slX + sleeveW / 2, h / 2);
+      ctx.rotate(sleeveSide === 'right' ? Math.PI / 2 : -Math.PI / 2);
+      ctx.fillStyle = '#f59e0b';
       ctx.font = 'bold 9.5px Inter, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🚩 DESK POLE SLEEVE', 0, 0);
+      ctx.fillText('🚩 DESK POLE SLEEVE', 0, 3.5);
       ctx.restore();
+
       ctx.restore();
     }
   },
 
-  _traceDeskBladePath(ctx, x1, y1, x2, y2) {
+  _traceDeskBladePath(ctx, x1, y1, x2, y2, sleeveSide = 'right') {
     const w = x2 - x1;
     const h = y2 - y1;
+    const cornerH = Math.min(w * 0.85, h * 0.16);
+    const cornerW = Math.min(w * 0.88, cornerH * 1.25);
 
-    // Start at bottom-left corner
-    ctx.moveTo(x1, y1 + h);
-    // Vertical left edge along pole spine
-    ctx.lineTo(x1, y1 + h * 0.32);
-    // Smooth dome arch curving to top-right
-    ctx.bezierCurveTo(x1, y1 + h * 0.06, x1 + w * 0.45, y1, x2, y1);
-    // Straight vertical right edge all the way to bottom
-    ctx.lineTo(x2, y1 + h);
-    // Flat horizontal bottom cutline
-    ctx.lineTo(x1, y1 + h);
+    if (sleeveSide === 'right') {
+      // Sleeve on right: curve at top-left, flat bottom, straight right pole edge
+      ctx.moveTo(x1, y1 + h);
+      ctx.lineTo(x1, y1 + cornerH);
+      ctx.bezierCurveTo(x1, y1 + cornerH * 0.35, x1 + cornerW * 0.35, y1, x1 + cornerW, y1);
+      ctx.lineTo(x2, y1);
+      ctx.lineTo(x2, y1 + h);
+      ctx.lineTo(x1, y1 + h);
+    } else {
+      // Sleeve on left: curve at top-right, flat bottom, straight left pole edge
+      ctx.moveTo(x1, y1 + h);
+      ctx.lineTo(x1, y1);
+      ctx.lineTo(x2 - cornerW, y1);
+      ctx.bezierCurveTo(x2 - cornerW * 0.35, y1, x2, y1 + cornerH * 0.35, x2, y1 + cornerH);
+      ctx.lineTo(x2, y1 + h);
+      ctx.lineTo(x1, y1 + h);
+    }
     ctx.closePath();
   },
 
-  _traceDeskBladeSafePath(ctx, x1, y1, x2, y2, safeX, safeY) {
-    const origW = x2 - x1;
-    const origH = y2 - y1;
-    const sx = Math.min(safeX, origW * 0.16);
-    const sy = Math.min(safeY, origH * 0.08);
+  _traceDeskBladeSafePath(ctx, x1, y1, x2, y2, safeX, safeY, sleeveSide = 'right', sleeveW = 20) {
+    const sx = Math.min(safeX, (x2 - x1) * 0.14);
+    const sy = Math.min(safeY, (y2 - y1) * 0.08);
 
-    const nx1 = x1 + sx;
+    // Extra margin on sleeve side so critical content does not get sewn into sleeve
+    const leftMargin = sleeveSide === 'right' ? sx : Math.max(sx, sleeveW + 4);
+    const rightMargin = sleeveSide === 'right' ? Math.max(sx, sleeveW + 4) : sx;
+
+    const nx1 = x1 + leftMargin;
     const ny1 = y1 + sy;
-    const nx2 = x2 - sx;
+    const nx2 = x2 - rightMargin;
     const ny2 = y2 - sy;
     const nw = nx2 - nx1;
     const nh = ny2 - ny1;
+    const cornerH = Math.min(nw * 0.85, nh * 0.16);
+    const cornerW = Math.min(nw * 0.88, cornerH * 1.25);
 
-    ctx.moveTo(nx1, ny1 + nh);
-    ctx.lineTo(nx1, ny1 + nh * 0.32);
-    ctx.bezierCurveTo(nx1, ny1 + nh * 0.06, nx1 + nw * 0.45, ny1, nx2, ny1);
-    ctx.lineTo(nx2, ny1 + nh);
-    ctx.lineTo(nx1, ny1 + nh);
+    if (sleeveSide === 'right') {
+      ctx.moveTo(nx1, ny1 + nh);
+      ctx.lineTo(nx1, ny1 + cornerH);
+      ctx.bezierCurveTo(nx1, ny1 + cornerH * 0.35, nx1 + cornerW * 0.35, ny1, nx1 + cornerW, ny1);
+      ctx.lineTo(nx2, ny1);
+      ctx.lineTo(nx2, ny1 + nh);
+      ctx.lineTo(nx1, ny1 + nh);
+    } else {
+      ctx.moveTo(nx1, ny1 + nh);
+      ctx.lineTo(nx1, ny1);
+      ctx.lineTo(nx2 - cornerW, ny1);
+      ctx.bezierCurveTo(nx2 - cornerW * 0.35, ny1, nx2, ny1 + cornerH * 0.35, nx2, ny1 + cornerH);
+      ctx.lineTo(nx2, ny1 + nh);
+      ctx.lineTo(nx1, ny1 + nh);
+    }
     ctx.closePath();
   },
 
@@ -2310,14 +2385,12 @@ const CanvasInspector = {
   _drawDeskTeardropTemplate(w, h, printW, printH, safeX, safeY) {
     const ctx = this.ctx;
     const sleeveW = Math.max(16, Math.min(26, Math.round(w * 0.08)));
-    const padTop = 14;
-    const padBottom = 12;
-    const padRight = 8;
 
+    // Edge-to-edge contour: 0 to w and 0 to h (NO arbitrary paddings!)
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, w, h);
-    this._traceTeardropPath(ctx, sleeveW, padTop, w - padRight, h - padBottom);
+    this._traceTeardropPath(ctx, 0, 0, w, h);
     ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
     ctx.fill('evenodd');
     ctx.restore();
@@ -2327,12 +2400,12 @@ const CanvasInspector = {
       ctx.strokeStyle = '#fb7b48';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      this._traceTeardropPath(ctx, sleeveW, padTop, w - padRight, h - padBottom);
+      this._traceTeardropPath(ctx, 0, 0, w, h);
       ctx.stroke();
 
       ctx.fillStyle = '#fb7b48';
       ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.fillText(`✂️ DESK TEARDROP CUTLINE: ${printW}" × ${printH}"`, sleeveW + 10, padTop + 24);
+      ctx.fillText(`✂️ DESK TEARDROP CUTLINE: ${printW}" × ${printH}"`, sleeveW + 10, 24);
       ctx.restore();
     }
 
@@ -2342,12 +2415,12 @@ const CanvasInspector = {
       ctx.lineWidth = 2.2;
       ctx.setLineDash([8, 5]);
       ctx.beginPath();
-      this._traceTeardropSafePath(ctx, sleeveW, padTop, w - padRight, h - padBottom, safeX, safeY);
+      this._traceTeardropSafePath(ctx, 0, 0, w, h, safeX, safeY);
       ctx.stroke();
 
       ctx.fillStyle = '#16a34a';
       ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.fillText(`🛡️ SAFE ZONE: 0.50" inside curve`, sleeveW + 12, padTop + 42);
+      ctx.fillText(`🛡️ SAFE ZONE: 0.50" inside curve`, sleeveW + 12, 42);
       ctx.restore();
     }
 
@@ -2359,30 +2432,31 @@ const CanvasInspector = {
       ctx.strokeRect(1, 1, w - 2, h - 2);
       ctx.fillStyle = '#3b82f6';
       ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.fillText(`📐 Bleed: 0.25" on all sides`, sleeveW + 10, h - 6);
+      ctx.fillText(`📐 Bleed: 0.25" on all sides`, sleeveW + 10, h - 10);
       ctx.restore();
     }
 
     if (this.guides.sleeve) {
       ctx.save();
-      ctx.fillStyle = 'rgba(26, 32, 44, 0.88)';
+      // Semi-transparent sleeve guide so artwork remains 100% visible
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.14)';
       ctx.fillRect(0, 0, sleeveW, h);
 
-      ctx.strokeStyle = '#fbbf24';
+      ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 1.8;
       ctx.setLineDash([5, 4]);
       ctx.beginPath();
-      ctx.moveTo(sleeveW - 3, 0);
-      ctx.lineTo(sleeveW - 3, h);
+      ctx.moveTo(sleeveW - 2, 0);
+      ctx.lineTo(sleeveW - 2, h);
       ctx.stroke();
 
       ctx.save();
-      ctx.translate(sleeveW / 2 + 2, h / 2);
+      ctx.translate(sleeveW / 2, h / 2);
       ctx.rotate(-Math.PI / 2);
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#f59e0b';
       ctx.font = 'bold 9.5px Inter, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🚩 DESK POLE SLEEVE', 0, 0);
+      ctx.fillText('🚩 DESK POLE SLEEVE', 0, 3.5);
       ctx.restore();
       ctx.restore();
     }
@@ -2395,17 +2469,12 @@ const CanvasInspector = {
   _drawTeardropTemplate(w, h, printW, printH, safeX, safeY) {
     const ctx = this.ctx;
     const sleeveW = Math.max(22, Math.min(36, w * 0.08));
-    const padTop = 16;
-    const padBottom = 14;
-    const padRight = 8;
 
-    // Outer waste mask outside teardrop
+    // Outer waste mask outside teardrop (edge-to-edge 0, 0, w, h)
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, w, h);
-
-    // Teardrop cut path (counter-clockwise to carve out hole)
-    this._traceTeardropPath(ctx, sleeveW, padTop, w - padRight, h - padBottom);
+    this._traceTeardropPath(ctx, 0, 0, w, h);
     ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
     ctx.fill('evenodd');
     ctx.restore();
@@ -2417,12 +2486,12 @@ const CanvasInspector = {
       ctx.lineWidth = 3;
       ctx.setLineDash([]);
       ctx.beginPath();
-      this._traceTeardropPath(ctx, sleeveW, padTop, w - padRight, h - padBottom);
+      this._traceTeardropPath(ctx, 0, 0, w, h);
       ctx.stroke();
 
       ctx.fillStyle = '#fb7b48';
       ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.fillText(`✂️ TEARDROP CUTLINE: ${printW}" × ${printH}"`, sleeveW + 12, padTop + 24);
+      ctx.fillText(`✂️ TEARDROP CUTLINE: ${printW}" × ${printH}"`, sleeveW + 12, 24);
       ctx.restore();
     }
 
@@ -2433,12 +2502,12 @@ const CanvasInspector = {
       ctx.lineWidth = 2.2;
       ctx.setLineDash([8, 5]);
       ctx.beginPath();
-      this._traceTeardropSafePath(ctx, sleeveW, padTop, w - padRight, h - padBottom, safeX, safeY);
+      this._traceTeardropSafePath(ctx, 0, 0, w, h, safeX, safeY);
       ctx.stroke();
 
       ctx.fillStyle = '#16a34a';
       ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.fillText(`🛡️ SAFE ZONE: 1.00" inside curve`, sleeveW + 14, padTop + 42);
+      ctx.fillText(`🛡️ SAFE ZONE: 1.00" inside curve`, sleeveW + 14, 42);
       ctx.restore();
     }
 
@@ -2451,34 +2520,31 @@ const CanvasInspector = {
       ctx.strokeRect(1, 1, w - 2, h - 2);
       ctx.fillStyle = '#3b82f6';
       ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.fillText(`📐 Bleed: 0.50" on all sides`, sleeveW + 10, h - 6);
+      ctx.fillText(`📐 Bleed: 0.50" on all sides`, sleeveW + 10, h - 10);
       ctx.restore();
     }
 
-    // 4. Pole Sleeve Channel on Left Side
+    // 4. Pole Sleeve Channel on Left Side (Semi-transparent with stitch line)
     if (this.guides.sleeve) {
       ctx.save();
-      // Sleeve fabric background
-      ctx.fillStyle = 'rgba(26, 32, 44, 0.88)';
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.14)';
       ctx.fillRect(0, 0, sleeveW, h);
 
-      // Double stitched line
-      ctx.strokeStyle = '#fbbf24';
+      ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 1.8;
       ctx.setLineDash([5, 4]);
       ctx.beginPath();
-      ctx.moveTo(sleeveW - 4, 0);
-      ctx.lineTo(sleeveW - 4, h);
+      ctx.moveTo(sleeveW - 2, 0);
+      ctx.lineTo(sleeveW - 2, h);
       ctx.stroke();
 
-      // Sleeve text rotated
       ctx.save();
-      ctx.translate(sleeveW / 2 + 4, h / 2);
+      ctx.translate(sleeveW / 2, h / 2);
       ctx.rotate(-Math.PI / 2);
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#f59e0b';
       ctx.font = 'bold 10px Inter, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🚩 REINFORCED POLE SLEEVE', 0, 0);
+      ctx.fillText('🚩 REINFORCED POLE SLEEVE', 0, 3.5);
       ctx.restore();
 
       ctx.restore();
@@ -2530,15 +2596,12 @@ const CanvasInspector = {
   _drawFeatherTemplate(w, h, printW, printH, safeX, safeY, tType) {
     const ctx = this.ctx;
     const sleeveW = Math.max(22, Math.min(36, w * 0.08));
-    const padTop = 16;
-    const padBottom = 14;
-    const padRight = 8;
 
-    // Outer waste mask
+    // Outer waste mask (edge-to-edge 0, 0, w, h)
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, w, h);
-    this._traceFeatherPath(ctx, sleeveW, padTop, w - padRight, h - padBottom, tType);
+    this._traceFeatherPath(ctx, 0, 0, w, h, tType);
     ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
     ctx.fill('evenodd');
     ctx.restore();
@@ -2550,12 +2613,12 @@ const CanvasInspector = {
       ctx.lineWidth = 3;
       ctx.setLineDash([]);
       ctx.beginPath();
-      this._traceFeatherPath(ctx, sleeveW, padTop, w - padRight, h - padBottom, tType);
+      this._traceFeatherPath(ctx, 0, 0, w, h, tType);
       ctx.stroke();
 
       ctx.fillStyle = '#fb7b48';
       ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.fillText(`✂️ ${tType.toUpperCase()} CUTLINE: ${printW}" × ${printH}"`, sleeveW + 12, padTop + 24);
+      ctx.fillText(`✂️ ${tType.toUpperCase()} CUTLINE: ${printW}" × ${printH}"`, sleeveW + 12, 24);
       ctx.restore();
     }
 
@@ -2566,12 +2629,12 @@ const CanvasInspector = {
       ctx.lineWidth = 2.2;
       ctx.setLineDash([8, 5]);
       ctx.beginPath();
-      this._traceFeatherSafePath(ctx, sleeveW, padTop, w - padRight, h - padBottom, safeX, safeY, tType);
+      this._traceFeatherSafePath(ctx, 0, 0, w, h, safeX, safeY, tType);
       ctx.stroke();
 
       ctx.fillStyle = '#16a34a';
       ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.fillText(`🛡️ SAFE ZONE: 1.00" inside cutline`, sleeveW + 14, padTop + 42);
+      ctx.fillText(`🛡️ SAFE ZONE: 1.00" inside cutline`, sleeveW + 14, 42);
       ctx.restore();
     }
 
@@ -2584,31 +2647,31 @@ const CanvasInspector = {
       ctx.strokeRect(1, 1, w - 2, h - 2);
       ctx.fillStyle = '#3b82f6';
       ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.fillText(`📐 Bleed: 0.50" required`, sleeveW + 10, h - 6);
+      ctx.fillText(`📐 Bleed: 0.50" required`, sleeveW + 10, h - 10);
       ctx.restore();
     }
 
-    // 4. Pole Sleeve
+    // 4. Pole Sleeve (Semi-transparent with stitch line)
     if (this.guides.sleeve) {
       ctx.save();
-      ctx.fillStyle = 'rgba(26, 32, 44, 0.88)';
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.14)';
       ctx.fillRect(0, 0, sleeveW, h);
 
-      ctx.strokeStyle = '#fbbf24';
+      ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 1.8;
       ctx.setLineDash([5, 4]);
       ctx.beginPath();
-      ctx.moveTo(sleeveW - 4, 0);
-      ctx.lineTo(sleeveW - 4, h);
+      ctx.moveTo(sleeveW - 2, 0);
+      ctx.lineTo(sleeveW - 2, h);
       ctx.stroke();
 
       ctx.save();
-      ctx.translate(sleeveW / 2 + 4, h / 2);
+      ctx.translate(sleeveW / 2, h / 2);
       ctx.rotate(-Math.PI / 2);
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#f59e0b';
       ctx.font = 'bold 10px Inter, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🚩 POLE SLEEVE', 0, 0);
+      ctx.fillText('🚩 POLE SLEEVE', 0, 3.5);
       ctx.restore();
       ctx.restore();
     }
@@ -2623,8 +2686,8 @@ const CanvasInspector = {
     // Rounded arch top
     ctx.quadraticCurveTo(x1 + w * 0.3, y1, x2, y1 + h * 0.12);
     // Straight vertical side
-    ctx.lineTo(x2, y1 + h * 0.82);
-    // Concave bottom scoop
+    ctx.lineTo(x2, y1 + (tType === 'blade-flag' ? h : h * 0.82));
+    // Bottom cutline
     if (tType === 'blade-flag') {
       ctx.lineTo(x1, y1 + h);
     } else {
@@ -2646,7 +2709,7 @@ const CanvasInspector = {
     ctx.moveTo(innerX1, innerY1 + h);
     ctx.lineTo(innerX1, innerY1 + h * 0.15);
     ctx.quadraticCurveTo(innerX1 + w * 0.3, innerY1, innerX2, innerY1 + h * 0.12);
-    ctx.lineTo(innerX2, innerY1 + h * 0.82);
+    ctx.lineTo(innerX2, innerY1 + (tType === 'blade-flag' ? h : h * 0.82));
     if (tType === 'blade-flag') {
       ctx.lineTo(innerX1, innerY1 + h);
     } else {
