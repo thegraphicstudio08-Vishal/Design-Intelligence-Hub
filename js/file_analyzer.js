@@ -279,6 +279,7 @@ const FileAnalyzer = {
 
     const bestDiff = Math.min(arStandardDiff, arRotatedDiff);
     res.aspectRatioMismatchPercent = +(bestDiff * 100).toFixed(1);
+    res.aspectRatioBestMatchIsRotated = arRotatedDiff < arStandardDiff && bestDiff <= 0.05;
   },
 
   /**

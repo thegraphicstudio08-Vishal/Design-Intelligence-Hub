@@ -326,6 +326,74 @@ function setupEventListeners() {
 }
 
 /**
+ * BannerBuzz SOP Slide 26 Auto-Orientation Rule:
+ * "Admin order size: Vertical orientation & Customer artwork: horizontal orientation ->
+ * We will change the orientation on the admin and make the file horizontal orientation after the customer's approval."
+ * Automatically aligns width/height inputs and appState when orientation mismatch is detected.
+ */
+function checkAndApplyAutoOrientation(artW, artH) {
+  if (!artW || !artH || !appState.userDims) return false;
+  const isArtLandscape = artW > artH * 1.05;
+  const isArtPortrait = artH > artW * 1.05;
+
+  let curW = appState.userDims.widthIn || 36;
+  let curH = appState.userDims.heightIn || 24;
+  const isOrderLandscape = curW > curH * 1.05;
+  const isOrderPortrait = curH > curW * 1.05;
+
+  if ((isArtLandscape && isOrderPortrait) || (isArtPortrait && isOrderLandscape)) {
+    const swappedW = curH;
+    const swappedH = curW;
+    appState.userDims.widthIn = swappedW;
+    appState.userDims.heightIn = swappedH;
+
+    const unit = document.getElementById('dim-unit')?.value || 'in';
+    const wInput = document.getElementById('print-w');
+    const hInput = document.getElementById('print-h');
+    if (wInput && hInput) {
+      if (unit === 'ft') {
+        wInput.value = (swappedW / 12).toFixed(2).replace(/\.00$/, '');
+        hInput.value = (swappedH / 12).toFixed(2).replace(/\.00$/, '');
+      } else if (unit === 'cm') {
+        wInput.value = (swappedW * 2.54).toFixed(1);
+        hInput.value = (swappedH * 2.54).toFixed(1);
+      } else if (unit === 'mm') {
+        wInput.value = Math.round(swappedW * 25.4);
+        hInput.value = Math.round(swappedH * 25.4);
+      } else {
+        wInput.value = swappedW;
+        hInput.value = swappedH;
+      }
+    }
+
+    const proofW = document.getElementById('proof-w');
+    const proofH = document.getElementById('proof-h');
+    if (proofW) proofW.value = swappedW;
+    if (proofH) proofH.value = swappedH;
+
+    if (appState.parsedFilename) {
+      appState.parsedFilename.widthIn = swappedW;
+      appState.parsedFilename.heightIn = swappedH;
+      appState.parsedFilename.autoOriented = true;
+    }
+
+    const banner = document.getElementById('fn-banner');
+    if (banner) {
+      let orientBadge = document.getElementById('fn-orient-badge');
+      if (!orientBadge) {
+        orientBadge = document.createElement('div');
+        orientBadge.id = 'fn-orient-badge';
+        banner.appendChild(orientBadge);
+      }
+      orientBadge.style.cssText = 'margin-top:6px; background:#f0fdf4; border:1px solid #86efac; border-radius:6px; padding:6px 10px; font-size:11.5px; color:#166534; font-weight:700; display:flex; align-items:center; gap:6px;';
+      orientBadge.innerHTML = `<span>✓</span> <span>Auto-Oriented to Artwork (SOP Slide 26): Aligned to ${swappedW}&quot; × ${swappedH}&quot; (${swappedW >= swappedH ? 'Landscape' : 'Portrait'})</span>`;
+    }
+    return true;
+  }
+  return false;
+}
+
+/**
  * Handle Uploaded File
  */
 function handleFile(file) {
@@ -393,9 +461,26 @@ function handleFile(file) {
           if (prevCard) prevCard.style.display = 'flex';
           if (dropZone) dropZone.style.display = 'none';
         }
-        if (document.getElementById('artwork-canvas') && appState.product) {
-          CanvasInspector.renderArtwork(e.target.result, appState.product, appState.userDims);
-        }
+
+        const img = new Image();
+        img.onload = () => {
+          checkAndApplyAutoOrientation(img.naturalWidth, img.naturalHeight);
+          if (document.getElementById('artwork-canvas') && appState.product) {
+            CanvasInspector.renderArtwork(e.target.result, appState.product, appState.userDims);
+          }
+          if (appState.product) {
+            runPreCheck();
+          }
+        };
+        img.onerror = () => {
+          if (document.getElementById('artwork-canvas') && appState.product) {
+            CanvasInspector.renderArtwork(e.target.result, appState.product, appState.userDims);
+          }
+          if (appState.product) {
+            runPreCheck();
+          }
+        };
+        img.src = e.target.result;
       };
       r.readAsDataURL(file);
     } else {
@@ -422,16 +507,14 @@ function handleFile(file) {
       if (document.getElementById('artwork-canvas') && appState.product) {
         CanvasInspector.renderArtwork(previewSvg, appState.product, appState.userDims);
       }
+      if (appState.product) {
+        runPreCheck();
+      }
     }
     previewCard.classList.add('show');
   }
 
   updateRunButtonState();
-
-  // Automatically trigger SOP pre-check if product identified
-  if (appState.product) {
-    runPreCheck();
-  }
 }
 
 /**
@@ -751,7 +834,13 @@ async function runPreCheck() {
       : appState.product;
 
     // 1. Analyze File
-    const analysis = await FileAnalyzer.analyze(appState.file, effectiveSpec, appState.userDims);
+    let analysis = await FileAnalyzer.analyze(appState.file, effectiveSpec, appState.userDims);
+    if (analysis && analysis.pixelWidth && analysis.pixelHeight) {
+      const swapped = checkAndApplyAutoOrientation(analysis.pixelWidth, analysis.pixelHeight);
+      if (swapped) {
+        analysis = await FileAnalyzer.analyze(appState.file, effectiveSpec, appState.userDims);
+      }
+    }
     appState.analysis = analysis;
 
     if (analysis?.parsedFilename) {

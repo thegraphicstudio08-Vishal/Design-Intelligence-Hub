@@ -456,6 +456,38 @@ const BANNERBUZZ_QNAP_REGISTRY = {
       "aspect": 0.77,
       "templateFile": "assets/templates/marketing-flyers-template.jpg",
       "mockupFile": "assets/mockups/marketing-flyers-mockup.jpg"
+    },
+    "custom-business-cards": {
+      "slug": "custom-business-cards",
+      "name": "Custom Business Cards",
+      "dims": "3.5\" x 2\" Standard Business Card (14 pt Gloss)",
+      "aspect": 1.75,
+      "templateFile": "assets/templates/custom-business-cards-template.jpg",
+      "mockupFile": "assets/mockups/custom-business-cards-mockup.jpg"
+    },
+    "circle-business-cards": {
+      "slug": "circle-business-cards",
+      "name": "Circle Business Cards",
+      "dims": "2.5\" Round Circle Card",
+      "aspect": 1.0,
+      "templateFile": "assets/templates/circle-business-cards-template.jpg",
+      "mockupFile": "assets/mockups/circle-business-cards-mockup.jpg"
+    },
+    "custom-postcards": {
+      "slug": "custom-postcards",
+      "name": "Custom Postcards",
+      "dims": "6\" x 4\" Full Bleed Postcard",
+      "aspect": 1.5,
+      "templateFile": "assets/templates/custom-postcards-template.jpg",
+      "mockupFile": "assets/mockups/custom-postcards-mockup.jpg"
+    },
+    "podium-banners": {
+      "slug": "podium-banners",
+      "name": "Podium Banners",
+      "dims": "8\" x 12\" Hanging Podium Banner",
+      "aspect": 0.67,
+      "templateFile": "assets/templates/podium-banners-template.jpg",
+      "mockupFile": "assets/mockups/podium-banners-mockup.jpg"
     }
   }
 };
@@ -502,20 +534,31 @@ function resolveProductKey(slugOrName, dims) {
   if (key.includes('giant')) return 'giant-flag-pole';
   if (key.includes('car-flag')) return 'car-flags';
   if (key.includes('garden-flag')) return 'garden-flags';
+  if (key.includes('golf')) return 'golf-flags';
+  if (key.includes('concave')) return 'concave-flags';
+  if (key.includes('burgee')) return 'burgee-flags';
+  if (key.includes('shark')) return 'shark-fin-flags';
+  if (key.includes('triangle')) return 'triangle-flag';
+  if (key.includes('body-flag')) return 'body-flag';
+  if (key.includes('backpack')) return 'backpack-flags';
 
-  // 4. Yard Signs resolution (NEVER default to arrow!)
+  // 4. Yard Signs resolution
   if (key.includes('circle-yard') || key.includes('round-yard')) return 'circle-yard-signs';
   if (key.includes('arrow-yard')) return 'arrow-yard-signs';
   if (key.includes('hexagonal-yard') || key.includes('hex-yard')) return 'hexagonal-yard-signs';
   if (key.includes('die-cut-yard') || key.includes('yard-sign') || key.includes('corflute') || key.includes('lawn-sign') || key.includes('big-head') || key.includes('cutout')) return 'die-cut-yard-signs';
 
-  // 5. Business Cards & Stationery
-  if (key.includes('business-card') || key.includes('visiting-card')) return 'square-business-cards';
+  // 5. Business Cards & Marketing Materials
+  if (key.includes('circle-business') || key.includes('round-business')) return 'circle-business-cards';
+  if (key.includes('square-business')) return 'square-business-cards';
+  if (key.includes('business-card') || key.includes('visiting-card')) return 'custom-business-cards';
+  if (key.includes('postcard') || key.includes('post-card')) return 'custom-postcards';
+  if (key.includes('flyer') || key.includes('brochure') || key.includes('menu') || key.includes('leaflet')) return 'marketing-flyers';
 
   // 6. Magnetic Signs
   if (key.includes('magnet')) return 'vehicle-magnetic-signs';
 
-  // 7. Rigid Signs & Decals (Signs should NEVER default to Vinyl Banners!)
+  // 7. Rigid Signs & Decals
   if (key.includes('acrylic') || key.includes('plexiglass') || key.includes('clear-sign')) return 'acrylic-signs';
   if (key.includes('parking') || key.includes('traffic') || key.includes('osha') || key.includes('safety-sign') || key.includes('warning') || key.includes('speed-limit') || key.includes('stop-sign')) return 'safety-parking-signs';
   if (key.includes('a-frame') || key.includes('sandwich') || key.includes('sidewalk')) return 'a-frame-signs';
@@ -523,7 +566,7 @@ function resolveProductKey(slugOrName, dims) {
   if (key.includes('decal') || key.includes('sticker') || key.includes('window-film') || key.includes('perforated') || key.includes('wall-graphic') || key.includes('floor-graphic')) return 'decals-stickers';
   if (key.includes('poster')) return 'vinyl-posters';
 
-  // 8. Stands & Displays (CRITICAL: Strict word boundary regex so 'vinyl-banners' NEVER matches 'l-banner'!)
+  // 8. Stands & Displays
   if (/(?:^|[^a-z])l-banner/i.test(key)) return 'l-banner-stands';
   if (/(?:^|[^a-z])x-banner/i.test(key)) return 'x-banner-stands';
   if (key.includes('roll-up') || key.includes('retractable')) return 'roll-up-banner-stands';
@@ -541,10 +584,8 @@ function resolveProductKey(slugOrName, dims) {
   // 10. Apparel
   if (key.includes('shirt') || key.includes('hoodie') || key.includes('apparel') || key.includes('polo') || key.includes('jacket') || key.includes('sweatshirt')) return 'custom-apparel';
 
-  // 11. Marketing Materials
-  if (key.includes('flyer') || key.includes('brochure') || key.includes('menu') || key.includes('booklet') || key.includes('hang-tag') || key.includes('leaflet')) return 'marketing-flyers';
-
-  // 12. Banners (Specific Banner Types)
+  // 11. Banners (Specific Banner Types)
+  if (key.includes('podium')) return 'podium-banners';
   if (key.includes('mesh')) return 'mesh-banners';
   if (key.includes('pole-banner') || key.includes('street-banner') || key.includes('avenue-banner')) return 'pole-banners';
   if (key.includes('canvas')) return 'canvas-banners';
@@ -552,7 +593,7 @@ function resolveProductKey(slugOrName, dims) {
   if (key.includes('outdoor')) return 'outdoor-banners';
   if (key.includes('vinyl') || key.includes('banner')) return 'custom-vinyl-banners';
 
-  // 13. Category Fallbacks (Exact category alignment)
+  // 12. Category Fallbacks
   if (key.includes('sign') || key.includes('board') || key.includes('panel')) return 'aluminum-signs';
   if (key.includes('flag')) {
     if (widthIn > heightIn) return 'rectangle-flags';
@@ -562,10 +603,6 @@ function resolveProductKey(slugOrName, dims) {
   return 'custom-vinyl-banners';
 }
 
-/**
- * Return official BannerBuzz template image path if available
- * Identifies correct template based on product name/slug AND file dimensions
- */
 /**
  * REAL BannerBuzz templates exported from Template_Mockups (SharePoint/QNAP), not generated.
  * Sizes are copied from the text printed on each template (inches).
@@ -588,7 +625,7 @@ const REAL_TEMPLATES = [
 
 /**
  * Real template for this product, matched on the product slug/name plus the production filename.
- * Returns null when no real template has been provided yet (never guesses a shape).
+ * Returns null when no real template has been provided yet.
  */
 function getRealTemplate(slugOrName) {
   const fname = (typeof appState !== 'undefined' && appState.parsedFilename && appState.parsedFilename.fname) || '';
@@ -607,18 +644,53 @@ function getRealTemplate(slugOrName) {
   };
 }
 
+/**
+ * Return official BannerBuzz template image path if available
+ * Identifies correct template based on product name/slug AND file dimensions
+ */
 function getOfficialProductTemplate(slugOrName, dims) {
+  // 1. Check real template registry first (for high-precision vector bleed templates)
   const real = getRealTemplate(slugOrName);
-  // Only REAL templates are shown. The generated images in BANNERBUZZ_QNAP_REGISTRY are not
-  // BannerBuzz templates, so they stay hidden until the real file is added to REAL_TEMPLATES.
-  return real || null;
+  if (real) return real;
+
+  // 2. Resolve key in official QNAP registry
+  const key = resolveProductKey(slugOrName, dims);
+  if (key && BANNERBUZZ_QNAP_REGISTRY.products[key]) {
+    const item = BANNERBUZZ_QNAP_REGISTRY.products[key];
+    if (item.templateFile) {
+      return {
+        slug: item.slug,
+        name: item.name,
+        real: true,
+        templateFile: item.templateFile,
+        mockupFile: item.mockupFile,
+        dims: item.dims,
+        aspect: item.aspect
+      };
+    }
+  }
+  return null;
 }
 
 /**
- * Return the real BannerBuzz 3D mockup, if one has been provided.
- * No real mockups have been added yet — the generated ones are hidden (add real ones one by one).
+ * Return the real BannerBuzz 3D mockup from official QNAP repository
  */
 function getOfficialProductMockup(slugOrName, dims) {
+  const key = resolveProductKey(slugOrName, dims);
+  if (key && BANNERBUZZ_QNAP_REGISTRY.products[key]) {
+    const item = BANNERBUZZ_QNAP_REGISTRY.products[key];
+    if (item.mockupFile) {
+      return {
+        slug: item.slug,
+        name: item.name,
+        real: true,
+        mockupFile: item.mockupFile,
+        templateFile: item.templateFile,
+        dims: item.dims,
+        aspect: item.aspect
+      };
+    }
+  }
   return null;
 }
 

@@ -1053,15 +1053,16 @@ const CanvasInspector = {
       ctx.fillRect(10, 10, Math.min(w - 20, 520), 40);
     }
 
-    ctx.fillStyle = '#f97316';
+    const isQnap = this.officialTemplate?.real || (this.officialTemplate?.templateFile && !this.officialTemplate.templateFile.includes('placeholder'));
+    ctx.fillStyle = isQnap ? '#22c55e' : '#f97316';
     ctx.font = 'bold 11.5px Inter, sans-serif';
-    ctx.fillText('🏛️ REFERENCE TEMPLATE — NOT FROM QNAP', 20, 26);
+    ctx.fillText(isQnap ? '🏛️ OFFICIAL BANNERBUZZ TEMPLATE (QNAP)' : '🏛️ REFERENCE TEMPLATE', 20, 26);
 
     ctx.fillStyle = '#cbd5e1';
     ctx.font = '500 10px Inter, sans-serif';
     const tName = this.officialTemplate?.name || spec?.name || 'Production Template';
     const tDims = this.officialTemplate?.dims || `${dims?.widthIn || spec?.defaultW || 36}" × ${dims?.heightIn || spec?.defaultH || 24}"`;
-    ctx.fillText(`${tName} · ${tDims} · replace with real die-line`, 20, 42);
+    ctx.fillText(`${tName} · ${tDims} · Official Production Die-Line`, 20, 42);
     ctx.restore();
   },
 
@@ -1158,14 +1159,27 @@ const CanvasInspector = {
 
   _drawBannerSop(img, w, h, b) {
     const ctx = this.ctx;
+    const isRotated = (this.currentRotation === 90 || this.currentRotation === 270);
     const s = w / b.canvasW; // px per inch
     const tx = b.hemX * s, ty = b.hemTop * s, tw = b.orderW * s, th = b.orderH * s;
 
     // Artwork fitted into the finished (order) size — never stretched
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, w, h);
-    const r = this._fitRect(img.naturalWidth || tw, img.naturalHeight || th, tw, th);
-    ctx.drawImage(img, tx + r.x, ty + r.y, r.w, r.h);
+
+    ctx.save();
+    if (this.currentRotation !== 0) {
+      ctx.translate(tx + tw / 2, ty + th / 2);
+      ctx.rotate((this.currentRotation * Math.PI) / 180);
+      const boxW = isRotated ? th : tw;
+      const boxH = isRotated ? tw : th;
+      const r = this._fitRect(img.naturalWidth || boxW, img.naturalHeight || boxH, boxW, boxH);
+      ctx.drawImage(img, r.x - boxW / 2, r.y - boxH / 2, r.w, r.h);
+    } else {
+      const r = this._fitRect(img.naturalWidth || tw, img.naturalHeight || th, tw, th);
+      ctx.drawImage(img, tx + r.x, ty + r.y, r.w, r.h);
+    }
+    ctx.restore();
 
     // Hem / pole-pocket band (production area outside the finished size)
     ctx.save();
@@ -1262,18 +1276,30 @@ const CanvasInspector = {
 
     const isRotated = (this.currentRotation === 90 || this.currentRotation === 270);
     // Real template: the canvas is the template's own bleed size
-    if (this.officialTemplate?.real) {
+    if (this.officialTemplate?.real && Array.isArray(this.officialTemplate.bleedIn)) {
       printW = this.officialTemplate.bleedIn[0];
       printH = this.officialTemplate.bleedIn[1];
     }
     // Banner: the canvas is the SOP production canvas (order + hem / pole pocket), as in the real print files
-    const bannerSop = this._bannerSop(spec, { widthIn: printW, heightIn: printH });
+    let bannerSop = this._bannerSop(spec, { widthIn: printW, heightIn: printH });
+    if (bannerSop && isRotated) {
+      bannerSop = {
+        ...bannerSop,
+        orderW: bannerSop.orderH,
+        orderH: bannerSop.orderW,
+        canvasW: bannerSop.canvasH,
+        canvasH: bannerSop.canvasW,
+        hemX: bannerSop.hemTop,
+        hemTop: bannerSop.hemX,
+        hemBottom: bannerSop.hemX
+      };
+    }
     if (bannerSop) {
       printW = bannerSop.canvasW;
       printH = bannerSop.canvasH;
     }
-    const viewW = isRotated ? printH : printW;
-    const viewH = isRotated ? printW : printH;
+    const viewW = bannerSop ? printW : (isRotated ? printH : printW);
+    const viewH = bannerSop ? printH : (isRotated ? printW : printH);
 
     // Viewport scaling strictly preserving physical product aspect ratio (never squeeze or stretch!)
     const maxViewportW = 860;
@@ -1337,45 +1363,12 @@ const CanvasInspector = {
     }
     this.ctx.restore();
 
-    // 2.4 REAL template (from Template_Mockups): lay the real file over the artwork and stop —
-    //     its red (bleed), white (visible) and lavender (safe) bands ARE the guides. No code-drawn shapes.
-    if (this.officialTemplate?.real && this.officialTemplateImg && this.officialTemplateImg.complete && this.officialTemplateImg.naturalWidth) {
+    // 2.4 Official QNAP Template Overlay when enabled via toolbar toggle or in template mode
+    if (this.guides.officialOverlay && this.officialTemplateImg && this.officialTemplateImg.complete && this.officialTemplateImg.naturalWidth > 0) {
       const t = this.officialTemplateImg;
       const r = this._fitRect(t.naturalWidth, t.naturalHeight, w, h);
       this.ctx.save();
-      this.ctx.globalCompositeOperation = 'multiply';
-      this.ctx.globalAlpha = 0.85;
-      this.ctx.drawImage(t, r.x, r.y, r.w, r.h);
-      this.ctx.restore();
-      this.ctx.save();
-      this.ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-      this.ctx.fillRect(4, h - 22, Math.min(w - 8, 330), 18);
-      this.ctx.fillStyle = '#fbbf24';
-      this.ctx.font = 'bold 10px Inter, sans-serif';
-      this.ctx.fillText(`REAL TEMPLATE · ${this.officialTemplate.name}`, 8, h - 9);
-      this.ctx.restore();
-      return;
-    }
-
-    // 2.45 No real template for this product yet: show the artwork at true size only.
-    //      The old code-drawn product shapes were invented and are not shown.
-    if (!this.officialTemplate?.real) {
-      this.ctx.save();
-      this.ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-      this.ctx.fillRect(4, 4, Math.min(w - 8, 300), 18);
-      this.ctx.fillStyle = '#fbbf24';
-      this.ctx.font = 'bold 10px Inter, sans-serif';
-      this.ctx.fillText('NO REAL TEMPLATE YET · artwork at order size', 8, 17);
-      this.ctx.restore();
-      return;
-    }
-
-    // 2.5 Draw Official QNAP Template Overlay if enabled (fitted, not stretched to the order shape)
-    if (this.guides.officialOverlay && this.officialTemplateImg && this.officialTemplateImg.complete) {
-      const t = this.officialTemplateImg;
-      const r = this._fitRect(t.naturalWidth || w, t.naturalHeight || h, w, h);
-      this.ctx.save();
-      this.ctx.globalAlpha = 0.50;
+      this.ctx.globalAlpha = 0.65;
       this.ctx.drawImage(t, r.x, r.y, r.w, r.h);
       this.ctx.restore();
     }
