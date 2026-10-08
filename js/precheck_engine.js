@@ -12,6 +12,70 @@ const PrecheckEngine = {
    * @param {Object} overrides - Designer override log { [checkId]: reason }
    * @returns {Object} Comprehensive evaluation report
    */
+  /**
+   * Orientation: the artwork page against the ordered size, and the direction of the text on it.
+   * SOP 1_Banners slide 26: when the order is vertical and the artwork horizontal, the orientation is
+   * changed on admin only AFTER the customer approves a mockup — so a mismatch is reported, never
+   * silently "fixed". SOP 4_Custom Flags: clip / suction-cup flags can be used both ways.
+   */
+  orientationCheck(analysis, spec, dims) {
+    const printW = dims.widthIn, printH = dims.heightIn;
+    const sop = spec && spec._sop;
+    const insp = (typeof AgenticAiInspector !== 'undefined') ? AgenticAiInspector : null;
+    const text = insp ? insp.textResult : null;
+    const textBusy = insp && ['loading', 'reading', 'idle'].includes((insp.textState || {}).status) && !insp.scanSkipReason;
+    const turn = text && text.orientation ? text.orientation.angle : 0;
+    const order = analysis.orientationOrder;
+    const art = analysis.orientationArtwork;
+    const size = analysis.detectedInchesW
+      ? ` ${analysis.detectedInchesW}" × ${analysis.detectedInchesH}"`
+      : (analysis.pixelWidth ? ` ${analysis.pixelWidth} × ${analysis.pixelHeight} px` : '');
+    const textTxt = turn
+      ? (turn === 180 ? 'text reads upside down' : 'text reads sideways')
+      : text && text.orientation && text.orientation.readable ? 'text reads upright'
+        : textBusy ? 'checking text direction…' : text ? 'too little text to confirm its direction' : 'text direction not checked';
+    const found = `Artwork page: ${art || 'Unknown'}${size} · Order: ${order} ${printW}" × ${printH}" · ${textTxt}`;
+    const required = `${order} artwork, text upright`;
+    const slugName = `${(spec && spec.slug) || ''} ${(spec && spec.name) || ''}`.toLowerCase();
+    const bothWays = /flag/.test(slugName) && /clip|suction/.test(slugName);
+    const pageMismatch = art && art !== 'Unknown' && !analysis.orientationMatch;
+
+    if (turn) {
+      const howTo = turn === 90 ? '90° clockwise' : turn === 270 ? '90° anticlockwise' : '180°';
+      const pageNote = pageMismatch
+        ? ` The page is ${art.toLowerCase()} while the order is ${order.toLowerCase()} (${printW}" × ${printH}").`
+        : '';
+      return {
+        status: 'FAIL', found, required,
+        detail: `The text on the artwork ${turn === 180 ? 'is upside down' : 'runs sideways'}: it only reads correctly when the artwork is turned ${howTo}.${pageNote}`,
+        action: `Rotate the artwork ${howTo}${pageMismatch || turn !== 180 ? ` and place it on the ${printW}" × ${printH}" ${order.toLowerCase()} canvas` : ''} before creating the design file, or confirm with the customer.`
+      };
+    }
+    if (!art || art === 'Unknown') {
+      return { status: 'WARNING', found, required,
+        detail: 'The artwork size could not be read, so its orientation cannot be compared with the order automatically.',
+        action: `Confirm the artwork is ${order.toLowerCase()} (${printW}" W × ${printH}" H) and the text is upright.` };
+    }
+    if (!pageMismatch) {
+      return { status: 'PASS', found, required,
+        detail: `Artwork orientation (${art}) matches the order (${printW}" × ${printH}")${text && text.orientation && text.orientation.readable ? ' and the text reads upright' : ''}.`,
+        action: '' };
+    }
+    if (bothWays) {
+      return { status: 'PASS', found, required,
+        detail: `Artwork is ${art.toLowerCase()}, order is ${order.toLowerCase()}. SOP 4_Custom Flags: this flag can be used vertically and horizontally.`,
+        action: 'Confirm with the customer which way the flag will hang.' };
+    }
+    if (sop && sop.orientationSwapAllowed) {
+      return { status: 'WARNING', found, required,
+        detail: `Artwork is ${art.toLowerCase()}, order is ${order.toLowerCase()} (${printW}" W × ${printH}" H). SOP 1_Banners slide 26: send a mockup; after the customer approves, change the orientation on admin. If a pole pocket is selected, place it for the new orientation.`,
+        action: 'Send a mockup to the customer and wait for approval before changing the admin orientation.' };
+    }
+    return { status: 'FAIL', found, required,
+      detail: `Orientation mismatch: the artwork is ${art.toLowerCase()} but the order is ${order.toLowerCase()} (${printW}" W × ${printH}" H). The text reads upright, so the artwork was made for the other orientation — it cannot simply be rotated.`,
+      action: 'Confirm with the customer whether the order size is the wrong way round, or ask for artwork in the ordered orientation.' };
+  },
+
   evaluate(analysis, spec, userDims, overrides = {}) {
     const checks = [];
     const printW = userDims?.widthIn || spec.defaultW || 36;
@@ -169,35 +233,10 @@ const PrecheckEngine = {
     // ──────────────────────────────────────────────────────────────────────────
     // CHECKPOINT 2: Orientation Check
     // ──────────────────────────────────────────────────────────────────────────
-    let orientStatus = 'PASS', orientFound = '', orientDetail = '', orientAction = '';
-    orientFound = `Artwork: ${analysis.orientationArtwork} · Order: ${analysis.orientationOrder}`;
-    if (analysis.orientationArtwork === 'Unknown') {
-      orientStatus = 'WARNING';
-      orientDetail = 'Artwork size could not be read, so orientation cannot be compared automatically.';
-      orientAction = `Confirm artwork orientation matches ${printW}"W × ${printH}"H.`;
-    } else if (analysis.orientationMatch) {
-      orientStatus = 'PASS';
-      orientDetail = `Artwork orientation (${analysis.orientationArtwork}) matches ordered product orientation (${printW}"×${printH}").`;
-    } else if (sop?.orientationSwapAllowed) {
-      // SOP 1_Banners · Mockup guideline: change orientation on admin after customer approval
-      orientStatus = 'WARNING';
-      orientDetail = `Artwork is ${analysis.orientationArtwork}, order is ${analysis.orientationOrder} (${printW}"W × ${printH}"H). ${SopRules.SOURCES.mockup}: change the orientation on admin after the customer's approval and communicate with a mockup.`;
-      orientAction = 'Send mockup to customer; after approval change admin orientation. If pole pocket or wind flaps are selected, place them for the new orientation.';
-    } else {
-      orientStatus = 'FAIL';
-      orientDetail = `Orientation Mismatch: Artwork is ${analysis.orientationArtwork}, but product order is ${analysis.orientationOrder} (${printW}"W × ${printH}"H).`;
-      orientAction = 'Rotate artwork 90 degrees or confirm with customer whether order dimensions were inverted.';
-    }
-    checks.push({
-      id: 'orientation',
-      name: 'Orientation',
-      icon: '📐',
-      status: orientStatus,
-      found: orientFound,
-      required: `Match ${analysis.orientationOrder} (${printW}"×${printH}")`,
-      detail: orientDetail,
-      action: orientAction
-    });
+    // Page orientation vs the order, plus the direction of the text read on the artwork.
+    // The text direction arrives a few seconds later (OCR); AgenticAiInspector then re-runs this check.
+    checks.push(Object.assign({ id: 'orientation', name: 'Orientation', icon: '📐' },
+      this.orientationCheck(analysis, spec, { widthIn: printW, heightIn: printH })));
 
     // ──────────────────────────────────────────────────────────────────────────
     // CHECKPOINT 4: Agentic AI Quality Audit: Spelling, Stray Lines & Dots
@@ -282,16 +321,15 @@ const PrecheckEngine = {
     // ──────────────────────────────────────────────────────────────────────────
     // CHECKPOINT 10: Spelling & Content Review
     // ──────────────────────────────────────────────────────────────────────────
-    checks.push({
+    // Text read on the artwork (OCR) and checked; updated live when the reading finishes
+    checks.push(Object.assign({
       id: 'spelling',
       name: 'Spelling & Copy Proofing',
       icon: '📝',
-      status: 'WARNING',
-      found: 'Manual review required',
-      required: 'Zero spelling/grammar errors',
-      detail: 'Customer artwork copy (company names, phone numbers, website URLs, addresses, dates) must be proofread by the designer.',
-      action: 'Carefully cross-check phone numbers, dates, and names before proceeding to customer proof.'
-    });
+      required: 'No spelling mistakes; correct brand names and web / e-mail addresses'
+    }, (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector.getSpellingSummary)
+      ? AgenticAiInspector.getSpellingSummary()
+      : { status: 'WARNING', found: 'Manual review required', detail: 'Proofread names, phone numbers, web addresses and dates.', action: '' }));
 
     // Apply designer overrides
     checks.forEach(c => {

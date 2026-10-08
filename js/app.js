@@ -398,63 +398,27 @@ function setupEventListeners() {
  * Automatically aligns width/height inputs and appState when orientation mismatch is detected.
  */
 function checkAndApplyAutoOrientation(artW, artH) {
-  if (!artW || !artH || !appState.userDims) return false;
-  const isArtLandscape = artW > artH * 1.05;
-  const isArtPortrait = artH > artW * 1.05;
-
-  let curW = appState.userDims.widthIn || 36;
-  let curH = appState.userDims.heightIn || 24;
-  const isOrderLandscape = curW > curH * 1.05;
-  const isOrderPortrait = curH > curW * 1.05;
-
-  if ((isArtLandscape && isOrderPortrait) || (isArtPortrait && isOrderLandscape)) {
-    const swappedW = curH;
-    const swappedH = curW;
-    appState.userDims.widthIn = swappedW;
-    appState.userDims.heightIn = swappedH;
-
-    const unit = document.getElementById('dim-unit')?.value || 'in';
-    const wInput = document.getElementById('print-w');
-    const hInput = document.getElementById('print-h');
-    if (wInput && hInput) {
-      if (unit === 'ft') {
-        wInput.value = (swappedW / 12).toFixed(2).replace(/\.00$/, '');
-        hInput.value = (swappedH / 12).toFixed(2).replace(/\.00$/, '');
-      } else if (unit === 'cm') {
-        wInput.value = (swappedW * 2.54).toFixed(1);
-        hInput.value = (swappedH * 2.54).toFixed(1);
-      } else if (unit === 'mm') {
-        wInput.value = Math.round(swappedW * 25.4);
-        hInput.value = Math.round(swappedH * 25.4);
-      } else {
-        wInput.value = swappedW;
-        hInput.value = swappedH;
-      }
+  // The order size is what the customer bought — it is never changed automatically.
+  // SOP 1_Banners slide 26: an orientation change is made on admin only after the customer approves
+  // a mockup. A mismatch is shown here and judged by the Orientation check of the pre-check report.
+  const banner = document.getElementById('fn-banner');
+  const old = document.getElementById('fn-orient-badge');
+  if (!artW || !artH || !appState.userDims) { if (old) old.remove(); return false; }
+  const curW = appState.userDims.widthIn || 0;
+  const curH = appState.userDims.heightIn || 0;
+  const isArtLandscape = artW > artH * 1.05, isArtPortrait = artH > artW * 1.05;
+  const isOrderLandscape = curW > curH * 1.05, isOrderPortrait = curH > curW * 1.05;
+  const mismatch = (isArtLandscape && isOrderPortrait) || (isArtPortrait && isOrderLandscape);
+  if (!mismatch) { if (old) old.remove(); return false; }
+  if (banner) {
+    let badge = old;
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.id = 'fn-orient-badge';
+      banner.appendChild(badge);
     }
-
-    const proofW = document.getElementById('proof-w');
-    const proofH = document.getElementById('proof-h');
-    if (proofW) proofW.value = swappedW;
-    if (proofH) proofH.value = swappedH;
-
-    if (appState.parsedFilename) {
-      appState.parsedFilename.widthIn = swappedW;
-      appState.parsedFilename.heightIn = swappedH;
-      appState.parsedFilename.autoOriented = true;
-    }
-
-    const banner = document.getElementById('fn-banner');
-    if (banner) {
-      let orientBadge = document.getElementById('fn-orient-badge');
-      if (!orientBadge) {
-        orientBadge = document.createElement('div');
-        orientBadge.id = 'fn-orient-badge';
-        banner.appendChild(orientBadge);
-      }
-      orientBadge.style.cssText = 'margin-top:6px; background:#f0fdf4; border:1px solid #86efac; border-radius:6px; padding:6px 10px; font-size:11.5px; color:#166534; font-weight:700; display:flex; align-items:center; gap:6px;';
-      orientBadge.innerHTML = `<span>✓</span> <span>Auto-Oriented to Artwork (SOP Slide 26): Aligned to ${swappedW}&quot; × ${swappedH}&quot; (${swappedW >= swappedH ? 'Landscape' : 'Portrait'})</span>`;
-    }
-    return true;
+    badge.style.cssText = 'margin-top:6px; background:#fffbeb; border:1px solid #fcd34d; border-radius:6px; padding:6px 10px; font-size:11.5px; color:#92400e; font-weight:700; display:flex; align-items:center; gap:6px;';
+    badge.innerHTML = `<span>⚠️</span> <span>Artwork is ${isArtLandscape ? 'landscape' : 'portrait'}, order is ${isOrderLandscape ? 'landscape' : 'portrait'} (${curW}&quot; × ${curH}&quot;). Order size kept — see the Orientation check.</span>`;
   }
   return false;
 }
@@ -912,6 +876,19 @@ async function runPreCheck() {
       }
     }
     appState.analysis = analysis;
+
+    // PDF / AI: the real page rendered by pdf.js replaces the generated stand-in picture everywhere
+    if (analysis && analysis.renderedFromPdf && analysis.previewDataUrl) {
+      appState.previewDataUrl = analysis.previewDataUrl;
+      const pImg = document.getElementById('preview-img');
+      if (pImg) pImg.src = analysis.previewDataUrl;
+      if (typeof ProofStudio !== 'undefined' && (!ProofStudio.slots.overall || !ProofStudio.slots.overall.isCustom)) {
+        ProofStudio.setSlot('overall', analysis.previewDataUrl, appState.file ? appState.file.name : 'artwork.pdf');
+        const prevImg = document.getElementById('prev-img-overall');
+        if (prevImg) prevImg.src = analysis.previewDataUrl;
+      }
+      checkAndApplyAutoOrientation(analysis.renderPxW, analysis.renderPxH);
+    }
 
     if (analysis?.parsedFilename) {
       if (!appState.userDims) appState.userDims = {};

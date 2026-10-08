@@ -277,7 +277,67 @@ const FileAnalyzer = {
     } else {
       res.previewDataUrl = this._generateVectorPreviewSvg(res, file.name, targetW, targetH);
     }
+
+    // Real page picture (PDF and PDF-compatible .AI files) so every check works on the actual artwork
+    const page = await this._renderPdfPage(file);
+    if (page) {
+      res.previewDataUrl = page.dataUrl;
+      res.renderedFromPdf = true;
+      res.renderPxW = page.w;
+      res.renderPxH = page.h;
+      res.pdfPages = page.pages;
+      if (!res.detectedInchesW) {
+        res.detectedInchesW = +(page.ptW / 72).toFixed(2);
+        res.detectedInchesH = +(page.ptH / 72).toFixed(2);
+      }
+      // Orientation follows the page as printed (incl. the PDF page rotation)
+      const pageLandscape = page.w > page.h * 1.01, pagePortrait = page.h > page.w * 1.01;
+      res.orientationArtwork = pageLandscape ? 'Landscape' : pagePortrait ? 'Portrait' : 'Square';
+      res.orientationMatch = res.orientationArtwork === res.orientationOrder;
+    }
     return res;
+  },
+
+  PDFJS: {
+    lib: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+    worker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+  },
+
+  async _loadPdfJs() {
+    if (window.pdfjsLib) return window.pdfjsLib;
+    await new Promise((resolve, reject) => {
+      const el = document.createElement('script');
+      el.src = this.PDFJS.lib;
+      el.onload = resolve;
+      el.onerror = () => reject(new Error('pdf.js could not be loaded'));
+      document.head.appendChild(el);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = this.PDFJS.worker;
+    return window.pdfjsLib;
+  },
+
+  /** Render page 1 of a PDF / AI file to a JPEG (long side up to maxSide px). Null if it cannot be read. */
+  async _renderPdfPage(file, maxSide = 2400) {
+    try {
+      const pdfjs = await this._loadPdfJs();
+      const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+      const pg = await doc.getPage(1);
+      const base = pg.getViewport({ scale: 1 });
+      const vp = pg.getViewport({ scale: Math.min(4, maxSide / Math.max(base.width, base.height)) });
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(vp.width);
+      cv.height = Math.round(vp.height);
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, cv.width, cv.height);
+      await pg.render({ canvasContext: ctx, viewport: vp }).promise;
+      const out = { dataUrl: cv.toDataURL('image/jpeg', 0.92), w: cv.width, h: cv.height, ptW: base.width, ptH: base.height, pages: doc.numPages };
+      doc.destroy();
+      return out;
+    } catch (e) {
+      console.warn('PDF page could not be rendered:', e);
+      return null;
+    }
   },
 
   /**

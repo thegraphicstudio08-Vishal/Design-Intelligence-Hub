@@ -360,7 +360,7 @@ const ArtworkMarkDetector = {
       if (iso < isoPx) return drop('touches artwork');             // i-dot, texture, part of a shape
       if (kind !== 'dot' && iso < isoPx * 1.5) return drop('close to artwork'); // lines / bigger marks stand well apart
       // punctuation (dots) sits within a few letter-spaces of a word; dividers/rules (lines) further out
-      if (inTextRow(c, kind === 'dot' ? isoPx * 3 : isoPx * 8)) return drop('text row');
+      if (inTextRow(c, kind === 'dot' ? isoPx * 5 : isoPx * 8)) return drop('text row');
       if (kind === 'line' && endJoinsArtwork(c)) return drop('line joins artwork'); // frame / box / shape edge
       if (crowded(c)) return drop('crowded');                      // sparkle / speckle texture
       if (kind === 'mark' && Math.min(cw, ch) >= dotMax && symmetric(c)) return drop('symmetric shape'); // star, icon
@@ -554,6 +554,128 @@ const AgenticAiInspector = {
   scanResult: null,
   // Why the artwork could not be scanned (e.g. PDF/AI shown as a generated preview), or null
   scanSkipReason: null,
+  // Text read from the artwork (ArtworkTextCheck): words, spelling issues, which way the text runs
+  textResult: null,
+  textState: { status: 'idle', text: '' },
+  textVerify: [],
+  _textRun: 0,
+  MIN_TEXT_CONF: 80,
+
+  /** Read the artwork text (OCR) in the background; findings arrive a few seconds after the pixel scan */
+  _startTextCheck(img) {
+    const run = ++this._textRun;
+    this.textResult = null;
+    this.textVerify = [];
+    if (typeof ArtworkTextCheck === 'undefined' || !img) {
+      this.textState = { status: 'unavailable', text: 'The text reader is not loaded — proofread the text manually.' };
+      return;
+    }
+    this.textState = { status: 'loading', text: 'Starting the text reader…' };
+    const fname = (typeof appState !== 'undefined' && ((appState.parsedFilename && appState.parsedFilename.fname) || (appState.file && appState.file.name))) || '';
+    const fileWords = fname.replace(/\.[a-z0-9]+$/i, '').split(/[^A-Za-z]+/).filter(t => t.length >= 3);
+    const refresh = () => { this.updateControlsUI(); this.syncPrecheckReport(); };
+    ArtworkTextCheck.run(img, {
+      fileWords,
+      onStatus: (st, text) => { if (run === this._textRun) { this.textState = { status: st, text }; refresh(); } }
+    }).then(res => {
+      if (run === this._textRun) this._applyTextResult(res);
+    }).catch(err => {
+      if (run !== this._textRun) return;
+      console.warn('Text check failed:', err);
+      this.textState = { status: 'unavailable', text: 'The text check could not run (' + err.message + '). Proofread the text manually.' };
+      refresh();
+    });
+  },
+
+  _applyTextResult(res) {
+    this.textResult = res && res.available ? res : null;
+    this.textState = res && res.available
+      ? { status: 'done', text: '' }
+      : { status: 'unavailable', text: (typeof ArtworkTextCheck !== 'undefined' && ArtworkTextCheck.statusText) || 'The text reader is unavailable — proofread the text manually.' };
+    this.defects = this.defects.filter(d => d.type !== 'spelling');
+    if (this.textResult) {
+      const pct = v => +(v * 100).toFixed(2);
+      const LABEL = { brand: 'Brand name', web: 'Web / e-mail address', word: 'Spelling' };
+      res.issues.filter(it => it.kind !== 'verify').forEach((it, n) => {
+        const desc = it.kind === 'brand'
+          ? `The artwork reads "${it.text}", which is close to the brand name "${it.suggestion}" but not the same. A wrong brand / company name means a reprint — confirm with the customer.`
+          : it.kind === 'web'
+            ? `"${it.text}" does not end with a real web / e-mail ending. Did the customer mean "${it.suggestion}"?`
+            : `"${it.text}" is not in the US or UK English dictionary. Did the customer mean "${it.suggestion}"?`;
+        this.defects.push({
+          id: `typo_${n + 1}`,
+          type: 'spelling',
+          kind: it.kind,
+          category: 'Text Check',
+          shape: 'box',
+          severity: it.kind === 'brand' ? 'Fatal' : 'Major',
+          title: `${LABEL[it.kind]}: "${it.text}" → "${it.suggestion}"`,
+          confidence: null,
+          xPercent: pct(it.box.x), yPercent: pct(it.box.y),
+          wPercent: Math.max(pct(it.box.w), 1.2), hPercent: Math.max(pct(it.box.h), 1.2),
+          details: { word: it.text, suggestion: it.suggestion, source: 'artwork',
+            description: `${desc} (Read by OCR with ${Math.round(it.conf)}% certainty — check the word on the artwork.)` },
+          intentional: false,
+          dismissed: false
+        });
+      });
+      this.textVerify = res.issues.filter(it => it.kind === 'verify');
+      const byText = t => res.issues.find(it => it.text === t);
+      this.extractedText = res.words
+        .filter(w => w.conf >= 60 && /[A-Za-z]{2,}/.test(w.text))
+        .map(w => {
+          const it = byText(w.text);
+          return { word: w.text, conf: Math.round(w.conf), kind: it ? it.kind : null, suggestion: it ? it.suggestion : null };
+        });
+    }
+    this._lastBulk = null;
+    this.renderOverlay();
+    this.updateControlsUI();
+    this.syncPrecheckReport();
+  },
+
+  /** Spelling card of the pre-check report: what was read, what looks wrong, what a person must still check */
+  getSpellingSummary() {
+    const st = this.textState || {};
+    if (this.scanSkipReason) {
+      return { status: 'WARNING', found: 'Manual proofreading needed',
+        detail: 'The artwork pixels could not be read in the browser, so its text was not checked automatically.',
+        action: 'Proofread names, phone numbers, web addresses and dates before creating the design file.' };
+    }
+    if (!this.textResult) {
+      if (st.status === 'unavailable') {
+        return { status: 'WARNING', found: 'Text reader unavailable — proofread manually', detail: st.text,
+          action: 'Proofread names, phone numbers, web addresses and dates.' };
+      }
+      return { status: 'WARNING', found: st.text || 'Waiting for the artwork…',
+        detail: 'The text on the artwork is read automatically (OCR) and checked against US and UK English dictionaries, brand names and web-address endings.',
+        action: '' };
+    }
+    const open = this.getDefects().filter(d => d.type === 'spelling' && !d.intentional);
+    const reviewed = this.defects.filter(d => d.type === 'spelling' && (d.dismissed || d.intentional)).length;
+    const nWords = this.textResult.words.filter(w => w.conf >= this.MIN_TEXT_CONF && /[A-Za-z]{2,}/.test(w.text)).length;
+    const verify = this.textVerify.length;
+    const verifyNote = verify
+      ? ` ${verify} name${verify > 1 ? 's' : ''} / uncommon word${verify > 1 ? 's' : ''} listed under Text Check to verify (e.g. ${this.textVerify.slice(0, 3).map(v => v.text).join(', ')}).`
+      : '';
+    const base = `Read ${nWords} word${nWords !== 1 ? 's' : ''} on the artwork (OCR) and checked them against US + UK English dictionaries, brand names and web-address endings.${verifyNote} Phone numbers and dates cannot be verified automatically.`;
+    if (open.length) {
+      const list = open.slice(0, 3).map(d => `"${d.details.word}" → "${d.details.suggestion}"`).join(', ') + (open.length > 3 ? ` +${open.length - 3} more` : '');
+      return { status: open.some(d => d.severity === 'Fatal') ? 'FAIL' : 'WARNING',
+        found: `${open.length} possible mistake${open.length > 1 ? 's' : ''}: ${list}`, detail: base,
+        action: 'Click the marked words on the canvas. Ask the customer to confirm or correct them before creating the design file.' };
+    }
+    if (nWords < 3) {
+      const readWords = this.textResult.words.filter(w => w.conf >= this.MIN_TEXT_CONF && /[A-Za-z]{2,}/.test(w.text)).map(w => w.text);
+      return { status: 'WARNING',
+        found: readWords.length ? `Only ${readWords.length} word${readWords.length > 1 ? 's' : ''} could be read clearly (${readWords.join(', ')}) — proofread the rest by eye` : 'No text could be read clearly — proofread manually',
+        detail: base,
+        action: 'Arched, script, very large/small or photo lettering cannot be read reliably by OCR. Proofread the artwork by eye.' };
+    }
+    return { status: verify ? 'WARNING' : 'PASS',
+      found: `No spelling mistakes found${reviewed ? ` · ${reviewed} reviewed by designer` : ''}${verify ? ` · ${verify} name${verify > 1 ? 's' : ''} to verify` : ''}`,
+      detail: base, action: verify ? 'Check the spelling of the listed names against the order / customer details.' : '' };
+  },
 
   /**
    * Run the QA scan. Called once when the pre-check starts (image may not be loaded yet) and again
@@ -574,7 +696,7 @@ const AgenticAiInspector = {
     }
 
     // Only formats whose real pixels the browser shows can be scanned
-    const scannableExt = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg'].includes(ext);
+    const scannableExt = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg'].includes(ext) || !!(analysis && analysis.renderedFromPdf);
     let skip = null;
     if (!scannableExt) {
       skip = `.${(ext || 'file').toUpperCase()} artwork is shown as a generated preview in the browser, not its real pixels, so lines and dots cannot be checked automatically. Open it in Illustrator / Acrobat and inspect at 100%.`;
@@ -586,6 +708,7 @@ const AgenticAiInspector = {
       // First call happens before the image has loaded: show "scanning" until the canvas draws it
       if (this._lastScannedSrc !== src) {
         this.defects = []; this.extractedText = []; this.scanResult = null; this.scanSkipReason = null;
+        this.textResult = null; this.textVerify = []; this.textState = { status: 'idle', text: '' }; this._textRun++;
       }
       this.renderOverlay();
       this.updateControlsUI();
@@ -614,6 +737,10 @@ const AgenticAiInspector = {
     // 2. Stray lines & dots on the real artwork pixels
     if (!skip) this._scanArtworkMarksWithIntentionality(canvas, img, spec, dims, w, h);
 
+    // 3. Spelling + direction of the text (OCR, runs in the background)
+    if (!skip) this._startTextCheck(img);
+    else { this._textRun++; this.textResult = null; this.textVerify = []; this.textState = { status: 'skipped', text: '' }; }
+
     // Render overlay and update controls
     this.renderOverlay();
     this.updateControlsUI();
@@ -633,14 +760,20 @@ const AgenticAiInspector = {
    * live update after the scan. Says what was checked, what was found, and what still needs a human.
    */
   getCheckSummary() {
-    const active = this.getDefects().filter(d => !d.intentional);
+    const marks = this.defects.filter(d => d.type !== 'spelling');
+    const active = marks.filter(d => !d.dismissed && !d.intentional);
     const lines = active.filter(d => d.type === 'stray_line');
     const dots = active.filter(d => d.type === 'stray_dot');
     const edges = active.filter(d => d.type === 'edge_line');
-    const typos = active.filter(d => d.type === 'spelling');
+    const typos = [];
     const r = this.scanResult;
     const plural = (n, w) => `${n} ${w}${n !== 1 ? 's' : ''}`;
 
+    const closed = marks.filter(d => d.dismissed).length;
+    const intentional = marks.filter(d => !d.dismissed && d.intentional).length;
+    // Findings the designer closed or confirmed are reported as such — never as "nothing found"
+    const reviewed = [closed ? `${closed} closed` : '', intentional ? `${intentional} marked intentional` : ''].filter(Boolean).join(', ');
+    const closedNote = reviewed ? ` · ${reviewed} by designer` : '';
     const parts = [];
     if (dots.length) parts.push(plural(dots.length, 'stray dot/mark'));
     if (lines.length) parts.push(plural(lines.length, 'stray line'));
@@ -674,7 +807,7 @@ const AgenticAiInspector = {
     if (parts.length) {
       return {
         status: hasFatal ? 'FAIL' : 'WARNING',
-        found: `${parts.join(', ')} · checked ${r.checkedPct}% of the artwork`,
+        found: `${parts.join(', ')} · checked ${r.checkedPct}% of the artwork${closedNote}`,
         detail: coverage + patternNote,
         action: 'Click a marker on the canvas (or 🎯 Locate) to zoom in. Remove real marks, or mark them intentional.'
           + (r.artworkType !== 'flat' ? ' Photo and illustration areas are not auto-checked — look over them at 100% zoom.' : '')
@@ -683,14 +816,18 @@ const AgenticAiInspector = {
     if (r.checkedPct < 40) {
       return {
         status: 'WARNING',
-        found: `No stray marks in the checked area (${r.checkedPct}%) · photo areas need a visual check`,
+        found: reviewed
+          ? `All findings reviewed by designer (${reviewed}) · photo areas need a visual check`
+          : `No stray marks in the checked area (${r.checkedPct}%) · photo areas need a visual check`,
         detail: coverage + patternNote,
         action: 'Most of this artwork is photo / illustration. Look over it at 100% zoom for dust, scratches or scanner marks.'
       };
     }
     return {
       status: 'PASS',
-      found: `No stray lines or dots found · checked ${r.checkedPct}% of the artwork`,
+      found: reviewed
+        ? `All findings reviewed by designer (${reviewed}) · checked ${r.checkedPct}% of the artwork`
+        : `No stray lines or dots found · checked ${r.checkedPct}% of the artwork`,
       detail: coverage + patternNote,
       action: ''
     };
@@ -702,24 +839,25 @@ const AgenticAiInspector = {
     if (appState.analysis) appState.analysis.aiDefects = activeDefects;
     const report = appState.report;
     if (!report || !Array.isArray(report.checks)) return;
-    const check = report.checks.find(c => c.id === 'linesAndDots');
-    if (!check) return;
-
-    Object.assign(check, this.getCheckSummary(), { aiDefects: activeDefects });
-
-    const cardEl = document.getElementById('cc-linesAndDots');
-    if (cardEl && !check.isOverridden) {
-      const stClass = check.status.toLowerCase();
-      cardEl.className = `check-card ${stClass}`;
-      const pillEl = cardEl.querySelector('.check-pill');
-      if (pillEl) {
-        pillEl.className = `check-pill pill-${stClass}`;
-        pillEl.textContent = check.status;
-      }
-      const cdvs = cardEl.querySelectorAll('.cdv');
-      if (cdvs[0]) cdvs[0].textContent = check.found;
-      if (cdvs[1]) cdvs[1].textContent = check.detail;
+    const updates = {
+      linesAndDots: Object.assign(this.getCheckSummary(), { aiDefects: activeDefects }),
+      spelling: this.getSpellingSummary()
+    };
+    if (typeof PrecheckEngine !== 'undefined' && PrecheckEngine.orientationCheck && report.analysis) {
+      updates.orientation = PrecheckEngine.orientationCheck(report.analysis, report.spec, report.dimensions);
     }
+    Object.entries(updates).forEach(([id, summary]) => {
+      const check = report.checks.find(c => c.id === id);
+      if (!check) return;
+      Object.assign(check, summary);
+      // Re-render the card with the app's own template, keeping it open if the designer opened it
+      const cardEl = document.getElementById(`cc-${id}`);
+      if (cardEl && typeof renderCheckCard === 'function') {
+        const wasOpen = cardEl.classList.contains('open');
+        cardEl.outerHTML = renderCheckCard(check);
+        if (wasOpen) { const again = document.getElementById(`cc-${id}`); if (again) again.classList.add('open'); }
+      }
+    });
     this._refreshSummaryCard(report);
   },
 
@@ -795,7 +933,7 @@ const AgenticAiInspector = {
     if (typeof appState !== 'undefined' && appState.parsedFilename) {
       const fname = appState.parsedFilename.fname || '';
       if (fname) {
-        textSnippets.push({ text: fname.replace(/[_.-]/g, ' '), x: 0, y: 0, source: 'filename' });
+        // The file name is not printed on the product, so it is not spell-checked as artwork text
       }
     }
 
@@ -956,7 +1094,9 @@ const AgenticAiInspector = {
     // Markers are placed in artwork coordinates, so the overlay covers exactly the rectangle where the
     // artwork is drawn (inside hem / bleed / letterbox). In template or mockup view, or when rotated,
     // the artwork is not drawn 1:1, so markers are hidden rather than shown in the wrong place.
-    const art = (typeof CanvasInspector !== 'undefined') ? CanvasInspector.artRect : null;
+    // artRect undefined = an older canvas_inspector.js (no artwork rectangle): fall back to the whole canvas
+    const ci = (typeof CanvasInspector !== 'undefined') ? CanvasInspector : null;
+    const art = ci && ci.artRect === undefined ? { x: 0, y: 0, w: canvas.width, h: canvas.height } : (ci ? ci.artRect : null);
     const sx = canvas.width ? canvas.offsetWidth / canvas.width : 1;
     const sy = canvas.height ? canvas.offsetHeight / canvas.height : 1;
     overlay.style.position = 'absolute';
@@ -1103,6 +1243,72 @@ const AgenticAiInspector = {
       this.updateControlsUI();
       this.syncPrecheckReport();
     }
+  },
+
+  // ── Bulk actions: close / mark intentional all open findings at once (one-step undo) ──
+  _lastBulk: null,
+
+  _refreshAfterBulk() {
+    this._activeDefectId = null;
+    this.renderOverlay();
+    this.updateControlsUI();
+    this.syncPrecheckReport();
+  },
+
+  closeAll() {
+    const ids = this.defects.filter(d => !d.dismissed).map(d => d.id);
+    if (!ids.length) return;
+    this.defects.forEach(d => { if (ids.includes(d.id)) d.dismissed = true; });
+    this._lastBulk = { type: 'close', ids };
+    this._refreshAfterBulk();
+  },
+
+  markAllIntentional() {
+    const targets = this.defects.filter(d => !d.dismissed && !d.intentional);
+    if (!targets.length) return;
+    targets.forEach(d => { d._severityBefore = d.severity; d.intentional = true; d.severity = 'Review'; });
+    this._lastBulk = { type: 'intentional', ids: targets.map(d => d.id) };
+    this._refreshAfterBulk();
+  },
+
+  undoBulk() {
+    const b = this._lastBulk;
+    if (!b) return;
+    this.defects.forEach(d => {
+      if (!b.ids.includes(d.id)) return;
+      if (b.type === 'close') d.dismissed = false;
+      if (b.type === 'intentional') { d.intentional = false; d.severity = d._severityBefore || d.severity; }
+    });
+    this._lastBulk = null;
+    this._refreshAfterBulk();
+  },
+
+  restoreClosed() {
+    this.defects.forEach(d => { d.dismissed = false; });
+    this._lastBulk = null;
+    this._refreshAfterBulk();
+  },
+
+  /** Bar above the findings list: counts + Close all / Mark all intentional / Undo / Restore */
+  _renderBulkBar() {
+    const open = this.defects.filter(d => !d.dismissed && !d.intentional).length;
+    const intentional = this.defects.filter(d => !d.dismissed && d.intentional).length;
+    const closed = this.defects.filter(d => d.dismissed).length;
+    if (!open && !intentional && !closed) return '';
+    const btn = 'border-radius:6px; padding:6px 12px; font-size:11.5px; font-weight:800; cursor:pointer;';
+    const undoLabel = this._lastBulk ? (this._lastBulk.type === 'close' ? `↺ Undo close all (${this._lastBulk.ids.length})` : `↺ Undo mark all intentional (${this._lastBulk.ids.length})`) : '';
+    return `
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; padding:8px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+        <div style="font-size:12px; color:#334155; font-weight:700;">
+          ${open} open${intentional ? ` · ${intentional} marked intentional` : ''}${closed ? ` · ${closed} closed` : ''}
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          ${open ? `<button type="button" onclick="AgenticAiInspector.markAllIntentional()" title="Confirm every open finding is part of the design" style="${btn} background:#ffffff; color:#16a34a; border:1px solid #86efac;">🟢 Mark all intentional</button>` : ''}
+          ${(open || intentional) ? `<button type="button" onclick="AgenticAiInspector.closeAll()" title="Close every finding in this list" style="${btn} background:#334155; color:#ffffff; border:1px solid #334155;">✕ Close all (${open + intentional})</button>` : ''}
+          ${this._lastBulk ? `<button type="button" onclick="AgenticAiInspector.undoBulk()" style="${btn} background:#ffffff; color:#c2410c; border:1px solid #fed7aa;">${undoLabel}</button>`
+            : closed ? `<button type="button" onclick="AgenticAiInspector.restoreClosed()" style="${btn} background:#ffffff; color:#475569; border:1px solid #cbd5e1;">↺ Restore closed (${closed})</button>` : ''}
+        </div>
+      </div>`;
   },
 
   toggleBlinking() {
@@ -1275,6 +1481,7 @@ const AgenticAiInspector = {
   _renderIssuesTab(activeDefects, isClean) {
     if (isClean) {
       return `
+        ${this._renderBulkBar()}
         <div style="padding:22px; text-align:center; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px;">
           <div style="font-size:24px; margin-bottom:6px;">✨</div>
           <div style="font-size:14px; font-weight:800; color:#166534;">${this.getCheckSummary().found}</div>
@@ -1286,6 +1493,7 @@ const AgenticAiInspector = {
     }
 
     return `
+      ${this._renderBulkBar()}
       <div style="display:flex; flex-direction:column; gap:10px;">
         ${activeDefects.map(d => {
           const isTypo = (d.type === 'spelling');
@@ -1356,43 +1564,47 @@ const AgenticAiInspector = {
   },
 
   _renderTextCheckTab() {
-    if (this.extractedText.length === 0) {
-      return `
-        <div style="padding:16px; text-align:center; background:#f8fafc; border-radius:6px; border:1px solid #e2e8f0; font-size:11.5px; color:#64748b;">
-          No typography or text elements were extracted directly. Raster artwork contains flat pixel lettering.
-        </div>
-      `;
+    const st = this.textState || {};
+    const box = (inner, bg = '#f8fafc', bd = '#e2e8f0') => `<div style="padding:12px 14px; background:${bg}; border:1px solid ${bd}; border-radius:8px; font-size:11.5px; color:#475569; line-height:1.5;">${inner}</div>`;
+    if (this.scanSkipReason) return box('ℹ️ The artwork pixels could not be read in the browser, so its text was not checked. Proofread the artwork manually.');
+    if (!this.textResult) {
+      if (st.status === 'unavailable') return box(`⚠️ ${st.text}`, '#fffbeb', '#fde68a');
+      return box(`<span class="spinner" style="display:inline-block; width:12px; height:12px; vertical-align:middle; margin-right:6px;"></span>${st.text || 'Waiting for the artwork…'}`);
     }
-
+    const r = this.textResult;
+    const dir = r.orientation && r.orientation.angle
+      ? `<div style="margin-bottom:10px;">${box(`🔄 <strong>The text reads ${r.orientation.angle === 180 ? 'upside down' : 'sideways'}</strong> — it was read with the artwork turned ${r.orientation.angle}° clockwise. See the Orientation check.`, '#fef2f2', '#fecaca')}</div>`
+      : '';
+    const chip = (t) => {
+      const map = { word: ['#fee2e2', '#991b1b', `⚠️ → ${t.suggestion}`], web: ['#fee2e2', '#991b1b', `⚠️ → ${t.suggestion}`],
+        brand: ['#fee2e2', '#991b1b', `🔴 brand → ${t.suggestion}`], verify: ['#fef9c3', '#854d0e', `❓ verify (${t.suggestion}?)`] };
+      const [bg, col, label] = map[t.kind] || (t.conf >= this.MIN_TEXT_CONF ? ['#f0fdf4', '#166534', '✓'] : ['#f1f5f9', '#64748b', `unclear ${t.conf}%`]);
+      return `<span style="display:inline-flex; align-items:center; gap:6px; background:#fff; border:1px solid #e2e8f0; border-radius:6px; padding:4px 8px; margin:0 6px 6px 0;">
+        <span style="font-size:12px; font-weight:800; color:#0e2246;">${t.word}</span>
+        <span style="font-size:9.5px; font-weight:800; background:${bg}; color:${col}; padding:1px 6px; border-radius:4px;">${label}</span></span>`;
+    };
+    const verify = this.textVerify.length
+      ? `<div style="margin-top:10px;">${box(`❓ <strong>Names / uncommon words to verify:</strong> ${this.textVerify.map(v => `${v.text}`).join(', ')}. These are not in the dictionary but look like names, so they are not marked as mistakes — check them against the order.`, '#fefce8', '#fde68a')}</div>`
+      : '';
     return `
       <div>
-        <div style="font-size:12px; font-weight:800; color:#1e293b; margin-bottom:8px;">Extracted Typography &amp; Brand Whitelist Status:</div>
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:8px;">
-          ${this.extractedText.map(t => {
-            const badgeBg = t.isTypo ? '#fee2e2' : t.isWhitelisted ? '#eff6ff' : '#f0fdf4';
-            const badgeColor = t.isTypo ? '#991b1b' : t.isWhitelisted ? '#1d4ed8' : '#166534';
-            const statusLabel = t.isTypo ? `⚠️ Typo → ${t.suggestion}` : t.isWhitelisted ? '🏷️ Brand Whitelisted' : '✅ Verified Word';
-
-            return `
-              <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:12px; font-weight:800; color:#0e2246;">${t.word}</span>
-                <span style="font-size:9.5px; font-weight:800; background:${badgeBg}; color:${badgeColor}; padding:2px 6px; border-radius:4px;">
-                  ${statusLabel}
-                </span>
-              </div>
-            `;
-          }).join('')}
-        </div>
+        ${dir}
+        <div style="font-size:12px; font-weight:800; color:#1e293b; margin-bottom:8px;">Text read on the artwork (OCR — machine reading, confirm by eye):</div>
+        <div>${this.extractedText.length ? this.extractedText.map(chip).join('') : '<span style="font-size:11.5px; color:#64748b;">No readable text found.</span>'}</div>
+        ${verify}
+        <div style="margin-top:10px; font-size:10.5px; color:#64748b;">Checked against US + UK English dictionaries, brand names and web / e-mail endings. Words read with less than ${this.MIN_TEXT_CONF}% certainty are not judged. Phone numbers and dates are not verified automatically.</div>
       </div>
     `;
   },
 
   _renderStrayElementsTab(activeDefects) {
     const strayItems = activeDefects.filter(d => d.type !== 'spelling');
+    const closedStray = this.defects.filter(d => d.dismissed && d.type !== 'spelling').length;
     if (strayItems.length === 0) {
       return `
+        ${this._renderBulkBar()}
         <div style="padding:18px; text-align:center; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px;">
-          <div style="font-size:13px; font-weight:800; color:#166534;">No stray lines or dots found</div>
+          <div style="font-size:13px; font-weight:800; color:#166534;">${closedStray ? `All ${closedStray} stray findings closed by the designer` : 'No stray lines or dots found'}</div>
           <div style="font-size:11px; color:#15803d; margin-top:2px;">
             ${this.scanSkipReason || (this.scanResult ? `Checked ${this.scanResult.checkedPct}% of the artwork (clear flat-colour areas). Photo and illustration areas are not auto-checked.` : 'Waiting for the artwork to load…')}
           </div>
@@ -1401,6 +1613,7 @@ const AgenticAiInspector = {
     }
 
     return `
+      ${this._renderBulkBar()}
       <div style="display:flex; flex-direction:column; gap:8px;">
         ${strayItems.map(s => `
           <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
