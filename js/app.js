@@ -802,16 +802,20 @@ function loadExampleFilename(fname) {
   }
 
   // 6. Create realistic production vector artwork tailored to the product
-  let demoArtUrl = (typeof CanvasInspector !== 'undefined' && CanvasInspector._createDemoArtwork)
-    ? CanvasInspector._createDemoArtwork(spec, appState.userDims)
-    : null;
+  let demoArtUrl = null;
+  if (fname.includes('PRAU2366057')) {
+    demoArtUrl = 'assets/test_magnet.png';
+  } else if (typeof CanvasInspector !== 'undefined' && CanvasInspector._createDemoArtwork) {
+    demoArtUrl = CanvasInspector._createDemoArtwork(spec, appState.userDims);
+  }
 
   if (!demoArtUrl) {
     demoArtUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect width="600" height="400" fill="#ffffff"/><text x="300" y="200" font-family="sans-serif" font-size="28" font-weight="900" fill="#0f172a" text-anchor="middle">${spec ? spec.name : 'BANNERBUZZ'}</text></svg>`);
   }
 
-  const blob = new Blob([demoArtUrl], { type: 'image/svg+xml' });
-  const mockFile = new File([blob], fname, { type: 'application/pdf', lastModified: Date.now() });
+  const isRasterImg = demoArtUrl.startsWith('assets/') || demoArtUrl.startsWith('http') || demoArtUrl.startsWith('data:image/png');
+  const blob = isRasterImg ? new Blob(['mock-raster'], { type: 'image/png' }) : new Blob([demoArtUrl], { type: 'image/svg+xml' });
+  const mockFile = new File([blob], fname, { type: isRasterImg ? 'image/png' : 'application/pdf', lastModified: Date.now() });
   appState.file = mockFile;
   appState.parsedFilename = parsed;
   appState.previewDataUrl = demoArtUrl;
@@ -921,8 +925,13 @@ async function runPreCheck() {
     }
 
     // 1.5 Scan with Agentic AI Quality Inspector (Spelling, Stray Lines & Dots)
+    const artSrc = (appState.previewDataUrl && !appState.previewDataUrl.includes('PDF VECTOR'))
+      ? appState.previewDataUrl
+      : (analysis?.previewDataUrl || appState.previewDataUrl);
+
+    if (analysis) analysis.previewDataUrl = artSrc;
+
     if (typeof AgenticAiInspector !== 'undefined') {
-      const artSrc = analysis?.previewDataUrl || appState.previewDataUrl;
       const dummyCanvas = document.createElement('canvas');
       dummyCanvas.width = analysis?.pixelWidth || 800;
       dummyCanvas.height = analysis?.pixelHeight || 600;
@@ -943,7 +952,7 @@ async function runPreCheck() {
 
     // 5. Render Interactive Canvas with Product Die-Line Template
     CanvasInspector.renderArtwork(
-      analysis?.previewDataUrl || appState.previewDataUrl,
+      artSrc,
       appState.product,
       appState.userDims
     );

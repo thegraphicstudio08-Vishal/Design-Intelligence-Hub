@@ -272,7 +272,11 @@ const FileAnalyzer = {
     }
 
     this._evaluateMeasurementsAndOrientation(res, targetW, targetH);
-    res.previewDataUrl = this._generateVectorPreviewSvg(res, file.name, targetW, targetH);
+    if (typeof appState !== 'undefined' && appState.previewDataUrl && !appState.previewDataUrl.includes('PDF VECTOR')) {
+      res.previewDataUrl = appState.previewDataUrl;
+    } else {
+      res.previewDataUrl = this._generateVectorPreviewSvg(res, file.name, targetW, targetH);
+    }
     return res;
   },
 

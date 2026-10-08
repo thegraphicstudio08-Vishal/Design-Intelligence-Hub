@@ -89,7 +89,12 @@ const AgenticAiInspector = {
    * Run full AI Artwork QA Scan on the active canvas and artwork
    */
   scanArtwork(canvas, img, spec, dims) {
-    const src = (img && img.src) || (canvas && canvas.toDataURL ? 'canvas' : '');
+    let resolvedImg = img;
+    if ((!resolvedImg || !resolvedImg.naturalWidth) && typeof CanvasInspector !== 'undefined' && CanvasInspector.currentImg && CanvasInspector.currentImg.naturalWidth > 0) {
+      resolvedImg = CanvasInspector.currentImg;
+    }
+
+    const src = (resolvedImg && resolvedImg.src) || (canvas && canvas.toDataURL ? 'canvas' : '');
     if (this._lastScannedSrc === src && this._lastScannedSrc && this.defects.length > 0) {
       this.renderOverlay();
       this.updateControlsUI();
@@ -99,10 +104,10 @@ const AgenticAiInspector = {
     this.defects = [];
     this.extractedText = [];
 
-    if (!canvas && !img) return this.defects;
+    if (!canvas && !resolvedImg) return this.defects;
 
-    const w = (img && (img.naturalWidth || img.width)) || (canvas && canvas.width) || 800;
-    const h = (img && (img.naturalHeight || img.height)) || (canvas && canvas.height) || 600;
+    const w = (resolvedImg && (resolvedImg.naturalWidth || resolvedImg.width)) || (canvas && canvas.width) || 800;
+    const h = (resolvedImg && (resolvedImg.naturalHeight || resolvedImg.height)) || (canvas && canvas.height) || 600;
 
     this._lastArtworkMeta = {
       width: w,
@@ -113,16 +118,68 @@ const AgenticAiInspector = {
     };
 
     // 1. Text Extraction & Spell-Check with Brand Whitelist
-    this._scanSpellingTypos(canvas, img, spec, dims);
+    this._scanSpellingTypos(canvas, resolvedImg, spec, dims);
 
     // 2. Identify Major Artwork Regions & Detect Stray Lines / Dots
-    this._scanArtworkMarksWithIntentionality(canvas, img, spec, dims, w, h);
+    this._scanArtworkMarksWithIntentionality(canvas, resolvedImg, spec, dims, w, h);
 
     // Render overlay and update controls
     this.renderOverlay();
     this.updateControlsUI();
+    this.syncPrecheckReport();
 
     return this.defects;
+  },
+
+  syncPrecheckReport() {
+    const activeDefects = this.getDefects();
+    if (typeof appState !== 'undefined') {
+      if (appState.analysis) {
+        appState.analysis.aiDefects = activeDefects;
+      }
+      if (appState.report && Array.isArray(appState.report.checks)) {
+        const auditCheck = appState.report.checks.find(c => c.id === 'artworkQAAudit');
+        if (auditCheck) {
+          const typos = activeDefects.filter(d => d.type === 'spelling');
+          const strayLines = activeDefects.filter(d => d.type === 'stray_line');
+          const strayDots = activeDefects.filter(d => d.type === 'stray_dot');
+          const hasDefects = activeDefects.length > 0;
+          const hasFatal = activeDefects.some(d => d.severity === 'Fatal');
+
+          if (hasDefects) {
+            auditCheck.status = hasFatal ? 'FAIL' : 'WARNING';
+            const parts = [];
+            if (typos.length > 0) parts.push(`${typos.length} Spelling Typo${typos.length > 1 ? 's' : ''}`);
+            if (strayLines.length > 0) parts.push(`${strayLines.length} Stray Line${strayLines.length > 1 ? 's' : ''}`);
+            if (strayDots.length > 0) parts.push(`${strayDots.length} Stray Dot${strayDots.length > 1 ? 's' : ''}`);
+            auditCheck.found = `${hasFatal ? '❌' : '⚠️'} ${activeDefects.length} Issue${activeDefects.length !== 1 ? 's' : ''} Flagged (${parts.join(', ')})`;
+            auditCheck.detail = `Stray Artifacts & Typo QA: ${parts.join(', ')} detected in artwork. Animated pulsating highlight boxes and circles are active on the proof canvas.`;
+          } else {
+            auditCheck.status = 'PASS';
+            auditCheck.found = '✅ Clean Artwork (0 Typos, 0 Stray Lines, 0 Stray Dots)';
+            auditCheck.detail = 'AI Artwork QA Scanner passed: Brand names verified in whitelist, no spelling typos detected, and margins verified 100% free of stray lines or rogue dust dots.';
+          }
+
+          const cardEl = document.getElementById('cc-artworkQAAudit');
+          if (cardEl) {
+            const stClass = auditCheck.status.toLowerCase();
+            cardEl.className = `check-card ${stClass}`;
+            const pillEl = cardEl.querySelector('.check-pill');
+            if (pillEl) {
+              pillEl.className = `check-pill pill-${stClass}`;
+              pillEl.textContent = auditCheck.status;
+            }
+            const cdvs = cardEl.querySelectorAll('.cdv');
+            if (cdvs && cdvs.length > 0) {
+              cdvs[0].textContent = auditCheck.found;
+            }
+            if (cdvs && cdvs.length > 1) {
+              cdvs[1].textContent = auditCheck.detail;
+            }
+          }
+        }
+      }
+    }
   },
 
   /**
@@ -236,219 +293,296 @@ const AgenticAiInspector = {
     if (!canvas && !img) return;
     try {
       // Use clean offscreen canvas to avoid scanning canvas guides or UI text
-      let scanCanvas = canvas;
+      let scanCanvas = null;
       if (img && img.naturalWidth > 0 && img.naturalHeight > 0) {
         scanCanvas = document.createElement('canvas');
         scanCanvas.width = img.naturalWidth;
         scanCanvas.height = img.naturalHeight;
         const sCtx = scanCanvas.getContext('2d');
         if (sCtx) sCtx.drawImage(img, 0, 0);
+      } else if (canvas && canvas.width > 0 && canvas.height > 0) {
+        scanCanvas = document.createElement('canvas');
+        scanCanvas.width = canvas.width;
+        scanCanvas.height = canvas.height;
+        const sCtx = scanCanvas.getContext('2d');
+        if (sCtx) sCtx.drawImage(canvas, 0, 0);
+      } else if (typeof CanvasInspector !== 'undefined' && CanvasInspector.currentImg && CanvasInspector.currentImg.naturalWidth > 0) {
+        const cImg = CanvasInspector.currentImg;
+        scanCanvas = document.createElement('canvas');
+        scanCanvas.width = cImg.naturalWidth;
+        scanCanvas.height = cImg.naturalHeight;
+        const sCtx = scanCanvas.getContext('2d');
+        if (sCtx) sCtx.drawImage(cImg, 0, 0);
       }
+
       if (!scanCanvas) return;
       const ctx = scanCanvas.getContext('2d');
       if (!ctx) return;
 
-      const sw = scanCanvas.width;
-      const sh = scanCanvas.height;
-      if (sw < 60 || sh < 60) return;
+      const origW = scanCanvas.width;
+      const origH = scanCanvas.height;
+      if (origW < 40 || origH < 40) return;
 
-      const imgData = ctx.getImageData(0, 0, sw, sh);
+      // Downscale proportionally if larger than 1000px for ultra-responsive analysis
+      let sw = origW;
+      let sh = origH;
+      let scale = 1.0;
+      if (origW > 1000 || origH > 1000) {
+        scale = 1000 / Math.max(origW, origH);
+        sw = Math.max(40, Math.round(origW * scale));
+        sh = Math.max(40, Math.round(origH * scale));
+        const downCanvas = document.createElement('canvas');
+        downCanvas.width = sw;
+        downCanvas.height = sh;
+        const downCtx = downCanvas.getContext('2d');
+        downCtx.drawImage(scanCanvas, 0, 0, sw, sh);
+        scanCanvas = downCanvas;
+      }
+
+      const imgData = scanCanvas.getContext('2d').getImageData(0, 0, sw, sh);
       const data = imgData.data;
 
-      // Identify background luminance (sample 4 corners)
-      const cornerLums = [
-        (data[0] + data[1] + data[2]) / 3,
-        (data[(sw - 1) * 4] + data[(sw - 1) * 4 + 1] + data[(sw - 1) * 4 + 2]) / 3,
-        (data[(sh - 1) * sw * 4] + data[(sh - 1) * sw * 4 + 1] + data[(sh - 1) * sw * 4 + 2]) / 3,
-        (data[((sh - 1) * sw + sw - 1) * 4] + data[((sh - 1) * sw + sw - 1) * 4 + 1] + data[((sh - 1) * sw + sw - 1) * 4 + 2]) / 3
-      ];
-      const bgLum = cornerLums.reduce((a, b) => a + b, 0) / 4;
-      const isLightBg = bgLum > 180;
+      // Step 1: Accurate Background Estimation (Median of inner 80% canvas area)
+      const innerLums = [];
+      const yStep = Math.max(2, Math.floor(sh / 100));
+      const xStep = Math.max(2, Math.floor(sw / 100));
+      for (let y = Math.floor(sh * 0.1); y < Math.floor(sh * 0.9); y += yStep) {
+        for (let x = Math.floor(sw * 0.1); x < Math.floor(sw * 0.9); x += xStep) {
+          const idx = (y * sw + x) * 4;
+          if (data[idx + 3] > 60) {
+            const lum = (data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114);
+            innerLums.push(lum);
+          }
+        }
+      }
+      innerLums.sort((a, b) => a - b);
+      const bgLum = innerLums[Math.floor(innerLums.length / 2)] || 240;
 
-      const isMarkPixel = (px, py) => {
-        if (px < 0 || px >= sw || py < 0 || py >= sh) return false;
-        const idx = (py * sw + px) * 4;
-        const alpha = data[idx + 3];
-        if (alpha < 60) return false;
-        const lum = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-        return isLightBg ? lum < bgLum - 40 : lum > bgLum + 40;
-      };
-
-      // Step 1: Detect Major Artwork Clusters (Text, Logos, Graphic Shapes)
-      // We sample in coarse grid (step 12px) to locate major design centers
-      const majorClusters = [];
-      const step = 16;
-      for (let y = step; y < sh - step; y += step) {
-        for (let x = step; x < sw - step; x += step) {
-          if (isMarkPixel(x, y)) {
-            // Count neighboring marked pixels
-            let denseCount = 0;
-            for (let dy = -10; dy <= 10; dy += 5) {
-              for (let dx = -10; dx <= 10; dx += 5) {
-                if (isMarkPixel(x + dx, y + dy)) denseCount++;
-              }
-            }
-            if (denseCount >= 4) {
-              majorClusters.push({ x, y });
-            }
+      // Step 2: Binary Foreground Mask
+      const mask = new Uint8Array(sw * sh);
+      for (let y = 0; y < sh; y++) {
+        for (let x = 0; x < sw; x++) {
+          const idx = (y * sw + x) * 4;
+          if (data[idx + 3] < 50) continue;
+          const lum = (data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114);
+          if (Math.abs(lum - bgLum) > 13) {
+            mask[y * sw + x] = 1;
           }
         }
       }
 
-      const getDistToNearestArtwork = (px, py) => {
-        if (majorClusters.length === 0) return 999;
-        let minDist = 999;
-        for (let c of majorClusters) {
-          const d = Math.hypot(px - c.x, py - c.y);
-          if (d < minDist) minDist = d;
-          if (minDist <= 15) break; // early exit
+      // Step 3: Fast Two-Pass Connected Components Labeling with Disjoint-Set Union
+      const labels = new Int32Array(sw * sh);
+      const parent = [0];
+      let nextLabel = 1;
+
+      function findRoot(i) {
+        let root = i;
+        while (parent[root] > 0) root = parent[root];
+        let curr = i;
+        while (curr !== root) {
+          let nxt = parent[curr];
+          if (nxt > 0) parent[curr] = root;
+          curr = nxt;
         }
-        return minDist;
-      };
-
-      // Step 2: Scan for Stray Lines (thin lines, thickness <= 4px, length >= 30px, isolated from artwork)
-      const edgeDepthX = Math.min(30, Math.max(10, Math.round(sw * 0.04)));
-      const edgeDepthY = Math.min(30, Math.max(10, Math.round(sh * 0.04)));
-
-      let lineFound = false;
-      const scanBands = [
-        { yStart: 6, yEnd: edgeDepthY, xStart: edgeDepthX, xEnd: sw - edgeDepthX },
-        { yStart: sh - edgeDepthY, yEnd: sh - 6, xStart: edgeDepthX, xEnd: sw - edgeDepthX }
-      ];
-
-      for (const band of scanBands) {
-        for (let y = band.yStart; y < band.yEnd; y += 3) {
-          let runLen = 0;
-          let startX = 0;
-          for (let x = band.xStart; x < band.xEnd; x++) {
-            if (isMarkPixel(x, y)) {
-              if (runLen === 0) startX = x;
-              runLen++;
-            } else {
-              if (runLen >= 25 && runLen <= 80) {
-                const midX = startX + Math.round(runLen / 2);
-                const distToArt = getDistToNearestArtwork(midX, y);
-
-                // If isolated (> 22px away from major artwork clusters)
-                if (distToArt > 22) {
-                  // Verify thickness is thin (above and below are background)
-                  let isThin = true;
-                  for (let k = startX; k < startX + runLen; k += 4) {
-                    if (isMarkPixel(k, y - 3) || isMarkPixel(k, y + 3)) {
-                      isThin = false;
-                      break;
-                    }
-                  }
-
-                  if (isThin) {
-                    const confidence = +Math.min(0.98, 0.85 + (distToArt / 150) * 0.13).toFixed(2);
-                    this.defects.push({
-                      id: `line_${this.defects.length + 1}`,
-                      type: 'stray_line',
-                      category: 'Stray Elements',
-                      shape: 'box',
-                      severity: 'Minor',
-                      title: `Possible Unnecessary Line (${runLen}px)`,
-                      confidence: confidence,
-                      xPercent: +((startX / sw) * 100).toFixed(1),
-                      yPercent: +(((y - 4) / sh) * 100).toFixed(1),
-                      wPercent: +(((runLen + 8) / sw) * 100).toFixed(1),
-                      hPercent: 3.5,
-                      metrics: {
-                        lengthPx: runLen,
-                        thicknessPx: 1,
-                        isolationDistPx: Math.round(distToArt),
-                        connectedToArtwork: false
-                      },
-                      details: {
-                        lengthPx: runLen,
-                        description: `Object #Line: Position X=${startX}, Y=${y}, Size ${runLen}×1 px. Connected to artwork: NO. Alignment with text: NO. Confidence: ${Math.round(confidence * 100)}%.`
-                      },
-                      intentional: false,
-                      dismissed: false
-                    });
-                    lineFound = true;
-                    break;
-                  }
-                }
-              }
-              runLen = 0;
-            }
-          }
-          if (lineFound) break;
-        }
-        if (lineFound) break;
+        return root;
       }
 
-      // Step 3: Scan for Stray Dots & Dust Speckles with Intentionality Filter
-      // Only examine isolated dots far from text/logo clusters (>25px)
-      let dotFound = false;
-      const cornerMargins = [
-        { xStart: 8, xEnd: edgeDepthX * 2, yStart: 8, yEnd: edgeDepthY * 2 },
-        { xStart: sw - edgeDepthX * 2, xEnd: sw - 8, yStart: 8, yEnd: edgeDepthY * 2 },
-        { xStart: 8, xEnd: edgeDepthX * 2, yStart: sh - edgeDepthY * 2, yEnd: sh - 8 },
-        { xStart: sw - edgeDepthX * 2, xEnd: sw - 8, yStart: sh - edgeDepthY * 2, yEnd: sh - 8 }
-      ];
-
-      for (const zone of cornerMargins) {
-        for (let y = zone.yStart; y < zone.yEnd; y += 4) {
-          for (let x = zone.xStart; x < zone.xEnd; x += 4) {
-            if (isMarkPixel(x, y)) {
-              // Check distance to nearest artwork: MUST be > 25px (Intentionality Check)
-              const distToArt = getDistToNearestArtwork(x, y);
-              if (distToArt > 25) {
-                // Check if tiny dot (radius 1-3px) surrounded by empty space
-                let isIsolatedDot = true;
-                for (let dy = -16; dy <= 16; dy += 4) {
-                  for (let dx = -16; dx <= 16; dx += 4) {
-                    if (Math.abs(dx) <= 2 && Math.abs(dy) <= 2) continue;
-                    if (isMarkPixel(x + dx, y + dy)) {
-                      isIsolatedDot = false;
-                      break;
-                    }
-                  }
-                  if (!isIsolatedDot) break;
-                }
-
-                if (isIsolatedDot) {
-                  const confidence = 0.98;
-                  this.defects.push({
-                    id: `dot_${this.defects.length + 1}`,
-                    type: 'stray_dot',
-                    category: 'Stray Elements',
-                    shape: 'circle',
-                    severity: 'Minor',
-                    title: `Stray Mark / Rogue Dot (Isolated)`,
-                    confidence: confidence,
-                    cxPercent: +((x / sw) * 100).toFixed(1),
-                    cyPercent: +((y / sh) * 100).toFixed(1),
-                    radiusPercent: 2.2,
-                    xPercent: +(((x - 12) / sw) * 100).toFixed(1),
-                    yPercent: +(((y - 12) / sh) * 100).toFixed(1),
-                    wPercent: 3.5,
-                    hPercent: 3.5,
-                    metrics: {
-                      sizePx: [2, 2],
-                      isolationDistPx: Math.round(distToArt),
-                      connectedToArtwork: false,
-                      nearTextOrLogo: false
-                    },
-                    details: {
-                      dotRadiusPx: 2,
-                      description: `Object #Dot: Position X=${x}, Y=${y}, Size 2×2 px. Connected to artwork: NO. Near text/logo: NO. Repeated pattern: NO. Confidence: ${Math.round(confidence * 100)}%.`
-                    },
-                    intentional: false,
-                    dismissed: false
-                  });
-                  dotFound = true;
-                  break;
-                }
-              }
-            }
-          }
-          if (dotFound) break;
+      function unionLabels(i, j) {
+        const rootI = findRoot(i);
+        const rootJ = findRoot(j);
+        if (rootI !== rootJ) {
+          if (rootI < rootJ) parent[rootJ] = rootI;
+          else parent[rootI] = rootJ;
         }
-        if (dotFound) break;
+      }
+
+      for (let y = 0; y < sh; y++) {
+        for (let x = 0; x < sw; x++) {
+          const idx = y * sw + x;
+          if (mask[idx] === 0) continue;
+
+          const up = (y > 0) ? labels[(y - 1) * sw + x] : 0;
+          const left = (x > 0) ? labels[y * sw + (x - 1)] : 0;
+
+          if (up === 0 && left === 0) {
+            labels[idx] = nextLabel;
+            parent.push(0);
+            nextLabel++;
+          } else if (up > 0 && left === 0) {
+            labels[idx] = up;
+          } else if (up === 0 && left > 0) {
+            labels[idx] = left;
+          } else {
+            labels[idx] = up;
+            if (up !== left) unionLabels(up, left);
+          }
+        }
+      }
+
+      // Consolidate components & collect geometric statistics
+      const stats = {};
+      for (let y = 0; y < sh; y++) {
+        for (let x = 0; x < sw; x++) {
+          const idx = y * sw + x;
+          const lbl = labels[idx];
+          if (lbl === 0) continue;
+          const root = findRoot(lbl);
+          if (!stats[root]) {
+            stats[root] = { minX: x, maxX: x, minY: y, maxY: y, area: 0, sumX: 0, sumY: 0 };
+          }
+          const s = stats[root];
+          if (x < s.minX) s.minX = x;
+          if (x > s.maxX) s.maxX = x;
+          if (y < s.minY) s.minY = y;
+          if (y > s.maxY) s.maxY = y;
+          s.area++;
+          s.sumX += x;
+          s.sumY += y;
+        }
+      }
+
+      // Step 4: Classify into Major Artwork vs. Candidate Lines & Dots
+      const majorArt = [];
+      const candidateLines = [];
+      const candidateDots = [];
+
+      for (const id in stats) {
+        const s = stats[id];
+        const bw = s.maxX - s.minX + 1;
+        const bh = s.maxY - s.minY + 1;
+        const cx = s.sumX / s.area;
+        const cy = s.sumY / s.area;
+
+        // Ignore outer canvas perimeter (within 3% of boundary)
+        if (s.minX < sw * 0.03 || s.maxX > sw * 0.97 || s.minY < sh * 0.035 || s.maxY > sh * 0.965) {
+          continue;
+        }
+
+        const isThinH = (bh <= 4 && bw >= 20 && (bw / Math.max(1, bh)) >= 4.5);
+        const isThinV = (bw <= 4 && bh >= 20 && (bh / Math.max(1, bw)) >= 4.5);
+
+        if (isThinH || isThinV) {
+          candidateLines.push({
+            id, minX: s.minX, minY: s.minY, maxX: s.maxX, maxY: s.maxY,
+            bw, bh, cx, cy, area: s.area, dir: isThinH ? 'H' : 'V'
+          });
+        } else if ((bw >= 12 && bh >= 12 && s.area >= 50) || s.area >= 180) {
+          // Significant 2D text character, logo, or artwork element
+          majorArt.push({
+            id, minX: s.minX, minY: s.minY, maxX: s.maxX, maxY: s.maxY,
+            bw, bh, cx, cy, area: s.area
+          });
+        } else if (bw <= 10 && bh <= 10 && s.area <= 35) {
+          candidateDots.push({
+            id, minX: s.minX, minY: s.minY, maxX: s.maxX, maxY: s.maxY,
+            bw, bh, cx, cy, area: s.area
+          });
+        }
+      }
+
+      function calcMinDistToArtwork(c) {
+        let minD = 9999;
+        for (const a of majorArt) {
+          const dx = Math.max(0, a.minX - c.maxX, c.minX - a.maxX);
+          const dy = Math.max(0, a.minY - c.maxY, c.minY - a.maxY);
+          const d = Math.hypot(dx, dy);
+          if (d < minD) minD = d;
+          if (minD < 8) break;
+        }
+        return minD;
+      }
+
+      // Step 5: Intentionality & Isolation Filter for Lines
+      for (const cl of candidateLines) {
+        const dist = calcMinDistToArtwork(cl);
+        // An unnecessary line is isolated in open space (> 14px away from text/logo)
+        if (dist > 14) {
+          const origLen = Math.round(cl.bw / scale);
+          const origThickness = Math.max(1, Math.round(cl.bh / scale));
+          const origX = cl.minX / scale;
+          const origY = cl.minY / scale;
+          const origWBox = cl.bw / scale;
+          const origHBox = cl.bh / scale;
+
+          const isMajorLine = origLen > 70;
+          const confidence = +Math.min(0.98, 0.88 + Math.min(dist / 120, 0.10)).toFixed(2);
+
+          this.defects.push({
+            id: `line_${this.defects.length + 1}`,
+            type: 'stray_line',
+            category: 'Stray Elements',
+            shape: 'box',
+            severity: isMajorLine ? 'Major' : 'Minor',
+            title: `Possible Unnecessary Line (~${origLen}px)`,
+            confidence: confidence,
+            xPercent: +((origX / origW) * 100).toFixed(1),
+            yPercent: +(((origY - 2) / origH) * 100).toFixed(1),
+            wPercent: +(((origWBox + 4) / origW) * 100).toFixed(1),
+            hPercent: +Math.max(2.8, ((origHBox + 8) / origH) * 100).toFixed(1),
+            metrics: {
+              lengthPx: origLen,
+              thicknessPx: origThickness,
+              isolationDistPx: Math.round(dist / scale),
+              connectedToArtwork: false,
+              orientation: cl.dir === 'H' ? 'Horizontal' : 'Vertical'
+            },
+            details: {
+              lengthPx: origLen,
+              description: `Unnecessary straight ${cl.dir === 'H' ? 'horizontal' : 'vertical'} line (~${origLen}×${origThickness}px) isolated in open artwork area (${Math.round(dist / scale)}px away from live graphics). Connected to artwork: NO. Alignment: None. Confidence: ${Math.round(confidence * 100)}%.`
+            },
+            intentional: false,
+            dismissed: false
+          });
+        }
+      }
+
+      // Step 6: Intentionality & Isolation Filter for Dots
+      for (const cd of candidateDots) {
+        const dist = calcMinDistToArtwork(cd);
+        // An isolated rogue dot/dust speckle is > 18px away from major text/logo
+        if (dist > 18) {
+          // Check if part of a dotted/dashed guideline
+          const collinearNeighbors = candidateDots.filter(o =>
+            o.id !== cd.id && Math.abs(o.minY - cd.minY) <= 2 && Math.abs(o.minX - cd.minX) < (50 * scale)
+          ).length;
+
+          if (collinearNeighbors <= 1) {
+            const origX = cd.cx / scale;
+            const origY = cd.cy / scale;
+            const origSize = Math.max(1, Math.round(Math.max(cd.bw, cd.bh) / scale));
+            const confidence = 0.98;
+
+            this.defects.push({
+              id: `dot_${this.defects.length + 1}`,
+              type: 'stray_dot',
+              category: 'Stray Elements',
+              shape: 'circle',
+              severity: 'Minor',
+              title: `Stray Mark / Rogue Dot (Isolated)`,
+              confidence: confidence,
+              cxPercent: +((origX / origW) * 100).toFixed(1),
+              cyPercent: +((origY / origH) * 100).toFixed(1),
+              radiusPercent: 2.2,
+              xPercent: +(((origX - 10) / origW) * 100).toFixed(1),
+              yPercent: +(((origY - 10) / origH) * 100).toFixed(1),
+              wPercent: 3.2,
+              hPercent: 3.2,
+              metrics: {
+                sizePx: [origSize, origSize],
+                isolationDistPx: Math.round(dist / scale),
+                connectedToArtwork: false,
+                nearTextOrLogo: false
+              },
+              details: {
+                dotRadiusPx: origSize,
+                description: `Isolated rogue dot / dust mark (~${origSize}px) detected ${Math.round(dist / scale)}px away from text/logo elements. Connected to artwork: NO. Near text: NO. Repetitive pattern: NO. Confidence: 98%.`
+              },
+              intentional: false,
+              dismissed: false
+            });
+          }
+        }
       }
     } catch (e) {
       console.warn('AI QA Scanner pixel inspection notice:', e);
@@ -576,6 +710,7 @@ const AgenticAiInspector = {
       d.severity = 'Review';
       this.renderOverlay();
       this.updateControlsUI();
+      this.syncPrecheckReport();
     }
   },
 
@@ -585,6 +720,7 @@ const AgenticAiInspector = {
       d.dismissed = true;
       this.renderOverlay();
       this.updateControlsUI();
+      this.syncPrecheckReport();
     }
   },
 

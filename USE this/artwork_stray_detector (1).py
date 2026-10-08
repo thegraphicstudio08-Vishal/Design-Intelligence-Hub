@@ -94,22 +94,25 @@ def detect_stray_marks(image, min_line_length=30, max_dot_area=80):
     original = image.copy()
     h, w = image.shape[:2]
 
-    # Convert to grayscale and adaptive threshold
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    mask = cv2.adaptiveThreshold(
-        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY_INV, 31, 8
-    )
+    # 1. Median background estimation and difference mask
+    inner = image[int(h * 0.1):int(h * 0.9), int(w * 0.1):int(w * 0.9)]
+    if inner.size > 0:
+        bg_bgr = np.median(inner.reshape(-1, 3), axis=0)
+        bg_gray = float(0.299 * bg_bgr[2] + 0.587 * bg_bgr[1] + 0.114 * bg_bgr[0])
+    else:
+        bg_gray = 240.0
 
-    kernel = np.ones((2, 2), np.uint8)
-    clean = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    diff = np.abs(gray.astype(float) - bg_gray)
+    clean = (diff > 14).astype(np.uint8) * 255
 
     # Cluster major artwork regions (Text, Logos, Graphic Shapes)
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(clean, connectivity=8)
     significant_mask = np.zeros_like(clean)
     for i in range(1, num_labels):
         x, y, bw, bh, area = stats[i]
-        if area > 100 or bw > 16 or bh > 16:
+        is_thin_line = (bw >= 15 and bh <= 4) or (bh >= 15 and bw <= 4)
+        if not is_thin_line and ((bw >= 12 and bh >= 12 and area >= 50) or area >= 180):
             significant_mask[labels == i] = 255
 
     inv_sig = cv2.bitwise_not(significant_mask)
@@ -117,7 +120,38 @@ def detect_stray_marks(image, min_line_length=30, max_dot_area=80):
 
     detections = []
 
-    # 1. Detect thin straight lines
+    # 1. Detect thin straight lines via connected components
+    for i in range(1, num_labels):
+        x, y, bw, bh, area = stats[i]
+        if x <= 2 or y <= 2 or x + bw >= w - 2 or y + bh >= h - 2:
+            continue
+        is_h = (bh <= 4 and bw >= min_line_length and (bw / max(1, bh)) >= 4.5)
+        is_v = (bw <= 4 and bh >= min_line_length and (bh / max(1, bw)) >= 4.5)
+        if is_h or is_v:
+            mid_x = clamp(int(x + bw / 2), 0, w - 1)
+            mid_y = clamp(int(y + bh / 2), 0, h - 1)
+            dist_to_art = float(dist_map[mid_y, mid_x])
+            if dist_to_art > 14.0:
+                pad = 6
+                bx1 = clamp(x - pad, 0, w - 1)
+                by1 = clamp(y - pad, 0, h - 1)
+                bx2 = clamp(x + bw + pad, 0, w - 1)
+                by2 = clamp(y + bh + pad, 0, h - 1)
+                length = bw if is_h else bh
+                thickness = bh if is_h else bw
+                detections.append({
+                    "type": "possible_stray_line",
+                    "severity": "Major" if length > 70 else "Minor",
+                    "bbox": [int(bx1), int(by1), int(bx2), int(by2)],
+                    "confidence": round(min(0.99, 0.88 + min(dist_to_art / 100.0, 0.11)), 2),
+                    "length_px": round(length, 1),
+                    "thickness_px": int(thickness),
+                    "angle_deg": 0.0 if is_h else 90.0,
+                    "dist_to_nearest_art": round(dist_to_art, 1),
+                    "description": f"Isolated {length}px straight line ({thickness}px thick) located {round(dist_to_art, 1)}px from live graphics."
+                })
+
+    # Detect additional lines via HoughLinesP
     edges = cv2.Canny(clean, 50, 150)
     lines = cv2.HoughLinesP(
         edges, rho=1, theta=np.pi / 180,
