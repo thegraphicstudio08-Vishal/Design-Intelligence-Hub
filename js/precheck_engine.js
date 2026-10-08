@@ -202,53 +202,24 @@ const PrecheckEngine = {
     // ──────────────────────────────────────────────────────────────────────────
     // CHECKPOINT 4: Agentic AI Quality Audit: Spelling, Stray Lines & Dots
     // ──────────────────────────────────────────────────────────────────────────
+    // The scanner states what it checked, what it found and what still needs a human look.
+    // The scan may finish after this report is built; AgenticAiInspector.syncPrecheckReport() then updates it.
     const aiDefects = (typeof AgenticAiInspector !== 'undefined')
       ? AgenticAiInspector.getDefects()
       : (analysis.aiDefects || []);
-    const typos = aiDefects.filter(d => d.type === 'spelling');
-    const strayLines = aiDefects.filter(d => d.type === 'stray_line');
-    const strayDots = aiDefects.filter(d => d.type === 'stray_dot');
-    const hasDefects = (aiDefects.length > 0);
-    const hasFatal = aiDefects.some(d => d.severity === 'Fatal');
-
-    let artStatus = 'PASS', artFound = '', artDetail = '', artAction = '';
-    if (hasDefects) {
-      artStatus = hasFatal ? 'FAIL' : 'WARNING';
-      const parts = [];
-      if (typos.length > 0) parts.push(`${typos.length} Spelling Typo${typos.length > 1 ? 's' : ''}`);
-      if (strayLines.length > 0) parts.push(`${strayLines.length} Stray Line${strayLines.length > 1 ? 's' : ''}`);
-      if (strayDots.length > 0) parts.push(`${strayDots.length} Stray Dot${strayDots.length > 1 ? 's' : ''}`);
-
-      artFound = `${hasFatal ? '❌' : '⚠️'} ${aiDefects.length} Issue${aiDefects.length !== 1 ? 's' : ''} Flagged (${parts.join(', ')})`;
-
-      const detailSnippets = [];
-      if (typos.length > 0) {
-        detailSnippets.push(`Spelling QA: ${typos.map(t => `"${t.details.word}" → "${t.details.suggestion}" (${t.severity})`).join(', ')}.`);
-      }
-      if (strayLines.length > 0) {
-        detailSnippets.push(`Stray Lines: ${strayLines.length} isolated hairline/line artifact${strayLines.length > 1 ? 's' : ''} detected.`);
-      }
-      if (strayDots.length > 0) {
-        detailSnippets.push(`Stray Dots: ${strayDots.length} isolated dust/speckle dot${strayDots.length > 1 ? 's' : ''} detected outside live graphics.`);
-      }
-      artDetail = detailSnippets.join(' ') + ' Interactive pulsating highlight boxes and circles are active on the proof canvas.';
-      artAction = 'Inspect the AI Artwork QA Scanner tabs (Artwork, Issues, Highlighted Proof, Text Check, Stray Elements, QA Summary). Click "Locate" to focus each artifact.';
-    } else {
-      artStatus = 'PASS';
-      artFound = '✅ Clean Artwork (0 Typos, 0 Stray Lines, 0 Stray Dots)';
-      artDetail = 'AI Artwork QA Scanner passed: Brand names verified in whitelist, no spelling typos detected, and margins verified 100% free of stray lines or rogue dust dots.';
-      artAction = 'Artwork is verified clean and approved for print production.';
-    }
+    const qa = (typeof AgenticAiInspector !== 'undefined')
+      ? AgenticAiInspector.getCheckSummary()
+      : { status: 'WARNING', found: 'Not checked', detail: 'Artwork QA scanner not loaded.', action: 'Inspect the artwork at 100% zoom.' };
 
     checks.push({
       id: 'linesAndDots',
-      name: 'AI Artwork QA Scanner: Spelling & Stray Marks',
-      icon: '🤖',
-      status: artStatus,
-      found: artFound,
-      required: 'Clean artwork, verified spelling, whitelisted brands, zero stray marks',
-      detail: artDetail,
-      action: artAction,
+      name: 'Lines & Dots (stray marks) · Spelling',
+      icon: '🔍',
+      status: qa.status,
+      found: qa.found,
+      required: 'No unwanted lines, dots or smudges on the artwork',
+      detail: qa.detail,
+      action: qa.action,
       aiDefects: aiDefects
     });
 

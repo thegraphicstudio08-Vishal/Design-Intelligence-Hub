@@ -1199,6 +1199,7 @@ const CanvasInspector = {
     } else {
       const r = this._fitRect(img.naturalWidth || tw, img.naturalHeight || th, tw, th);
       ctx.drawImage(img, tx + r.x, ty + r.y, r.w, r.h);
+      this.artRect = { x: tx + r.x, y: ty + r.y, w: r.w, h: r.h };
     }
     ctx.restore();
 
@@ -1286,6 +1287,15 @@ const CanvasInspector = {
    * Redraw the canvas, artwork, and product template overlays
    */
   redraw() {
+    this.artRect = null;
+    this._redrawCanvas();
+    // Stray line & dot scan + markers: always on the real artwork image, whichever layout drew it
+    if (typeof AgenticAiInspector !== 'undefined' && this.canvas && this.currentImg) {
+      AgenticAiInspector.onCanvasRedraw(this.canvas, this.currentImg, this.currentSpec, this.currentDims);
+    }
+  },
+
+  _redrawCanvas() {
     this.init('artwork-canvas');
     if (!this.canvas || !this.currentImg) return;
 
@@ -1400,6 +1410,7 @@ const CanvasInspector = {
     } else {
       const r = this._fitRect(img.naturalWidth || w, img.naturalHeight || h, w, h);
       this.ctx.drawImage(img, r.x, r.y, r.w, r.h);
+      this.artRect = { x: r.x, y: r.y, w: r.w, h: r.h };   // where the artwork sits on the canvas (px)
     }
     this.ctx.restore();
 
@@ -1497,10 +1508,6 @@ const CanvasInspector = {
       this._drawBannerTemplate(w, h, printW, printH, safePxX, safePxY, spec);
     }
 
-    // Agentic AI Quality Audit: Scan artwork and render animated blinking boxes & circles
-    if (typeof AgenticAiInspector !== 'undefined') {
-      AgenticAiInspector.onCanvasRedraw(this.canvas, this.currentImg || null, spec, dims);
-    }
   },
 
   /**

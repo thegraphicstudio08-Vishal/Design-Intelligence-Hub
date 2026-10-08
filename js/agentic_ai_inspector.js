@@ -20,6 +20,468 @@
  *    - QA Summary: Executive severity card and one-click QA decision
  */
 
+/**
+ * Content-aware stray mark detector (lines & dots).
+ *
+ * A stray mark is a small mark sitting alone on a FLAT area of the design (solid colour or a smooth
+ * gradient), different from the colour right around it. Photos, illustrations and textured
+ * backgrounds are full of small details that belong to the image, so marks are never searched for
+ * inside them; the tool reports how much of the artwork it could check instead of guessing.
+ *
+ * Steps:
+ *  1. Split the artwork into 8 px blocks and measure each block's local spread (MAD) and tone count:
+ *     flat (solid / gradient), edge (text, logo or shape edge) or detail (photo / texture).
+ *  2. Busy area = edge + detail blocks, grown by an isolation margin. Nothing is searched there
+ *     (this also protects i-dots, full stops and fine parts of letters next to text).
+ *  3. In the remaining flat area, a pixel is "ink" when it differs from ITS OWN block's background
+ *     colour (not one global background, which is what made every photo detail a "stray mark").
+ *  4. Ink pixels are grouped; a group is kept only when it is small (dot) or thin (line), touches
+ *     nothing else, and the ring of pixels around it is one clean colour.
+ *  5. Five or more look-alike small marks are a pattern (stars, confetti), not strays.
+ *  6. Thin lines running along an outer edge (white/grey slivers after cropping) are checked separately.
+ */
+const ArtworkMarkDetector = {
+  MAX_SCAN_SIDE: 2000,
+  BLOCK: 8,
+
+  /**
+   * Scan a loaded image (or canvas). Large artwork is scanned at up to MAX_SCAN_SIDE px on the long
+   * side; every result is mapped back to the artwork's own pixel size.
+   */
+  scanImage(source) {
+    const origW = source.naturalWidth || source.width;
+    const origH = source.naturalHeight || source.height;
+    if (!origW || !origH || origW < 40 || origH < 40) return null;
+    const scale = Math.min(1, this.MAX_SCAN_SIDE / Math.max(origW, origH));
+    const W = Math.max(1, Math.round(origW * scale)), H = Math.max(1, Math.round(origH * scale));
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d', { willReadFrequently: true });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(source, 0, 0, W, H);
+    const res = this.analyze(ctx.getImageData(0, 0, W, H).data, W, H);
+    const k = 1 / scale;
+    res.marks.forEach(m => {
+      ['x', 'y', 'w', 'h', 'cx', 'cy', 'lengthPx', 'isolationPx'].forEach(f => { m[f] = Math.round(m[f] * k); });
+      m.thicknessPx = Math.max(1, Math.round(m.thicknessPx * k));
+    });
+    res.edgeLines.forEach(e => { e.thicknessPx = Math.max(1, Math.round(e.thicknessPx * k)); });
+    res.width = origW; res.height = origH; res.scanScale = +scale.toFixed(3);
+    return res;
+  },
+
+  /**
+   * @param {Uint8ClampedArray} data RGBA pixels
+   * @param {number} W width of the scanned copy
+   * @param {number} H height of the scanned copy
+   * @returns {{artworkType, detailPct, flatPct, checkedPct, marks: Array, edgeLines: Array, patterns: Array}}
+   */
+  analyze(data, W, H) {
+    const B = this.BLOCK;
+    const N = W * H;
+    const short = Math.min(W, H);
+    const lum = new Float32Array(N);
+    const opaque = new Uint8Array(N);
+    for (let i = 0, p = 0; i < N; i++, p += 4) {
+      lum[i] = data[p] * 0.299 + data[p + 1] * 0.587 + data[p + 2] * 0.114;
+      opaque[i] = data[p + 3] >= 128 ? 1 : 0;
+    }
+
+    // ── 1. Block statistics ──────────────────────────────────────────────
+    const bw = Math.ceil(W / B), bh = Math.ceil(H / B), NB = bw * bh;
+    const bType = new Uint8Array(NB);        // 0 transparent, 1 flat, 2 edge, 3 detail
+    const bPure = new Uint8Array(NB);        // 1 = solid colour (MAD <= 1)
+    const bRef = new Float32Array(NB * 3);   // background colour of the block (inlier mean)
+    const vals = new Float32Array(B * B);
+    const bins = new Uint8Array(32);
+
+    for (let by = 0; by < bh; by++) {
+      for (let bx = 0; bx < bw; bx++) {
+        const b = by * bw + bx;
+        const x0 = bx * B, y0 = by * B, x1 = Math.min(W, x0 + B), y1 = Math.min(H, y0 + B);
+        let n = 0, total = 0;
+        for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+          total++;
+          const i = y * W + x;
+          if (opaque[i]) vals[n++] = lum[i];
+        }
+        if (n < total * 0.5) { bType[b] = 0; continue; }
+        const sorted = Array.prototype.slice.call(vals, 0, n).sort((a, c) => a - c);
+        const med = sorted[n >> 1];
+        const dev = sorted.map(v => Math.abs(v - med)).sort((a, c) => a - c);
+        const mad = dev[n >> 1];
+        bins.fill(0);
+        for (let k = 0; k < n; k++) { const q = Math.min(31, sorted[k] >> 3); if (bins[q] < 255) bins[q]++; }
+        let tones = 0;
+        for (let k = 0; k < 32; k++) if (bins[k] >= 2) tones++;
+
+        bType[b] = mad <= 3 ? 1 : tones >= 6 ? 3 : 2;
+        bPure[b] = mad <= 1 ? 1 : 0;
+
+        // Block background colour = mean of pixels close to the median tone
+        const tol = Math.max(4, mad * 2);
+        let r = 0, g = 0, bl = 0, c = 0;
+        for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+          const i = y * W + x;
+          if (!opaque[i] || Math.abs(lum[i] - med) > tol) continue;
+          const p = i * 4; r += data[p]; g += data[p + 1]; bl += data[p + 2]; c++;
+        }
+        bRef[b * 3] = r / Math.max(1, c); bRef[b * 3 + 1] = g / Math.max(1, c); bRef[b * 3 + 2] = bl / Math.max(1, c);
+      }
+    }
+
+    // A mark bigger than half a block makes its own block non-flat. A small cluster of non-flat
+    // blocks fully surrounded by flat blocks of one colour is such a mark: give it the surrounding
+    // background so it can be checked, instead of hiding it inside the busy area.
+    const markMax = Math.max(16, Math.round(short * 0.12));
+    const dotMax = Math.max(6, Math.round(short * 0.02));
+    const lineMin = Math.max(12, Math.round(short * 0.02));
+    const maxClusterBlocks = Math.ceil(markMax / B) + 1;
+    const seenB = new Uint8Array(NB);
+    for (let s = 0; s < NB; s++) {
+      if (seenB[s] || (bType[s] !== 2 && bType[s] !== 3)) continue;
+      const cluster = [s]; seenB[s] = 1;
+      let cx0 = s % bw, cx1 = cx0, cy0 = (s / bw) | 0, cy1 = cy0, big = false;
+      for (let q = 0; q < cluster.length; q++) {
+        const cb = cluster[q], x = cb % bw, y = (cb / bw) | 0;
+        [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([dx, dy]) => {
+          const xx = x + dx, yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= bw || yy >= bh) return;
+          const nb = yy * bw + xx;
+          if (seenB[nb] || (bType[nb] !== 2 && bType[nb] !== 3)) return;
+          seenB[nb] = 1; cluster.push(nb);
+          if (xx < cx0) cx0 = xx; if (xx > cx1) cx1 = xx; if (yy < cy0) cy0 = yy; if (yy > cy1) cy1 = yy;
+        });
+        if (cx1 - cx0 + 1 > maxClusterBlocks || cy1 - cy0 + 1 > maxClusterBlocks) big = true;
+      }
+      if (big || cx0 === 0 || cy0 === 0 || cx1 === bw - 1 || cy1 === bh - 1) continue;
+      const ring = [];
+      for (let x = cx0 - 1; x <= cx1 + 1; x++) { ring.push((cy0 - 1) * bw + x, (cy1 + 1) * bw + x); }
+      for (let y = cy0; y <= cy1; y++) { ring.push(y * bw + cx0 - 1, y * bw + cx1 + 1); }
+      if (ring.some(rb => bType[rb] !== 1)) continue;
+      const mean = [0, 1, 2].map(k => ring.reduce((a, rb) => a + bRef[rb * 3 + k], 0) / ring.length);
+      if (ring.some(rb => Math.hypot(bRef[rb * 3] - mean[0], bRef[rb * 3 + 1] - mean[1], bRef[rb * 3 + 2] - mean[2]) > 20)) continue;
+      const pure = ring.every(rb => bPure[rb]);
+      cluster.forEach(cb => { bType[cb] = 1; bPure[cb] = pure ? 1 : 0; bRef[cb * 3] = mean[0]; bRef[cb * 3 + 1] = mean[1]; bRef[cb * 3 + 2] = mean[2]; });
+    }
+
+    let opaqueBlocks = 0, detailBlocks = 0, flatBlocks = 0, solidBlocks = 0;
+    for (let b = 0; b < NB; b++) {
+      if (bType[b] === 0) continue;
+      opaqueBlocks++;
+      if (bType[b] === 1) { flatBlocks++; if (bPure[b]) solidBlocks++; } else if (bType[b] === 3) detailBlocks++;
+    }
+
+    // ── 2. Busy area: edge + detail blocks grown by the isolation margin ───
+    const isoPx = Math.max(10, Math.round(short * 0.012));
+    const grow = Math.ceil(isoPx / B);
+    const busy = new Uint8Array(NB);
+    for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {
+      const t = bType[by * bw + bx];
+      if (t !== 2 && t !== 3) continue;
+      for (let yy = Math.max(0, by - grow); yy <= Math.min(bh - 1, by + grow); yy++)
+        for (let xx = Math.max(0, bx - grow); xx <= Math.min(bw - 1, bx + grow); xx++) busy[yy * bw + xx] = 1;
+    }
+    let checkedBlocks = 0;
+    for (let b = 0; b < NB; b++) if (bType[b] === 1 && !busy[b]) checkedBlocks++;
+
+    // ── 3. Ink pixels inside the checked flat area ──────────────────────
+    const ink = new Uint8Array(N);
+    for (let y = 0; y < H; y++) {
+      const rowB = ((y / B) | 0) * bw;
+      for (let x = 0; x < W; x++) {
+        const b = rowB + ((x / B) | 0);
+        if (bType[b] !== 1 || busy[b]) continue;
+        const i = y * W + x;
+        if (!opaque[i]) continue;
+        const p = i * 4;
+        const dr = data[p] - bRef[b * 3], dg = data[p + 1] - bRef[b * 3 + 1], db = data[p + 2] - bRef[b * 3 + 2];
+        if (Math.sqrt(dr * dr + dg * dg + db * db) > 30) ink[i] = 1;
+      }
+    }
+
+    // ── 4. Group ink pixels (8-connected) ───────────────────────────────
+    const label = new Int32Array(N);
+    const comps = [];
+    const stack = [];
+    for (let i = 0; i < N; i++) {
+      if (!ink[i] || label[i]) continue;
+      const id = comps.length + 1;
+      const c = { id, minX: W, minY: H, maxX: 0, maxY: 0, area: 0, r: 0, g: 0, b: 0, sx: 0, sy: 0 };
+      label[i] = id; stack.push(i);
+      while (stack.length) {
+        const j = stack.pop();
+        const x = j % W, y = (j / W) | 0;
+        c.area++; c.sx += x; c.sy += y;
+        if (x < c.minX) c.minX = x; if (x > c.maxX) c.maxX = x;
+        if (y < c.minY) c.minY = y; if (y > c.maxY) c.maxY = y;
+        const p = j * 4; c.r += data[p]; c.g += data[p + 1]; c.b += data[p + 2];
+        for (let dy = -1; dy <= 1; dy++) {
+          const yy = y + dy; if (yy < 0 || yy >= H) continue;
+          for (let dx = -1; dx <= 1; dx++) {
+            const xx = x + dx; if (xx < 0 || xx >= W) continue;
+            const k = yy * W + xx;
+            if (ink[k] && !label[k]) { label[k] = id; stack.push(k); }
+          }
+        }
+      }
+      comps.push(c);
+    }
+
+    // Distance (px) from a mark to the nearest ink pixel of anything else, searched up to maxD.
+    // Pixel based, so a large frame or shape around the mark does not count as "touching" it.
+    const nearestOther = (c, maxD) => {
+      let best = Infinity;
+      const x0 = Math.max(0, c.minX - maxD), x1 = Math.min(W - 1, c.maxX + maxD);
+      const y0 = Math.max(0, c.minY - maxD), y1 = Math.min(H - 1, c.maxY + maxD);
+      for (let y = y0; y <= y1; y++) {
+        const dy = Math.max(0, c.minY - y, y - c.maxY);
+        if (dy >= best) continue;
+        for (let x = x0; x <= x1; x++) {
+          const l = label[y * W + x];
+          if (!l || l === c.id) continue;
+          const d = Math.hypot(Math.max(0, c.minX - x, x - c.maxX), dy);
+          if (d < best) best = d;
+        }
+      }
+      return best;
+    };
+    // Distance (px) from a box to the nearest busy block, searched up to maxD
+    const busyDist = (c, maxD) => {
+      const bx0 = Math.max(0, ((c.minX - maxD) / B) | 0), bx1 = Math.min(bw - 1, ((c.maxX + maxD) / B) | 0);
+      const by0 = Math.max(0, ((c.minY - maxD) / B) | 0), by1 = Math.min(bh - 1, ((c.maxY + maxD) / B) | 0);
+      let best = Infinity;
+      for (let by = by0; by <= by1; by++) for (let bx = bx0; bx <= bx1; bx++) {
+        const t = bType[by * bw + bx]; if (t !== 2 && t !== 3) continue;
+        const dx = Math.max(0, bx * B - c.maxX, c.minX - (bx * B + B - 1));
+        const dy = Math.max(0, by * B - c.maxY, c.minY - (by * B + B - 1));
+        const d = Math.hypot(dx, dy); if (d < best) best = d;
+      }
+      return best;
+    };
+    // Ring of pixels around the mark: must be one clean colour
+    const ringTest = (c, pad) => {
+      const x0 = c.minX - pad, x1 = c.maxX + pad, y0 = c.minY - pad, y1 = c.maxY + pad;
+      const px = [];
+      const take = (x, y) => { if (x >= 0 && y >= 0 && x < W && y < H) { const i = y * W + x; if (opaque[i]) px.push(i); } };
+      for (let x = x0; x <= x1; x++) { take(x, y0); take(x, y1); }
+      for (let y = y0 + 1; y < y1; y++) { take(x0, y); take(x1, y); }
+      if (px.length < 8) return null;
+      const ls = px.map(i => lum[i]).sort((a, b) => a - b);
+      const med = ls[ls.length >> 1];
+      const mad = ls.map(v => Math.abs(v - med)).sort((a, b) => a - b)[ls.length >> 1];
+      let r = 0, g = 0, b = 0, n = 0;
+      px.forEach(i => { if (Math.abs(lum[i] - med) <= 6) { const p = i * 4; r += data[p]; g += data[p + 1]; b += data[p + 2]; n++; } });
+      return { clean: mad <= 3 && n / px.length >= 0.9, r: r / Math.max(1, n), g: g / Math.max(1, n), b: b / Math.max(1, n) };
+    };
+
+    // Text or graphics on the same row, left or right of the mark => punctuation, divider or rule
+    const touchesEdge = c => c.minX <= 1 || c.minY <= 1 || c.maxX >= W - 2 || c.maxY >= H - 2;
+    const inTextRow = (c, rowReach) => {
+      const y0 = Math.max(0, c.minY - 1), y1 = Math.min(H - 1, c.maxY + 1);
+      const sides = [[c.maxX + 1, Math.min(W - 1, c.maxX + rowReach)], [Math.max(0, c.minX - rowReach), c.minX - 1]];
+      for (const [xa, xb] of sides) {
+        for (let y = y0; y <= y1; y++) {
+          const rowB = ((y / B) | 0) * bw;
+          for (let x = xa; x <= xb; x++) {
+            const t = bType[rowB + ((x / B) | 0)];
+            if (t === 2 || t === 3) return true;
+            const l = label[y * W + x];
+            if (!l || l === c.id) continue;
+            const o = comps[l - 1];   // only text- or shape-sized neighbours count, not another speck
+            if (!touchesEdge(o) && Math.max(o.maxX - o.minX, o.maxY - o.minY) + 1 > dotMax) return true;
+          }
+        }
+      }
+      return false;
+    };
+    // A line whose end runs into other artwork is an edge of a frame, box or shape
+    const endJoinsArtwork = (c) => {
+      const horiz = (c.maxX - c.minX) >= (c.maxY - c.minY);
+      const r = isoPx * 2, cy = Math.round((c.minY + c.maxY) / 2), cx = Math.round((c.minX + c.maxX) / 2);
+      const ends = horiz ? [[c.minX, cy], [c.maxX, cy]] : [[cx, c.minY], [cx, c.maxY]];
+      for (const [ex, ey] of ends) {
+        for (let y = Math.max(0, ey - r); y <= Math.min(H - 1, ey + r); y++) {
+          const rowB = ((y / B) | 0) * bw;
+          for (let x = Math.max(0, ex - r); x <= Math.min(W - 1, ex + r); x++) {
+            const t = bType[rowB + ((x / B) | 0)];
+            if (t === 2 || t === 3) return true;
+            const l = label[y * W + x];
+            if (l && l !== c.id && !touchesEdge(comps[l - 1])) return true;
+          }
+        }
+      }
+      return false;
+    };
+    // Many other free-standing specks around it => sparkle / speckle texture of the design.
+    // Fragments hugging text or graphics edges are not counted (they belong to that artwork).
+    const crowded = (c) => {
+      const cx = (c.minX + c.maxX) / 2, cy = (c.minY + c.maxY) / 2, R = isoPx * 8;
+      let n = 0;
+      for (const o of comps) {
+        if (o === c || touchesEdge(o)) continue;
+        if (Math.abs((o.minX + o.maxX) / 2 - cx) > R || Math.abs((o.minY + o.maxY) / 2 - cy) > R) continue;
+        if (Math.max(o.maxX - o.minX, o.maxY - o.minY) + 1 > dotMax) continue;
+        if (busyDist(o, isoPx) < isoPx) continue;
+        if (++n >= 4) return true;
+      }
+      return false;
+    };
+    // Mirror symmetry in both directions => a designed shape (star, icon), not a smudge
+    const symmetric = (c) => {
+      const cw = c.maxX - c.minX + 1, ch = c.maxY - c.minY + 1;
+      let inter = 0, interV = 0, n = 0;
+      for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+        if (label[(c.minY + y) * W + c.minX + x] !== c.id) continue;
+        n++;
+        if (label[(c.minY + y) * W + c.minX + (cw - 1 - x)] === c.id) inter++;
+        if (label[(c.minY + (ch - 1 - y)) * W + c.minX + x] === c.id) interV++;
+      }
+      return n > 0 && inter / n >= 0.8 && interV / n >= 0.8;
+    };
+
+    // ── 5. Keep small / thin, isolated marks on a clean surround ────────
+    const raw = [];
+    const rejected = [];
+    comps.forEach(c => {
+      const drop = (why) => { if (this.DEBUG) rejected.push({ x: c.minX, y: c.minY, w: c.maxX - c.minX + 1, h: c.maxY - c.minY + 1, why }); };
+      if (touchesEdge(c)) return;                                 // handled by the edge check
+      const cw = c.maxX - c.minX + 1, ch = c.maxY - c.minY + 1;
+      const len = Math.hypot(cw, ch);
+      const thick = c.area / Math.max(cw, ch);
+      let kind = null;
+      if (Math.max(cw, ch) >= lineMin && thick <= 3.2 && Math.max(cw, ch) / Math.max(1, Math.min(cw, ch)) >= 4) kind = 'line';
+      else if (cw <= dotMax && ch <= dotMax && c.area >= 2) kind = 'dot';
+      else if (cw <= markMax && ch <= markMax) kind = 'mark';
+      if (!kind) return;                                          // larger shape = part of the design
+
+      const iso = Math.min(nearestOther(c, isoPx * 3), busyDist(c, isoPx * 3));
+      if (iso < isoPx) return drop('touches artwork');             // i-dot, texture, part of a shape
+      if (kind !== 'dot' && iso < isoPx * 1.5) return drop('close to artwork'); // lines / bigger marks stand well apart
+      // punctuation (dots) sits within a few letter-spaces of a word; dividers/rules (lines) further out
+      if (inTextRow(c, kind === 'dot' ? isoPx * 3 : isoPx * 8)) return drop('text row');
+      if (kind === 'line' && endJoinsArtwork(c)) return drop('line joins artwork'); // frame / box / shape edge
+      if (crowded(c)) return drop('crowded');                      // sparkle / speckle texture
+      if (kind === 'mark' && Math.min(cw, ch) >= dotMax && symmetric(c)) return drop('symmetric shape'); // star, icon
+      const ring = ringTest(c, Math.max(3, Math.ceil(Math.min(cw, ch) / 2) + 2));
+      if (!ring || !ring.clean) return drop('surround not clean'); // surround is not one clean colour
+      const mr = c.r / c.area, mg = c.g / c.area, mb = c.b / c.area;
+      const contrast = Math.hypot(mr - ring.r, mg - ring.g, mb - ring.b);
+      const pure = bPure[((c.minY / B) | 0) * bw + ((c.minX / B) | 0)] === 1;
+      if (contrast < (pure ? 30 : 50) || (c.area <= 4 && contrast < 45) || (c.area <= 2 && contrast < 60)) return drop('faint ' + Math.round(contrast)); // too faint to print visibly
+
+      const conf = Math.min(0.95, 0.55
+        + 0.20 * Math.min(1, (contrast - 30) / 90)
+        + 0.12 * Math.min(1, (iso - isoPx) / (2 * isoPx))
+        + (pure ? 0.08 : 0));
+      raw.push({
+        kind, x: c.minX, y: c.minY, w: cw, h: ch, cx: c.sx / c.area, cy: c.sy / c.area,
+        area: c.area, lengthPx: Math.round(len), thicknessPx: Math.max(1, Math.round(thick)),
+        orientation: cw >= ch ? 'Horizontal' : 'Vertical',
+        color: [Math.round(mr), Math.round(mg), Math.round(mb)], contrast: Math.round(contrast),
+        isolationPx: Math.round(iso === Infinity ? isoPx * 3 : iso), onSolidColour: pure, confidence: +conf.toFixed(2)
+      });
+    });
+
+    // Pattern filter: look-alike marks repeated across the design are a design element
+    // (4+ dots, 3+ lines in the same direction, 3+ larger marks)
+    const patterns = [];
+    const used = new Set();
+    raw.forEach((m, i) => {
+      if (used.has(i)) return;
+      const group = [i];
+      raw.forEach((o, j) => {
+        if (j === i || used.has(j) || o.kind !== m.kind) return;
+        if (m.kind === 'line' && o.orientation !== m.orientation) return;
+        const sizeOk = Math.max(o.area, m.area) / Math.max(1, Math.min(o.area, m.area)) <= 2.5;
+        const colOk = Math.hypot(o.color[0] - m.color[0], o.color[1] - m.color[1], o.color[2] - m.color[2]) <= 40;
+        if (sizeOk && colOk) group.push(j);
+      });
+      if (group.length >= (m.kind === 'dot' ? 4 : 3)) {
+        group.forEach(k => used.add(k));
+        patterns.push({ kind: m.kind, count: group.length, color: m.color });
+      }
+    });
+    const marks = raw.filter((m, i) => !used.has(i));
+    if (this.DEBUG) this._debug = { W, H, bw, bh, bType, busy, bRef, comps, label, isoPx, dotMax, lineMin, markMax, rejected };
+
+    // ── 6. Thin lines along the outer edges ──────────────────────────────
+    const edgeLines = this._edgeLines(data, lum, opaque, W, H);
+
+    // Vector / flat-colour artwork is mostly SOLID colour (no grain at all). Photos and painted
+    // backgrounds are detailed, and even their smooth parts (sky, fog, skin) carry slight grain.
+    const detailPct = opaqueBlocks ? detailBlocks / opaqueBlocks : 0;
+    const solidPct = opaqueBlocks ? solidBlocks / opaqueBlocks : 0;
+    return {
+      artworkType: solidPct >= 0.6 ? 'flat' : solidPct < 0.3 ? 'detailed' : 'mixed',
+      detailPct: Math.round(detailPct * 100),
+      solidPct: Math.round(solidPct * 100),
+      flatPct: Math.round((opaqueBlocks ? flatBlocks / opaqueBlocks : 0) * 100),
+      checkedPct: Math.round((opaqueBlocks ? checkedBlocks / opaqueBlocks : 0) * 100),
+      transparentPct: Math.round((1 - opaqueBlocks / Math.max(1, NB)) * 100),
+      isolationPx: isoPx,
+      marks, edgeLines, patterns
+    };
+  },
+
+  /**
+   * A 1–3 px line that runs along most of an outer edge and differs from the artwork just inside it.
+   */
+  _edgeLines(data, lum, opaque, W, H) {
+    const out = [];
+    const sides = [
+      { name: 'top', len: W, at: (k, t) => t * W + k },
+      { name: 'bottom', len: W, at: (k, t) => (H - 1 - t) * W + k },
+      { name: 'left', len: H, at: (k, t) => k * W + t },
+      { name: 'right', len: H, at: (k, t) => k * W + (W - 1 - t) }
+    ];
+    const depthLimit = Math.min(W, H);
+    const lineStats = (s, t) => {
+      const a = Math.round(s.len * 0.03), b = Math.round(s.len * 0.97);
+      const ls = [];
+      let r = 0, g = 0, bl = 0, n = 0;
+      for (let k = a; k < b; k++) {
+        const i = s.at(k, t); if (!opaque[i]) continue;
+        ls.push(lum[i]); const p = i * 4; r += data[p]; g += data[p + 1]; bl += data[p + 2]; n++;
+      }
+      if (n < (b - a) * 0.8) return null;
+      ls.sort((x, y) => x - y);
+      const med = ls[ls.length >> 1];
+      const close = ls.filter(v => Math.abs(v - med) <= 12).length / ls.length;
+      return { color: [r / n, g / n, bl / n], uniform: close >= 0.9 };
+    };
+    // Share of pixels along the edge where row `t` differs from the artwork at depth `ref`
+    const differShare = (s, t, ref) => {
+      const a = Math.round(s.len * 0.03), b = Math.round(s.len * 0.97);
+      let differ = 0, n = 0;
+      for (let k = a; k < b; k++) {
+        const i = s.at(k, t), j = s.at(k, ref);
+        if (!opaque[i] || !opaque[j]) continue;
+        const p = i * 4, q = j * 4;
+        if (Math.hypot(data[p] - data[q], data[p + 1] - data[q + 1], data[p + 2] - data[q + 2]) > 40) differ++;
+        n++;
+      }
+      return n ? differ / n : 0;
+    };
+    const REF = 10;                                  // artwork reference depth, safely inside any sliver
+    sides.forEach(s => {
+      if (depthLimit < 60) return;
+      const outer = lineStats(s, 0);
+      if (!outer || !outer.uniform) return;
+      // Band = consecutive uniform rows from the edge that differ from the artwork inside.
+      // Frames with a tone change (outer dark row + lighter rows) count as one band.
+      // Only the outermost row has to be one even colour; inner rows of a frame may shade.
+      if (differShare(s, 0, REF) < 0.85) return;
+      let thick = 1;
+      while (thick < 8 && differShare(s, thick, REF) >= 0.85) thick++;
+      if (thick > 2) return;                         // a wider band is a design border, not a sliver
+      out.push({ side: s.name, thicknessPx: thick, color: outer.color.map(Math.round) });
+    });
+    return out;
+  }
+};
+
 const AgenticAiInspector = {
   defects: [],
   extractedText: [],
@@ -88,40 +550,69 @@ const AgenticAiInspector = {
   /**
    * Run full AI Artwork QA Scan on the active canvas and artwork
    */
-  scanArtwork(canvas, img, spec, dims) {
-    let resolvedImg = img;
-    if ((!resolvedImg || !resolvedImg.naturalWidth) && typeof CanvasInspector !== 'undefined' && CanvasInspector.currentImg && CanvasInspector.currentImg.naturalWidth > 0) {
-      resolvedImg = CanvasInspector.currentImg;
-    }
+  // Result of the last pixel scan (artwork type, checked area, marks) — null until the artwork is scanned
+  scanResult: null,
+  // Why the artwork could not be scanned (e.g. PDF/AI shown as a generated preview), or null
+  scanSkipReason: null,
 
-    const src = (resolvedImg && resolvedImg.src) || (canvas && canvas.toDataURL ? 'canvas' : '');
-    if (this._lastScannedSrc === src && this._lastScannedSrc && this.defects.length > 0) {
+  /**
+   * Run the QA scan. Called once when the pre-check starts (image may not be loaded yet) and again
+   * by CanvasInspector every time it draws the artwork. The pixel scan runs once per artwork, only
+   * on the customer's real pixels — never on a generated preview or demo image.
+   */
+  scanArtwork(canvas, img, spec, dims) {
+    const analysis = (typeof appState !== 'undefined') ? appState.analysis : null;
+    const ext = ((analysis && analysis.fileExt) || '').toLowerCase();
+    const realSrc = analysis ? analysis.previewDataUrl : null;
+    const loaded = !!(img && img.naturalWidth > 0);
+    const src = (img && img.src) || realSrc || '';
+
+    if (this._lastScannedSrc === src && (this.scanResult || this.scanSkipReason)) {
       this.renderOverlay();
       this.updateControlsUI();
       return this.defects;
     }
+
+    // Only formats whose real pixels the browser shows can be scanned
+    const scannableExt = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg'].includes(ext);
+    let skip = null;
+    if (!scannableExt) {
+      skip = `.${(ext || 'file').toUpperCase()} artwork is shown as a generated preview in the browser, not its real pixels, so lines and dots cannot be checked automatically. Open it in Illustrator / Acrobat and inspect at 100%.`;
+    } else if (loaded && realSrc && img.src !== realSrc) {
+      skip = 'The browser could not display this artwork file, so lines and dots were not checked automatically. Inspect it in Photoshop / Illustrator at 100%.';
+    }
+
+    if (!skip && !loaded) {
+      // First call happens before the image has loaded: show "scanning" until the canvas draws it
+      if (this._lastScannedSrc !== src) {
+        this.defects = []; this.extractedText = []; this.scanResult = null; this.scanSkipReason = null;
+      }
+      this.renderOverlay();
+      this.updateControlsUI();
+      return this.defects;
+    }
+
     this._lastScannedSrc = src;
     this.defects = [];
     this.extractedText = [];
+    this.scanResult = null;
+    this.scanSkipReason = skip;
 
-    if (!canvas && !resolvedImg) return this.defects;
-
-    const w = (resolvedImg && (resolvedImg.naturalWidth || resolvedImg.width)) || (canvas && canvas.width) || 800;
-    const h = (resolvedImg && (resolvedImg.naturalHeight || resolvedImg.height)) || (canvas && canvas.height) || 600;
-
+    const w = loaded ? img.naturalWidth : (analysis && analysis.pixelWidth) || 0;
+    const h = loaded ? img.naturalHeight : (analysis && analysis.pixelHeight) || 0;
     this._lastArtworkMeta = {
       width: w,
       height: h,
-      aspect: +(w / h).toFixed(2),
+      aspect: h ? +(w / h).toFixed(2) : 0,
       specName: spec ? spec.name : 'Standard Print',
       orderDims: dims ? `${dims.widthIn}" × ${dims.heightIn}"` : 'N/A'
     };
 
     // 1. Text Extraction & Spell-Check with Brand Whitelist
-    this._scanSpellingTypos(canvas, resolvedImg, spec, dims);
+    this._scanSpellingTypos(canvas, img, spec, dims);
 
-    // 2. Identify Major Artwork Regions & Detect Stray Lines / Dots
-    this._scanArtworkMarksWithIntentionality(canvas, resolvedImg, spec, dims, w, h);
+    // 2. Stray lines & dots on the real artwork pixels
+    if (!skip) this._scanArtworkMarksWithIntentionality(canvas, img, spec, dims, w, h);
 
     // Render overlay and update controls
     this.renderOverlay();
@@ -131,54 +622,133 @@ const AgenticAiInspector = {
     return this.defects;
   },
 
+  ARTWORK_TYPE_LABELS: {
+    flat: 'Flat-colour / vector-style design',
+    mixed: 'Mixed design (flat colour + photo / illustration)',
+    detailed: 'Photo or detailed full-background design'
+  },
+
+  /**
+   * One honest summary of the Lines & Dots / spelling check, used by the pre-check report and by the
+   * live update after the scan. Says what was checked, what was found, and what still needs a human.
+   */
+  getCheckSummary() {
+    const active = this.getDefects().filter(d => !d.intentional);
+    const lines = active.filter(d => d.type === 'stray_line');
+    const dots = active.filter(d => d.type === 'stray_dot');
+    const edges = active.filter(d => d.type === 'edge_line');
+    const typos = active.filter(d => d.type === 'spelling');
+    const r = this.scanResult;
+    const plural = (n, w) => `${n} ${w}${n !== 1 ? 's' : ''}`;
+
+    const parts = [];
+    if (dots.length) parts.push(plural(dots.length, 'stray dot/mark'));
+    if (lines.length) parts.push(plural(lines.length, 'stray line'));
+    if (edges.length) parts.push('thin edge line');
+    if (typos.length) parts.push(plural(typos.length, 'spelling note'));
+
+    if (!r && !this.scanSkipReason) {
+      return {
+        status: 'WARNING',
+        found: 'Scanning artwork…',
+        detail: 'The stray line & dot scan runs as soon as the artwork is drawn on the canvas.',
+        action: ''
+      };
+    }
+    if (this.scanSkipReason) {
+      return {
+        status: 'WARNING',
+        found: `Manual check needed${typos.length ? ' · ' + parts.join(', ') : ''}`,
+        detail: this.scanSkipReason,
+        action: 'Inspect the artwork at 100% zoom for stray lines, dots and smudges before creating the design file.'
+      };
+    }
+
+    const typeLabel = this.ARTWORK_TYPE_LABELS[r.artworkType] || 'Artwork';
+    const coverage = `${typeLabel}. ${r.checkedPct}% of the artwork is clear flat colour and was scanned for stray lines and dots; the rest is photo, illustration, text or graphics, where small details belong to the design and are not flagged.`;
+    const patternNote = r.patterns.length
+      ? ` ${r.patterns.reduce((a, p) => a + p.count, 0)} repeated small elements (stars, dots or stripes) were treated as part of the design.`
+      : '';
+    const hasFatal = active.some(d => d.severity === 'Fatal');
+
+    if (parts.length) {
+      return {
+        status: hasFatal ? 'FAIL' : 'WARNING',
+        found: `${parts.join(', ')} · checked ${r.checkedPct}% of the artwork`,
+        detail: coverage + patternNote,
+        action: 'Click a marker on the canvas (or 🎯 Locate) to zoom in. Remove real marks, or mark them intentional.'
+          + (r.artworkType !== 'flat' ? ' Photo and illustration areas are not auto-checked — look over them at 100% zoom.' : '')
+      };
+    }
+    if (r.checkedPct < 40) {
+      return {
+        status: 'WARNING',
+        found: `No stray marks in the checked area (${r.checkedPct}%) · photo areas need a visual check`,
+        detail: coverage + patternNote,
+        action: 'Most of this artwork is photo / illustration. Look over it at 100% zoom for dust, scratches or scanner marks.'
+      };
+    }
+    return {
+      status: 'PASS',
+      found: `No stray lines or dots found · checked ${r.checkedPct}% of the artwork`,
+      detail: coverage + patternNote,
+      action: ''
+    };
+  },
+
   syncPrecheckReport() {
+    if (typeof appState === 'undefined') return;
     const activeDefects = this.getDefects();
-    if (typeof appState !== 'undefined') {
-      if (appState.analysis) {
-        appState.analysis.aiDefects = activeDefects;
-      }
-      if (appState.report && Array.isArray(appState.report.checks)) {
-        const auditCheck = appState.report.checks.find(c => c.id === 'artworkQAAudit');
-        if (auditCheck) {
-          const typos = activeDefects.filter(d => d.type === 'spelling');
-          const strayLines = activeDefects.filter(d => d.type === 'stray_line');
-          const strayDots = activeDefects.filter(d => d.type === 'stray_dot');
-          const hasDefects = activeDefects.length > 0;
-          const hasFatal = activeDefects.some(d => d.severity === 'Fatal');
+    if (appState.analysis) appState.analysis.aiDefects = activeDefects;
+    const report = appState.report;
+    if (!report || !Array.isArray(report.checks)) return;
+    const check = report.checks.find(c => c.id === 'linesAndDots');
+    if (!check) return;
 
-          if (hasDefects) {
-            auditCheck.status = hasFatal ? 'FAIL' : 'WARNING';
-            const parts = [];
-            if (typos.length > 0) parts.push(`${typos.length} Spelling Typo${typos.length > 1 ? 's' : ''}`);
-            if (strayLines.length > 0) parts.push(`${strayLines.length} Stray Line${strayLines.length > 1 ? 's' : ''}`);
-            if (strayDots.length > 0) parts.push(`${strayDots.length} Stray Dot${strayDots.length > 1 ? 's' : ''}`);
-            auditCheck.found = `${hasFatal ? '❌' : '⚠️'} ${activeDefects.length} Issue${activeDefects.length !== 1 ? 's' : ''} Flagged (${parts.join(', ')})`;
-            auditCheck.detail = `Stray Artifacts & Typo QA: ${parts.join(', ')} detected in artwork. Animated pulsating highlight boxes and circles are active on the proof canvas.`;
-          } else {
-            auditCheck.status = 'PASS';
-            auditCheck.found = '✅ Clean Artwork (0 Typos, 0 Stray Lines, 0 Stray Dots)';
-            auditCheck.detail = 'AI Artwork QA Scanner passed: Brand names verified in whitelist, no spelling typos detected, and margins verified 100% free of stray lines or rogue dust dots.';
-          }
+    Object.assign(check, this.getCheckSummary(), { aiDefects: activeDefects });
 
-          const cardEl = document.getElementById('cc-artworkQAAudit');
-          if (cardEl) {
-            const stClass = auditCheck.status.toLowerCase();
-            cardEl.className = `check-card ${stClass}`;
-            const pillEl = cardEl.querySelector('.check-pill');
-            if (pillEl) {
-              pillEl.className = `check-pill pill-${stClass}`;
-              pillEl.textContent = auditCheck.status;
-            }
-            const cdvs = cardEl.querySelectorAll('.cdv');
-            if (cdvs && cdvs.length > 0) {
-              cdvs[0].textContent = auditCheck.found;
-            }
-            if (cdvs && cdvs.length > 1) {
-              cdvs[1].textContent = auditCheck.detail;
-            }
-          }
-        }
+    const cardEl = document.getElementById('cc-linesAndDots');
+    if (cardEl && !check.isOverridden) {
+      const stClass = check.status.toLowerCase();
+      cardEl.className = `check-card ${stClass}`;
+      const pillEl = cardEl.querySelector('.check-pill');
+      if (pillEl) {
+        pillEl.className = `check-pill pill-${stClass}`;
+        pillEl.textContent = check.status;
       }
+      const cdvs = cardEl.querySelectorAll('.cdv');
+      if (cdvs[0]) cdvs[0].textContent = check.found;
+      if (cdvs[1]) cdvs[1].textContent = check.detail;
+    }
+    this._refreshSummaryCard(report);
+  },
+
+  /** Recount pass / warning / fail after the scan (same scoring as PrecheckEngine.evaluate). */
+  _refreshSummaryCard(report) {
+    const checks = report.checks;
+    const fails = checks.filter(c => c.status === 'FAIL' && !c.isOverridden).length;
+    const warns = checks.filter(c => c.status === 'WARNING' && !c.isOverridden).length;
+    const passes = checks.filter(c => c.status === 'PASS' || c.isOverridden).length;
+    let score = Math.max(0, 100 - fails * 20 - warns * 5);
+    if (report.analysis && report.analysis.isVector) score = Math.min(100, score + 5);
+    const overall = fails > 0 ? 'FAIL' : warns > 3 ? 'WARNING' : 'PASS';
+    Object.assign(report, { score, overall });
+
+    const card = document.getElementById('summary-card');
+    if (!card) return;
+    const scoreEl = card.querySelector('.score-num');
+    if (scoreEl) { scoreEl.textContent = score; scoreEl.className = `score-num ${overall.toLowerCase()}`; }
+    const chips = card.querySelector('.summary-chips');
+    if (chips) {
+      chips.innerHTML = `
+        <div class="chip chip-pass"><span class="chip-dot"></span>${passes} Passed</div>
+        <div class="chip chip-warn"><span class="chip-dot"></span>${warns} Warning${warns !== 1 ? 's' : ''}</div>
+        <div class="chip chip-fail"><span class="chip-dot"></span>${fails} Critical</div>`;
+    }
+    const verdict = card.querySelector('.summary-verdict');
+    if (verdict) {
+      verdict.textContent = overall;
+      verdict.className = `summary-verdict ${overall === 'PASS' ? 'verd-pass' : overall === 'WARNING' ? 'verd-warning' : 'verd-fail'}`;
     }
   },
 
@@ -210,7 +780,8 @@ const AgenticAiInspector = {
                 text: rawText,
                 x: xAttr,
                 y: yAttr,
-                nodeIdx: idx
+                nodeIdx: idx,
+                source: 'artwork'
               });
             }
           });
@@ -224,7 +795,7 @@ const AgenticAiInspector = {
     if (typeof appState !== 'undefined' && appState.parsedFilename) {
       const fname = appState.parsedFilename.fname || '';
       if (fname) {
-        textSnippets.push({ text: fname.replace(/[_.-]/g, ' '), x: 0, y: 0 });
+        textSnippets.push({ text: fname.replace(/[_.-]/g, ' '), x: 0, y: 0, source: 'filename' });
       }
     }
 
@@ -255,27 +826,29 @@ const AgenticAiInspector = {
           const typoInfo = this.TYPO_DICTIONARY[clean];
           const suggestion = typoInfo.suggestion;
           const isBrand = typoInfo.isBrand;
-          const severity = isBrand ? 'Fatal' : 'Major';
+          const inFileName = snippet.source === 'filename';
+          // A word in the file name is not printed, so it is a note for the designer, not an artwork error
+          const severity = inFileName ? 'Review' : isBrand ? 'Fatal' : 'Major';
 
           this.defects.push({
             id: `typo_${this.defects.length + 1}`,
             type: 'spelling',
             category: 'Text Check',
-            shape: 'box',
+            // No position is known for the word, so no marker is drawn on the artwork
+            shape: 'none',
             severity: severity,
-            title: `Spelling Typo: "${word}" → "${suggestion}"`,
-            confidence: 0.99,
-            xPercent: 35.0,
-            yPercent: 42.0,
-            wPercent: 28.0,
-            hPercent: 7.5,
+            title: `${inFileName ? 'File name' : 'Spelling'}: "${word}" → "${suggestion}"`,
+            confidence: null,
             details: {
               word: word,
               suggestion: suggestion,
               isBrand: isBrand,
-              description: isBrand
-                ? `Fatal spelling mistake on customer/brand name: "${word}". Correction: "${suggestion}". Must be fixed before printing.`
-                : `Spelling typo detected: "${word}". Recommended correction: "${suggestion}".`
+              source: snippet.source,
+              description: inFileName
+                ? `"${word}" in the file name looks like a typo of "${suggestion}". The file name is not printed — check the same word in the artwork.`
+                : isBrand
+                  ? `Spelling mistake on a customer/brand name in the artwork text: "${word}". Correction: "${suggestion}". Must be fixed before printing.`
+                  : `Possible spelling mistake in the artwork text: "${word}". Suggested: "${suggestion}".`
             },
             intentional: false,
             dismissed: false
@@ -286,306 +859,81 @@ const AgenticAiInspector = {
   },
 
   /**
-   * 2. IDENTIFY MAJOR ARTWORK REGIONS & DETECT STRAY MARKS (LINES & DOTS)
-   * Implements the intentionality classification logic ported from artwork_stray_detector (1).py
+   * 2. STRAY LINES & DOTS — content-aware scan of the real artwork pixels (see ArtworkMarkDetector).
+   * Each finding carries its real position, size, contrast and an evidence-based confidence.
    */
   _scanArtworkMarksWithIntentionality(canvas, img, spec, dims, w, h) {
-    if (!canvas && !img) return;
+    let res = null;
     try {
-      // Use clean offscreen canvas to avoid scanning canvas guides or UI text
-      let scanCanvas = null;
-      if (img && img.naturalWidth > 0 && img.naturalHeight > 0) {
-        scanCanvas = document.createElement('canvas');
-        scanCanvas.width = img.naturalWidth;
-        scanCanvas.height = img.naturalHeight;
-        const sCtx = scanCanvas.getContext('2d');
-        if (sCtx) sCtx.drawImage(img, 0, 0);
-      } else if (canvas && canvas.width > 0 && canvas.height > 0) {
-        scanCanvas = document.createElement('canvas');
-        scanCanvas.width = canvas.width;
-        scanCanvas.height = canvas.height;
-        const sCtx = scanCanvas.getContext('2d');
-        if (sCtx) sCtx.drawImage(canvas, 0, 0);
-      } else if (typeof CanvasInspector !== 'undefined' && CanvasInspector.currentImg && CanvasInspector.currentImg.naturalWidth > 0) {
-        const cImg = CanvasInspector.currentImg;
-        scanCanvas = document.createElement('canvas');
-        scanCanvas.width = cImg.naturalWidth;
-        scanCanvas.height = cImg.naturalHeight;
-        const sCtx = scanCanvas.getContext('2d');
-        if (sCtx) sCtx.drawImage(cImg, 0, 0);
-      }
-
-      if (!scanCanvas) return;
-      const ctx = scanCanvas.getContext('2d');
-      if (!ctx) return;
-
-      const origW = scanCanvas.width;
-      const origH = scanCanvas.height;
-      if (origW < 40 || origH < 40) return;
-
-      // Downscale proportionally if larger than 1000px for ultra-responsive analysis
-      let sw = origW;
-      let sh = origH;
-      let scale = 1.0;
-      if (origW > 1000 || origH > 1000) {
-        scale = 1000 / Math.max(origW, origH);
-        sw = Math.max(40, Math.round(origW * scale));
-        sh = Math.max(40, Math.round(origH * scale));
-        const downCanvas = document.createElement('canvas');
-        downCanvas.width = sw;
-        downCanvas.height = sh;
-        const downCtx = downCanvas.getContext('2d');
-        downCtx.drawImage(scanCanvas, 0, 0, sw, sh);
-        scanCanvas = downCanvas;
-      }
-
-      const imgData = scanCanvas.getContext('2d').getImageData(0, 0, sw, sh);
-      const data = imgData.data;
-
-      // Step 1: Accurate Background Estimation (Median of inner 80% canvas area)
-      const innerLums = [];
-      const yStep = Math.max(2, Math.floor(sh / 100));
-      const xStep = Math.max(2, Math.floor(sw / 100));
-      for (let y = Math.floor(sh * 0.1); y < Math.floor(sh * 0.9); y += yStep) {
-        for (let x = Math.floor(sw * 0.1); x < Math.floor(sw * 0.9); x += xStep) {
-          const idx = (y * sw + x) * 4;
-          if (data[idx + 3] > 60) {
-            const lum = (data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114);
-            innerLums.push(lum);
-          }
-        }
-      }
-      innerLums.sort((a, b) => a - b);
-      const bgLum = innerLums[Math.floor(innerLums.length / 2)] || 240;
-
-      // Step 2: Binary Foreground Mask
-      const mask = new Uint8Array(sw * sh);
-      for (let y = 0; y < sh; y++) {
-        for (let x = 0; x < sw; x++) {
-          const idx = (y * sw + x) * 4;
-          if (data[idx + 3] < 50) continue;
-          const lum = (data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114);
-          if (Math.abs(lum - bgLum) > 13) {
-            mask[y * sw + x] = 1;
-          }
-        }
-      }
-
-      // Step 3: Fast Two-Pass Connected Components Labeling with Disjoint-Set Union
-      const labels = new Int32Array(sw * sh);
-      const parent = [0];
-      let nextLabel = 1;
-
-      function findRoot(i) {
-        let root = i;
-        while (parent[root] > 0) root = parent[root];
-        let curr = i;
-        while (curr !== root) {
-          let nxt = parent[curr];
-          if (nxt > 0) parent[curr] = root;
-          curr = nxt;
-        }
-        return root;
-      }
-
-      function unionLabels(i, j) {
-        const rootI = findRoot(i);
-        const rootJ = findRoot(j);
-        if (rootI !== rootJ) {
-          if (rootI < rootJ) parent[rootJ] = rootI;
-          else parent[rootI] = rootJ;
-        }
-      }
-
-      for (let y = 0; y < sh; y++) {
-        for (let x = 0; x < sw; x++) {
-          const idx = y * sw + x;
-          if (mask[idx] === 0) continue;
-
-          const up = (y > 0) ? labels[(y - 1) * sw + x] : 0;
-          const left = (x > 0) ? labels[y * sw + (x - 1)] : 0;
-
-          if (up === 0 && left === 0) {
-            labels[idx] = nextLabel;
-            parent.push(0);
-            nextLabel++;
-          } else if (up > 0 && left === 0) {
-            labels[idx] = up;
-          } else if (up === 0 && left > 0) {
-            labels[idx] = left;
-          } else {
-            labels[idx] = up;
-            if (up !== left) unionLabels(up, left);
-          }
-        }
-      }
-
-      // Consolidate components & collect geometric statistics
-      const stats = {};
-      for (let y = 0; y < sh; y++) {
-        for (let x = 0; x < sw; x++) {
-          const idx = y * sw + x;
-          const lbl = labels[idx];
-          if (lbl === 0) continue;
-          const root = findRoot(lbl);
-          if (!stats[root]) {
-            stats[root] = { minX: x, maxX: x, minY: y, maxY: y, area: 0, sumX: 0, sumY: 0 };
-          }
-          const s = stats[root];
-          if (x < s.minX) s.minX = x;
-          if (x > s.maxX) s.maxX = x;
-          if (y < s.minY) s.minY = y;
-          if (y > s.maxY) s.maxY = y;
-          s.area++;
-          s.sumX += x;
-          s.sumY += y;
-        }
-      }
-
-      // Step 4: Classify into Major Artwork vs. Candidate Lines & Dots
-      const majorArt = [];
-      const candidateLines = [];
-      const candidateDots = [];
-
-      for (const id in stats) {
-        const s = stats[id];
-        const bw = s.maxX - s.minX + 1;
-        const bh = s.maxY - s.minY + 1;
-        const cx = s.sumX / s.area;
-        const cy = s.sumY / s.area;
-
-        // Ignore outer canvas perimeter (within 3% of boundary)
-        if (s.minX < sw * 0.03 || s.maxX > sw * 0.97 || s.minY < sh * 0.035 || s.maxY > sh * 0.965) {
-          continue;
-        }
-
-        const isThinH = (bh <= 4 && bw >= 20 && (bw / Math.max(1, bh)) >= 4.5);
-        const isThinV = (bw <= 4 && bh >= 20 && (bh / Math.max(1, bw)) >= 4.5);
-
-        if (isThinH || isThinV) {
-          candidateLines.push({
-            id, minX: s.minX, minY: s.minY, maxX: s.maxX, maxY: s.maxY,
-            bw, bh, cx, cy, area: s.area, dir: isThinH ? 'H' : 'V'
-          });
-        } else if ((bw >= 12 && bh >= 12 && s.area >= 50) || s.area >= 180) {
-          // Significant 2D text character, logo, or artwork element
-          majorArt.push({
-            id, minX: s.minX, minY: s.minY, maxX: s.maxX, maxY: s.maxY,
-            bw, bh, cx, cy, area: s.area
-          });
-        } else if (bw <= 10 && bh <= 10 && s.area <= 35) {
-          candidateDots.push({
-            id, minX: s.minX, minY: s.minY, maxX: s.maxX, maxY: s.maxY,
-            bw, bh, cx, cy, area: s.area
-          });
-        }
-      }
-
-      function calcMinDistToArtwork(c) {
-        let minD = 9999;
-        for (const a of majorArt) {
-          const dx = Math.max(0, a.minX - c.maxX, c.minX - a.maxX);
-          const dy = Math.max(0, a.minY - c.maxY, c.minY - a.maxY);
-          const d = Math.hypot(dx, dy);
-          if (d < minD) minD = d;
-          if (minD < 8) break;
-        }
-        return minD;
-      }
-
-      // Step 5: Intentionality & Isolation Filter for Lines
-      for (const cl of candidateLines) {
-        const dist = calcMinDistToArtwork(cl);
-        // An unnecessary line is isolated in open space (> 14px away from text/logo)
-        if (dist > 14) {
-          const origLen = Math.round(cl.bw / scale);
-          const origThickness = Math.max(1, Math.round(cl.bh / scale));
-          const origX = cl.minX / scale;
-          const origY = cl.minY / scale;
-          const origWBox = cl.bw / scale;
-          const origHBox = cl.bh / scale;
-
-          const isMajorLine = origLen > 70;
-          const confidence = +Math.min(0.98, 0.88 + Math.min(dist / 120, 0.10)).toFixed(2);
-
-          this.defects.push({
-            id: `line_${this.defects.length + 1}`,
-            type: 'stray_line',
-            category: 'Stray Elements',
-            shape: 'box',
-            severity: isMajorLine ? 'Major' : 'Minor',
-            title: `Possible Unnecessary Line (~${origLen}px)`,
-            confidence: confidence,
-            xPercent: +((origX / origW) * 100).toFixed(1),
-            yPercent: +(((origY - 2) / origH) * 100).toFixed(1),
-            wPercent: +(((origWBox + 4) / origW) * 100).toFixed(1),
-            hPercent: +Math.max(2.8, ((origHBox + 8) / origH) * 100).toFixed(1),
-            metrics: {
-              lengthPx: origLen,
-              thicknessPx: origThickness,
-              isolationDistPx: Math.round(dist / scale),
-              connectedToArtwork: false,
-              orientation: cl.dir === 'H' ? 'Horizontal' : 'Vertical'
-            },
-            details: {
-              lengthPx: origLen,
-              description: `Unnecessary straight ${cl.dir === 'H' ? 'horizontal' : 'vertical'} line (~${origLen}×${origThickness}px) isolated in open artwork area (${Math.round(dist / scale)}px away from live graphics). Connected to artwork: NO. Alignment: None. Confidence: ${Math.round(confidence * 100)}%.`
-            },
-            intentional: false,
-            dismissed: false
-          });
-        }
-      }
-
-      // Step 6: Intentionality & Isolation Filter for Dots
-      for (const cd of candidateDots) {
-        const dist = calcMinDistToArtwork(cd);
-        // An isolated rogue dot/dust speckle is > 18px away from major text/logo
-        if (dist > 18) {
-          // Check if part of a dotted/dashed guideline
-          const collinearNeighbors = candidateDots.filter(o =>
-            o.id !== cd.id && Math.abs(o.minY - cd.minY) <= 2 && Math.abs(o.minX - cd.minX) < (50 * scale)
-          ).length;
-
-          if (collinearNeighbors <= 1) {
-            const origX = cd.cx / scale;
-            const origY = cd.cy / scale;
-            const origSize = Math.max(1, Math.round(Math.max(cd.bw, cd.bh) / scale));
-            const confidence = 0.98;
-
-            this.defects.push({
-              id: `dot_${this.defects.length + 1}`,
-              type: 'stray_dot',
-              category: 'Stray Elements',
-              shape: 'circle',
-              severity: 'Minor',
-              title: `Stray Mark / Rogue Dot (Isolated)`,
-              confidence: confidence,
-              cxPercent: +((origX / origW) * 100).toFixed(1),
-              cyPercent: +((origY / origH) * 100).toFixed(1),
-              radiusPercent: 2.2,
-              xPercent: +(((origX - 10) / origW) * 100).toFixed(1),
-              yPercent: +(((origY - 10) / origH) * 100).toFixed(1),
-              wPercent: 3.2,
-              hPercent: 3.2,
-              metrics: {
-                sizePx: [origSize, origSize],
-                isolationDistPx: Math.round(dist / scale),
-                connectedToArtwork: false,
-                nearTextOrLogo: false
-              },
-              details: {
-                dotRadiusPx: origSize,
-                description: `Isolated rogue dot / dust mark (~${origSize}px) detected ${Math.round(dist / scale)}px away from text/logo elements. Connected to artwork: NO. Near text: NO. Repetitive pattern: NO. Confidence: 98%.`
-              },
-              intentional: false,
-              dismissed: false
-            });
-          }
-        }
-      }
+      res = ArtworkMarkDetector.scanImage(img);
     } catch (e) {
-      console.warn('AI QA Scanner pixel inspection notice:', e);
+      console.warn('Stray mark scan failed:', e);
+    }
+    if (!res) {
+      this.scanSkipReason = 'The artwork could not be read for the stray mark check. Inspect it at 100% zoom.';
+      return;
+    }
+    this.scanResult = res;
+    const W = res.width, H = res.height;
+    const pct = v => +(v * 100).toFixed(2);
+
+    res.marks.forEach((m, i) => {
+      const likely = m.confidence >= 0.8;
+      const where = m.onSolidColour ? 'on a solid-colour area' : 'on a smooth / gradient area';
+      const sizeTxt = m.kind === 'line' ? `${m.lengthPx} px long, ${m.thicknessPx} px thick` : `${m.w} × ${m.h} px`;
+      const name = m.kind === 'line' ? 'stray line' : m.kind === 'mark' ? 'stray mark / smudge' : 'stray dot';
+      const isLine = m.kind === 'line';
+      this.defects.push({
+        id: `${isLine ? 'line' : 'dot'}_${i + 1}`,
+        type: isLine ? 'stray_line' : 'stray_dot',
+        kind: m.kind,
+        category: 'Stray Elements',
+        shape: m.kind === 'dot' ? 'circle' : 'box',
+        // A mark on solid colour is almost always unwanted; on a gradient it may be part of the image
+        severity: m.onSolidColour ? 'Minor' : 'Review',
+        title: `${likely ? 'Likely' : 'Possible'} ${name}`,
+        confidence: m.confidence,
+        cxPercent: pct(m.cx / W),
+        cyPercent: pct(m.cy / H),
+        xPercent: pct(m.x / W),
+        yPercent: pct(m.y / H),
+        wPercent: Math.max(pct(m.w / W), 1.2),
+        hPercent: Math.max(pct(m.h / H), 1.2),
+        metrics: {
+          sizePx: [m.w, m.h],
+          lengthPx: m.lengthPx,
+          thicknessPx: m.thicknessPx,
+          orientation: m.orientation,
+          contrast: m.contrast,
+          isolationDistPx: m.isolationPx,
+          color: m.color
+        },
+        details: {
+          description: `${sizeTxt} at (${m.x}, ${m.y}) px, ${where}. Nothing else within ${m.isolationPx} px; colour rgb(${m.color.join(', ')}) stands out from its surround (contrast ${m.contrast}). Zoom in to confirm, then remove it or mark it intentional.`
+        },
+        intentional: false,
+        dismissed: false
+      });
+    });
+
+    if (res.edgeLines.length) {
+      const sides = res.edgeLines.map(e => e.side);
+      const thick = Math.max(...res.edgeLines.map(e => e.thicknessPx));
+      this.defects.push({
+        id: 'edge_1',
+        type: 'edge_line',
+        category: 'Stray Elements',
+        shape: 'edges',
+        sides,
+        severity: 'Review',
+        title: `Thin line along the ${sides.length === 4 ? 'whole border' : sides.join(', ') + ' edge' + (sides.length > 1 ? 's' : '')}`,
+        confidence: null,
+        details: {
+          description: `A ${thick} px line runs along the ${sides.join(', ')} edge${sides.length > 1 ? 's' : ''} and differs from the artwork next to it. If it is not a planned border (e.g. a white or grey sliver left after cropping), remove it or extend the background — after trimming it can show unevenly.`
+        },
+        intentional: false,
+        dismissed: false
+      });
     }
   },
 
@@ -605,18 +953,24 @@ const AgenticAiInspector = {
       wrap.appendChild(overlay);
     }
 
+    // Markers are placed in artwork coordinates, so the overlay covers exactly the rectangle where the
+    // artwork is drawn (inside hem / bleed / letterbox). In template or mockup view, or when rotated,
+    // the artwork is not drawn 1:1, so markers are hidden rather than shown in the wrong place.
+    const art = (typeof CanvasInspector !== 'undefined') ? CanvasInspector.artRect : null;
+    const sx = canvas.width ? canvas.offsetWidth / canvas.width : 1;
+    const sy = canvas.height ? canvas.offsetHeight / canvas.height : 1;
     overlay.style.position = 'absolute';
-    overlay.style.left = canvas.offsetLeft + 'px';
-    overlay.style.top = canvas.offsetTop + 'px';
-    overlay.style.width = canvas.offsetWidth + 'px';
-    overlay.style.height = canvas.offsetHeight + 'px';
+    overlay.style.left = (canvas.offsetLeft + (art ? art.x * sx : 0)) + 'px';
+    overlay.style.top = (canvas.offsetTop + (art ? art.y * sy : 0)) + 'px';
+    overlay.style.width = (art ? art.w * sx : canvas.offsetWidth) + 'px';
+    overlay.style.height = (art ? art.h * sy : canvas.offsetHeight) + 'px';
     overlay.style.pointerEvents = 'none';
     overlay.style.overflow = 'visible';
     overlay.style.zIndex = '15';
-    overlay.style.display = this.options.enabled ? 'block' : 'none';
+    overlay.style.display = (this.options.enabled && art) ? 'block' : 'none';
 
     const visibleDefects = this.defects.filter(d => {
-      if (d.dismissed) return false;
+      if (d.dismissed || d.shape === 'none') return false;   // no real position → listed only, never drawn
       if (this.options.filter === 'all') return true;
       if (this.options.filter === 'fatal') return d.severity === 'Fatal';
       if (this.options.filter === 'major') return d.severity === 'Major';
@@ -631,27 +985,54 @@ const AgenticAiInspector = {
     }
 
     const isBlinking = this.options.blinking;
+    // Labels only where they help: the selected marker, or every marker when there are only a few
+    const showAllTags = visibleDefects.length <= 6;
     let html = '';
 
     visibleDefects.forEach(defect => {
       const isActive = (this._activeDefectId === defect.id);
       const isIntentional = defect.intentional;
+      const showTag = showAllTags || isActive;
+      const confTxt = defect.confidence ? ` · ${Math.round(defect.confidence * 100)}%` : '';
+      const tip = `${defect.title}: ${defect.details.description}`.replace(/"/g, '&quot;');
 
-      if (defect.shape === 'circle') {
+      if (defect.shape === 'edges') {
+        const col = isIntentional ? '#22c55e' : '#0ea5e9';
+        (defect.sides || []).forEach(side => {
+          const pos = side === 'top' ? 'left:0; top:0; width:100%; height:6px;'
+            : side === 'bottom' ? 'left:0; bottom:0; width:100%; height:6px;'
+            : side === 'left' ? 'left:0; top:0; width:6px; height:100%;'
+            : 'right:0; top:0; width:6px; height:100%;';
+          html += `<div class="ai-highlight-item ${isActive ? 'ai-pulse-active' : ''}" style="${pos} background:${col}; opacity:0.55; border-radius:2px;"
+                     onclick="AgenticAiInspector.handleMarkerClick('${defect.id}', event)" title="${tip}"></div>`;
+        });
+        if (showTag) {
+          // Put the label next to the edge it describes
+          const first = (defect.sides || ['top'])[0];
+          const at = first === 'bottom' ? 'left:50%; top:calc(100% - 34px);'
+            : first === 'left' ? 'left:16px; top:50%;'
+            : first === 'right' ? 'left:calc(100% - 16px); top:50%;'
+            : 'left:50%; top:10px;';
+          const shift = first === 'left' ? 'left:0; transform:none;' : first === 'right' ? 'left:auto; right:0; transform:none;' : '';
+          html += `<div class="ai-highlight-item" style="${at} width:0; height:0;">
+                     <div class="ai-marker-tag" style="background:${isIntentional ? '#15803d' : '#0369a1'}; color:#ffffff; bottom:auto; top:0; ${shift}">${isIntentional ? '🟢 Marked as planned border' : '🔵 ' + defect.title}</div>
+                   </div>`;
+        }
+      } else if (defect.shape === 'circle') {
         const blinkClass = isBlinking && !isIntentional ? 'ai-blink-circle' : '';
         const activeClass = isActive ? 'ai-pulse-active' : '';
-        const tagColor = isIntentional ? '#15803d' : '#b91c1c';
+        const tagColor = isIntentional ? '#15803d' : defect.severity === 'Review' ? '#475569' : '#b91c1c';
 
         html += `
           <div class="ai-highlight-item ai-highlight-circle ${blinkClass} ${activeClass}" 
                id="marker-${defect.id}"
                style="left:${defect.cxPercent}%; top:${defect.cyPercent}%; transform:translate(-50%, -50%); border-color:${isIntentional ? '#22c55e' : '#ef4444'};"
                onclick="AgenticAiInspector.handleMarkerClick('${defect.id}', event)"
-               title="${defect.title}: ${defect.details.description}">
+               title="${tip}">
             <div class="ai-circle-core" style="background:${isIntentional ? '#22c55e' : '#ef4444'};"></div>
-            <div class="ai-marker-tag" style="background:${tagColor}; color:#ffffff;">
-              ${isIntentional ? '🟢 Verified Element' : `🔴 Stray Mark (${defect.confidence ? Math.round(defect.confidence * 100) : 98}%)`}
-            </div>
+            ${showTag ? `<div class="ai-marker-tag" style="background:${tagColor}; color:#ffffff;">
+              ${isIntentional ? '🟢 Marked intentional' : `${defect.title}${confTxt}`}
+            </div>` : ''}
           </div>
         `;
       } else {
@@ -660,18 +1041,18 @@ const AgenticAiInspector = {
         const blinkClass = isBlinking && !isIntentional ? (isTypo ? 'ai-blink-typo-box' : 'ai-blink-line-box') : '';
         const activeClass = isActive ? 'ai-pulse-active' : '';
         const boxBorderColor = isIntentional ? '#22c55e' : isFatal ? '#ef4444' : isTypo ? '#f59e0b' : '#ea580c';
-        const tagBg = isIntentional ? '#15803d' : isFatal ? '#991b1b' : isTypo ? '#b45309' : '#c2410c';
-        const tagText = isIntentional ? '🟢 Verified Intentional' : isTypo ? `🔴 Typo: "${defect.details.word}" → "${defect.details.suggestion}"` : `🟡 Stray Line (${Math.round(defect.confidence * 100)}%)`;
+        const tagBg = isIntentional ? '#15803d' : isFatal ? '#991b1b' : isTypo ? '#b45309' : defect.severity === 'Review' ? '#475569' : '#c2410c';
+        const tagText = isIntentional ? '🟢 Marked intentional' : `${defect.title}${confTxt}`;
+        // Pad the box so a 1 px line is still easy to see
+        const padX = 0.6, padY = 0.8;
 
         html += `
           <div class="ai-highlight-item ${blinkClass} ${activeClass}"
                id="marker-${defect.id}"
-               style="left:${defect.xPercent}%; top:${defect.yPercent}%; width:${defect.wPercent}%; height:${defect.hPercent}%; border:2.5px solid ${boxBorderColor}; background:rgba(0,0,0,0.05); border-radius:4px;"
+               style="left:${Math.max(0, defect.xPercent - padX)}%; top:${Math.max(0, defect.yPercent - padY)}%; width:${defect.wPercent + 2 * padX}%; height:${defect.hPercent + 2 * padY}%; border:2.5px solid ${boxBorderColor}; background:rgba(0,0,0,0.05); border-radius:4px;"
                onclick="AgenticAiInspector.handleMarkerClick('${defect.id}', event)"
-               title="${defect.title}: ${defect.details.description}">
-            <div class="ai-marker-tag" style="background:${tagBg}; color:#ffffff;">
-              ${tagText}
-            </div>
+               title="${tip}">
+            ${showTag ? `<div class="ai-marker-tag" style="background:${tagBg}; color:#ffffff;">${tagText}</div>` : ''}
           </div>
         `;
       }
@@ -868,11 +1249,24 @@ const AgenticAiInspector = {
           </div>
           <div style="background:#ffffff; padding:10px 14px; border-radius:6px; border:1px solid #e2e8f0;">
             <div style="font-size:10px; color:#64748b; font-weight:700; text-transform:uppercase;">Aspect Ratio</div>
-            <div style="font-size:13px; font-weight:800; color:#1e293b; margin-top:2px;">${meta.aspect}:1 (Conforming)</div>
+            <div style="font-size:13px; font-weight:800; color:#1e293b; margin-top:2px;">${meta.aspect}:1</div>
           </div>
+          ${this.scanResult ? `
+          <div style="background:#ffffff; padding:10px 14px; border-radius:6px; border:1px solid #e2e8f0;">
+            <div style="font-size:10px; color:#64748b; font-weight:700; text-transform:uppercase;">Artwork Type (estimated)</div>
+            <div style="font-size:13px; font-weight:800; color:#1e293b; margin-top:2px;">${this.ARTWORK_TYPE_LABELS[this.scanResult.artworkType]}</div>
+          </div>
+          <div style="background:#ffffff; padding:10px 14px; border-radius:6px; border:1px solid #e2e8f0;">
+            <div style="font-size:10px; color:#64748b; font-weight:700; text-transform:uppercase;">Area Checked for Stray Marks</div>
+            <div style="font-size:13px; font-weight:800; color:#1e293b; margin-top:2px;">${this.scanResult.checkedPct}% (flat colour)</div>
+          </div>` : ''}
         </div>
         <div style="font-size:11.5px; color:#475569; line-height:1.5;">
-          ℹ️ High-resolution analysis copy active. The artwork has undergone multi-stage region segmentation (Text, Logos, Graphic Shapes, Borders, Background) to distinguish genuine artwork elements from rogue prepress artifacts.
+          ${this.scanSkipReason
+            ? 'ℹ️ ' + this.scanSkipReason
+            : this.scanResult
+              ? `ℹ️ ${this.scanResult.solidPct}% of the artwork is solid colour and ${this.scanResult.detailPct}% is photo / texture detail. Stray marks are only searched for on clear flat-colour areas (away from text, logos and photos), where a lone dot or line cannot be part of the picture. Photo and illustration areas need a visual check at 100% zoom.`
+              : 'ℹ️ Waiting for the artwork to load…'}
         </div>
       </div>
     `;
@@ -883,9 +1277,9 @@ const AgenticAiInspector = {
       return `
         <div style="padding:22px; text-align:center; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px;">
           <div style="font-size:24px; margin-bottom:6px;">✨</div>
-          <div style="font-size:14px; font-weight:800; color:#166534;">Clean Artwork &amp; Production Ready</div>
+          <div style="font-size:14px; font-weight:800; color:#166534;">${this.getCheckSummary().found}</div>
           <div style="font-size:11.5px; color:#15803d; margin-top:4px;">
-            AI Artwork QA Scanner found no spelling typos, no unnecessary stray lines, and no isolated dust dots.
+            ${this.getCheckSummary().detail}
           </div>
         </div>
       `;
@@ -998,9 +1392,9 @@ const AgenticAiInspector = {
     if (strayItems.length === 0) {
       return `
         <div style="padding:18px; text-align:center; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px;">
-          <div style="font-size:13px; font-weight:800; color:#166534;">0 Stray Elements Detected</div>
+          <div style="font-size:13px; font-weight:800; color:#166534;">No stray lines or dots found</div>
           <div style="font-size:11px; color:#15803d; margin-top:2px;">
-            Margins and open spaces are 100% free of rogue lines, hairlines, and dust speckles.
+            ${this.scanSkipReason || (this.scanResult ? `Checked ${this.scanResult.checkedPct}% of the artwork (clear flat-colour areas). Photo and illustration areas are not auto-checked.` : 'Waiting for the artwork to load…')}
           </div>
         </div>
       `;
@@ -1014,9 +1408,9 @@ const AgenticAiInspector = {
               <div style="font-size:12px; font-weight:800; color:#1e293b;">${s.title}</div>
               <div style="font-size:10.5px; color:#64748b; margin-top:2px;">${s.details.description}</div>
             </div>
-            <span style="font-size:11px; font-weight:800; color:#ff5f1f; background:#fff7ed; padding:3px 8px; border-radius:4px; border:1px solid #ffedd5;">
-              Confidence: ${Math.round((s.confidence || 0.95) * 100)}%
-            </span>
+            ${s.confidence ? `<span style="font-size:11px; font-weight:800; color:#ff5f1f; background:#fff7ed; padding:3px 8px; border-radius:4px; border:1px solid #ffedd5;">
+              Confidence: ${Math.round(s.confidence * 100)}%
+            </span>` : ''}
           </div>
         `).join('')}
       </div>
@@ -1024,13 +1418,16 @@ const AgenticAiInspector = {
   },
 
   _renderSummaryTab(fatal, major, minor, review, isClean) {
-    const qaDecision = fatal.length > 0 ? 'REJECT: Fatal Brand/Spelling Errors' :
-                       major.length > 0 ? 'ACTION REQUIRED: Major Issues Flagged' :
-                       minor.length > 0 ? 'REVIEW: Minor Artifacts Present' :
-                       'APPROVED: Production Ready';
+    const qaSummary = this.getCheckSummary();
+    const qaDecision = fatal.length > 0 ? 'Fix required: spelling error on a brand / customer name' :
+                       major.length > 0 ? 'Action required: major issues flagged' :
+                       minor.length > 0 ? 'Review: possible stray marks found' :
+                       qaSummary.status === 'PASS' ? 'No stray marks found in the checked area' :
+                       'Manual check: ' + qaSummary.found;
 
-    const decisionColor = fatal.length > 0 ? '#b91c1c' : major.length > 0 ? '#c2410c' : minor.length > 0 ? '#b45309' : '#15803d';
-    const decisionBg = fatal.length > 0 ? '#fef2f2' : major.length > 0 ? '#fff7ed' : minor.length > 0 ? '#fffbeb' : '#f0fdf4';
+    const needsLook = minor.length > 0 || qaSummary.status !== 'PASS';
+    const decisionColor = fatal.length > 0 ? '#b91c1c' : major.length > 0 ? '#c2410c' : needsLook ? '#b45309' : '#15803d';
+    const decisionBg = fatal.length > 0 ? '#fef2f2' : major.length > 0 ? '#fff7ed' : needsLook ? '#fffbeb' : '#f0fdf4';
 
     return `
       <div>
@@ -1057,7 +1454,7 @@ const AgenticAiInspector = {
         <!-- QA Decision Banner -->
         <div style="padding:14px; background:${decisionBg}; border:1px solid ${decisionColor}; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">Autonomous Pre-Press Decision</div>
+            <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">Scanner result (designer decides)</div>
             <div style="font-size:14px; font-weight:900; color:${decisionColor}; margin-top:2px;">${qaDecision}</div>
           </div>
           <div style="display:flex; gap:8px;">
