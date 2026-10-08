@@ -600,8 +600,11 @@ const AgenticAiInspector = {
     const fname = (typeof appState !== 'undefined' && ((appState.parsedFilename && appState.parsedFilename.fname) || (appState.file && appState.file.name))) || '';
     const fileWords = fname.replace(/\.[a-z0-9]+$/i, '').split(/[^A-Za-z]+/).filter(t => t.length >= 3);
     const refresh = () => { this.updateControlsUI(); this.syncPrecheckReport(); };
+    // The customer / company name typed in Order Information is checked like a brand name
+    const customer = (typeof appState !== 'undefined' && appState.customerName) || (document.getElementById('customer-name') || {}).value || '';
     ArtworkTextCheck.run(img, {
       fileWords,
+      brands: customer && !/^customer$/i.test(customer.trim()) ? [customer.trim()] : [],
       onStatus: (st, text) => { if (run === this._textRun) { this.textState = { status: st, text }; refresh(); } }
     }).then(res => {
       if (run === this._textRun) this._applyTextResult(res);
@@ -620,6 +623,7 @@ const AgenticAiInspector = {
       : { status: 'unavailable', text: (typeof ArtworkTextCheck !== 'undefined' && ArtworkTextCheck.statusText) || 'The text reader is unavailable — proofread the text manually.' };
     this.defects = this.defects.filter(d => d.type !== 'spelling');
     if (this.textResult) this._restoreTextRowMarks(res.words);
+    if (this.textResult) this._dropMarksInWords(res.words);
     if (this.textResult) {
       const pct = v => +(v * 100).toFixed(2);
       const LABEL = { brand: 'Brand name', web: 'Web / e-mail address', word: 'Spelling' };
@@ -688,8 +692,10 @@ const AgenticAiInspector = {
     const base = `Read ${nWords} word${nWords !== 1 ? 's' : ''} on the artwork (OCR) and checked them against US + UK English dictionaries, brand names and web-address endings.${verifyNote} Phone numbers and dates cannot be verified automatically.`;
     if (open.length) {
       const list = open.slice(0, 3).map(d => `"${d.details.word}" → "${d.details.suggestion}"`).join(', ') + (open.length > 3 ? ` +${open.length - 3} more` : '');
-      return { status: open.some(d => d.severity === 'Fatal') ? 'FAIL' : 'WARNING',
-        found: `${open.length} possible mistake${open.length > 1 ? 's' : ''}: ${list}`, detail: base,
+      // A word that is not in the dictionary but one or two letters from a real word is a spelling
+      // mistake the customer must fix or confirm — the check fails until it is resolved
+      return { status: 'FAIL',
+        found: `${open.length} spelling mistake${open.length > 1 ? 's' : ''} found: ${list}`, detail: base,
         action: 'Click the marked words on the canvas. Ask the customer to confirm or correct them before creating the design file.' };
     }
     if (nWords < 3) {
@@ -1123,6 +1129,28 @@ const AgenticAiInspector = {
         return gap <= m.textRowReach;
       });
       if (!besideText) this.defects.push(this._markDefect(m, `r${i + 1}`, W, H, 'No words beside it, so it is not punctuation or a divider.'));
+    });
+  },
+
+  /**
+   * A dot or line lying inside a word that was read clearly is part of a letter (the dot of an "i",
+   * the tail of a "y"), not a stray mark. Called once the text reading has finished.
+   */
+  _dropMarksInWords(words) {
+    const r = this.scanResult;
+    if (!r) return;
+    const boxes = words
+      .filter(w => w.conf >= 70 && /[A-Za-z]{2,}/.test(w.text) && w.box.w * w.box.h < 0.1)
+      .map(w => {
+        const mx = w.box.h * 0.05, my = w.box.h * 0.1;
+        return { x0: (w.box.x - mx) * 100, x1: (w.box.x + w.box.w + mx) * 100, y0: (w.box.y - my) * 100, y1: (w.box.y + w.box.h + my) * 100 };
+      });
+    if (!boxes.length) return;
+    this.defects = this.defects.filter(d => {
+      if (d.type !== 'stray_dot' && d.type !== 'stray_line') return true;
+      const x0 = d.xPercent, y0 = d.yPercent;
+      const x1 = x0 + d.metrics.sizePx[0] / r.width * 100, y1 = y0 + d.metrics.sizePx[1] / r.height * 100;
+      return !boxes.some(b => x0 >= b.x0 && x1 <= b.x1 && y0 >= b.y0 && y1 <= b.y1);
     });
   },
 

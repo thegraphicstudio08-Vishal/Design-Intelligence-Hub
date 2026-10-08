@@ -105,7 +105,7 @@ const ArtworkTextCheck = {
     const w = Math.round(w0 * k), h = Math.round(h0 * k);
     const rot = ((angle % 360) + 360) % 360;
     // A white margin around the artwork helps the reader find large lettering near the edges
-    const pad = Math.round(Math.max(w, h) * (cfg.pad || 0.06));
+    const pad = Math.round(Math.max(w, h) * (cfg.pad != null ? cfg.pad : 0.06));
     const cv = document.createElement('canvas');
     cv.width = (rot % 180 ? h : w) + 2 * pad; cv.height = (rot % 180 ? w : h) + 2 * pad;
     const ctx = cv.getContext('2d', { willReadFrequently: !!cfg.bw });
@@ -166,7 +166,7 @@ const ArtworkTextCheck = {
     for (let i = 1; i <= m; i++) {
       const cur = [i];
       for (let j = 1; j <= n; j++) {
-        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] || b[j - 1] === '\u0000' ? 0 : 1));
         if (prev2 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) cur[j] = Math.min(cur[j], prev2[j - 2] + 1);
       }
       prev2 = prev; prev = cur;
@@ -185,12 +185,68 @@ const ArtworkTextCheck = {
     return this._dicts.some(d => d.check(w) || d.check(lw) || d.check(lw.charAt(0).toUpperCase() + lw.slice(1)));
   },
 
+  /**
+   * Corrections one letter away (missing, extra, swapped or wrong letter), ranked by how people
+   * actually mistype: doubled letter, swapped pair, missing letter, sound-alike letter.
+   * Returns [{ word, proper }] — proper = only exists as a name (e.g. "Cher"), not an ordinary word.
+   * Much faster than Typo.js suggest(), which tries every two-letter change.
+   */
   _suggest(word) {
+    this._sugCache = this._sugCache || new Map();
+    if (this._sugCache.has(word)) return this._sugCache.get(word);
+    const lw = word.toLowerCase();
+    const letters = 'abcdefghijklmnopqrstuvwxyz';
+    const SIMILAR = { s: 'cz', c: 'sk', k: 'c', z: 's', a: 'eiou', e: 'aiou', i: 'aeoy', o: 'aeiu', u: 'aeio', y: 'i', m: 'n', n: 'm', v: 'w', w: 'v', f: 'v', g: 'j', j: 'g' };
+    const cands = new Map();   // candidate -> rank (lower = more likely)
+    const add = (c, rank) => { if (c && c !== lw && (!cands.has(c) || cands.get(c) > rank)) cands.set(c, rank); };
+    for (let i = 0; i <= lw.length; i++) {
+      const a = lw.slice(0, i), b = lw.slice(i);
+      if (b) add(a + b.slice(1), b[0] === a.slice(-1) || b[0] === b[1] ? 0 : 5);          // extra letter (doubled = most likely)
+      if (b.length > 1) add(a + b[1] + b[0] + b.slice(2), 1);                             // two letters swapped
+      for (const ch of letters) {
+        add(a + ch + b, i === 0 ? 4 : 2);                                                 // missing letter
+        if (b) add(a + ch + b.slice(1), (SIMILAR[b[0]] || '').includes(ch) ? 3 : 4);      // wrong letter
+      }
+    }
+    const style = t => (word === word.toUpperCase() ? t.toUpperCase() : /^[A-Z]/.test(word) ? t[0].toUpperCase() + t.slice(1) : t);
     const out = [];
-    this._dicts.forEach(d => (d.suggest(word, 4) || []).forEach(s => {
-      if (/^[A-Za-z][A-Za-z'’-]*$/.test(s) && !out.includes(s)) out.push(s);   // real words only
-    }));
-    return out.sort((a, b) => this._lev(word, a) - this._lev(word, b));
+    cands.forEach((rank, c) => {
+      if (c.length < 2) return;
+      const common = this._dicts.some(d => d.check(c)) || this._extra.has(c);
+      const proper = !common && this._dicts.some(d => d.check(c[0].toUpperCase() + c.slice(1)));
+      if (common || proper) out.push({ word: proper ? c[0].toUpperCase() + c.slice(1) : style(c), proper, rank: rank + (proper ? 10 : 0) });
+    });
+    if (!out.length && lw.length >= 7 && /^[a-z]+$/.test(lw)) {
+      // Two changes of the kinds people really make (sound-alike letter, swapped pair, doubled /
+      // single letter, missing vowel): LISENCED → LICENSED, tommorow → tomorrow
+      const likely = (t, emit) => {
+        for (let i = 0; i <= t.length; i++) {
+          const a = t.slice(0, i), b = t.slice(i);
+          if (b) emit(a + b.slice(1), b[0] === a.slice(-1) || b[0] === b[1] ? 0 : 5);
+          if (b.length > 1 && b[0] !== b[1]) emit(a + b[1] + b[0] + b.slice(2), 1);
+          if (b && i > 0) emit(a + b[0] + b, 0);
+          if (i > 0) for (const v of 'aeiou') emit(a + v + b, 2);
+          if (b) for (const ch of (SIMILAR[b[0]] || '')) emit(a + ch + b.slice(1), 3);
+        }
+      };
+      const first = new Map();
+      likely(lw, (c, r) => { if (c !== lw && (!first.has(c) || first.get(c) > r)) first.set(c, r); });
+      const seen = new Set(), found = new Map();
+      first.forEach((r1, c1) => likely(c1, (c2, r2) => {
+        if (c2 === lw || c2.length < 5 || first.has(c2)) return;
+        const r = 20 + r1 + r2;
+        if (found.has(c2)) { if (found.get(c2).rank > r) found.get(c2).rank = r; return; }
+        if (seen.has(c2)) return;
+        seen.add(c2);
+        if (this._dicts.some(d => d.check(c2)) || this._extra.has(c2)) {
+          found.set(c2, { word: style(c2), proper: false, rank: r, sound: r1 !== 2 && r1 !== 5 && r2 !== 2 && r2 !== 5 });
+        }
+      }));
+      found.forEach(v => out.push(v));
+    }
+    out.sort((p, q) => p.rank - q.rank || Math.abs(p.word.length - word.length) - Math.abs(q.word.length - word.length));
+    this._sugCache.set(word, out);
+    return out;
   },
 
   _isGood(w) {
@@ -220,16 +276,164 @@ const ArtworkTextCheck = {
       const inter = ix * iy;
       return inter / Math.max(1e-9, p.w * p.h + q.w * q.h - inter);
     };
-    const score = w => w.conf + (this._isGood(w) ? 25 : 0);
     const list = [];
+    const all = [];
     for (const cfg of cfgs) {
-      (await this._readOnce(source, cfg, angle)).forEach(w => {
-        const k = list.findIndex(o => iou(o.box, w.box) > 0.3);
-        if (k < 0) list.push(w);
-        else if (score(w) > score(list[k])) list[k] = w;
+      const words = await this._readOnce(source, cfg, angle);
+      all.push(words);
+      this._mergeInto(list, words);
+    }
+    const W0 = source.naturalWidth || source.width, H0 = source.naturalHeight || source.height, M = Math.max(W0, H0) || 1;
+    const rot = ((angle % 360) + 360) % 360;
+    const across = w => { const f = this._frameBox(w.box, rot, W0 / M, H0 / M); return f.w >= f.h * 0.9; };
+    return { angle: rot, words: list, all, good: list.filter(w => this._isGood(w) && across(w)).length };
+  },
+
+  _iou(p, q) {
+    const ix = Math.max(0, Math.min(p.x + p.w, q.x + q.w) - Math.max(p.x, q.x));
+    const iy = Math.max(0, Math.min(p.y + p.h, q.y + q.h) - Math.max(p.y, q.y));
+    const inter = ix * iy;
+    return inter / Math.max(1e-9, p.w * p.h + q.w * q.h - inter);
+  },
+
+  /** Add words to a combined list; where two readings overlap keep the better word (a real word beats a misread) */
+  _mergeInto(list, words) {
+    const score = w => w.conf + (this._isGood(w) ? 25 : 0);
+    const inside = (p, q) => {   // share of p that lies inside q
+      const ix = Math.max(0, Math.min(p.x + p.w, q.x + q.w) - Math.max(p.x, q.x));
+      const iy = Math.max(0, Math.min(p.y + p.h, q.y + q.h) - Math.max(p.y, q.y));
+      return (ix * iy) / Math.max(1e-12, p.w * p.h);
+    };
+    const letters = t => t.replace(/[^A-Za-z0-9]/g, '').length;
+    words.forEach(w => {
+      const k = list.findIndex(o => this._iou(o.box, w.box) > 0.3);
+      if (k < 0 && list.some(o => o.conf >= 60 && letters(o.text) > letters(w.text) && inside(w.box, o.box) > 0.7)) return;
+      if (k < 0) list.push(w);
+      else if (score(w) > score(list[k])) list[k] = w;
+    });
+  },
+
+  /**
+   * Find text lines: rows of letter-sized shapes (dark-on-light and light-on-dark), so that each line
+   * can be read on its own at the size the reader handles best. Large display lettering next to
+   * logos and shapes is often skipped when the whole artwork is read at once.
+   */
+  _findTextLines(canvas) {
+    const W0 = canvas.width, H0 = canvas.height;
+    const k = Math.min(1, 1000 / Math.max(W0, H0));
+    const W = Math.max(1, Math.round(W0 * k)), H = Math.max(1, Math.round(H0 * k));
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(canvas, 0, 0, W, H);
+    const a = ctx.getImageData(0, 0, W, H).data;
+    const L = new Uint8Array(W * H), hist = new Array(256).fill(0);
+    for (let i = 0, j = 0; i < a.length; i += 4, j++) { L[j] = (a[i] * 0.299 + a[i + 1] * 0.587 + a[i + 2] * 0.114) | 0; hist[L[j]]++; }
+    let sum = 0; for (let t = 0; t < 256; t++) sum += t * hist[t];
+    let sB = 0, wB = 0, best = 0, th = 128;
+    for (let t = 0; t < 256; t++) {
+      wB += hist[t]; if (!wB) continue;
+      const wF = L.length - wB; if (!wF) break;
+      sB += t * hist[t];
+      const v = wB * wF * (sB / wB - (sum - sB) / wF) ** 2;
+      if (v > best) { best = v; th = t; }
+    }
+    const lines = [];
+    const minH = Math.max(6, H * 0.012), maxH = H * 0.5;
+    for (const dark of [true, false]) {
+      const ink = new Uint8Array(W * H);
+      for (let j = 0; j < L.length; j++) ink[j] = dark ? (L[j] < th ? 1 : 0) : (L[j] > th ? 1 : 0);
+      const lab = new Int32Array(W * H);
+      const glyphs = [];
+      const stack = [];
+      let id = 0;
+      for (let i = 0; i < ink.length; i++) {
+        if (!ink[i] || lab[i]) continue;
+        id++;
+        let x0 = W, y0 = H, x1 = 0, y1 = 0, n = 0;
+        lab[i] = id; stack.push(i);
+        while (stack.length) {
+          const q = stack.pop(), x = q % W, y = (q / W) | 0;
+          n++;
+          if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+          for (let dy = -1; dy <= 1; dy++) {
+            const yy = y + dy; if (yy < 0 || yy >= H) continue;
+            for (let dx = -1; dx <= 1; dx++) {
+              const xx = x + dx; if (xx < 0 || xx >= W) continue;
+              const r = yy * W + xx;
+              if (ink[r] && !lab[r]) { lab[r] = id; stack.push(r); }
+            }
+          }
+        }
+        const gw = x1 - x0 + 1, gh = y1 - y0 + 1;
+        if (gh >= minH && gh <= maxH && gw <= gh * 2.5 && x0 > 0 && y0 > 0 && x1 < W - 1 && y1 < H - 1 && n / (gw * gh) >= 0.08) {
+          glyphs.push({ x0, y0, x1, y1, h: gh });
+        }
+      }
+      if (glyphs.length < 2 || glyphs.length > 4000) continue;   // nothing letter-like, or a texture
+      glyphs.sort((p, q) => p.x0 - q.x0);
+      const parent = glyphs.map((_, i) => i);
+      const find = i => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+      for (let i = 0; i < glyphs.length; i++) {
+        const p = glyphs[i];
+        for (let j = i + 1; j < glyphs.length; j++) {
+          const q = glyphs[j];
+          if (q.x0 > p.x1 + 1.5 * Math.max(p.h, q.h)) { if (q.x0 > p.x1 + 1.5 * maxH) break; continue; }
+          if (Math.max(p.h, q.h) / Math.min(p.h, q.h) > 2.2) continue;
+          if (Math.min(p.y1, q.y1) - Math.max(p.y0, q.y0) < 0.5 * Math.min(p.h, q.h)) continue;
+          parent[find(j)] = find(i);
+        }
+      }
+      const groups = new Map();
+      glyphs.forEach((g, i) => { const r = find(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(g); });
+      groups.forEach(gs => {
+        if (gs.length < 2) return;
+        lines.push({
+          x0: Math.min(...gs.map(g => g.x0)) / k, y0: Math.min(...gs.map(g => g.y0)) / k,
+          x1: (Math.max(...gs.map(g => g.x1)) + 1) / k, y1: (Math.max(...gs.map(g => g.y1)) + 1) / k,
+          n: gs.length, dark
+        });
       });
     }
-    return { angle: ((angle % 360) + 360) % 360, words: list, good: list.filter(w => this._isGood(w)).length };
+    // drop duplicates, keep the 40 biggest lines
+    const box = l => ({ x: l.x0, y: l.y0, w: l.x1 - l.x0, h: l.y1 - l.y0 });
+    lines.sort((p, q) => (q.x1 - q.x0) * (q.y1 - q.y0) - (p.x1 - p.x0) * (p.y1 - p.y0));
+    const kept = [];
+    lines.forEach(l => { if (!kept.some(o => this._iou(box(o), box(l)) > 0.5)) kept.push(l); });
+    return kept.slice(0, 40);
+  },
+
+  /** Read each text line on its own: crop, scale to ~64 px tall, black & white, single-line reading */
+  async _readLines(source, angle, lineH = 64) {
+    const view = this._canvasFrom(source, { side: 2000, pad: 0 }, angle);
+    const lines = this._findTextLines(view.canvas);
+    const out = [];
+    if (!lines.length) return out;
+    if (this._psm !== '7') { await this._worker.setParameters({ tessedit_pageseg_mode: '7' }); this._psm = '7'; }
+    for (const ln of lines) {
+      const h = ln.y1 - ln.y0, pad = Math.round(h * 0.35);
+      const sx = Math.max(0, Math.round(ln.x0 - pad)), sy = Math.max(0, Math.round(ln.y0 - pad));
+      const sw = Math.min(view.canvas.width, Math.round(ln.x1 + pad)) - sx, sh = Math.min(view.canvas.height, Math.round(ln.y1 + pad)) - sy;
+      const k = Math.max(0.2, Math.min(4, lineH / h));
+      const cw = Math.round(sw * k), ch = Math.round(sh * k);
+      if (cw < 8 || ch < 8 || cw > 6000) continue;
+      const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+      const c = cv.getContext('2d', { willReadFrequently: true });
+      c.drawImage(view.canvas, sx, sy, sw, sh, 0, 0, cw, ch);
+      this._binarize(c, cw, ch);
+      if (!ln.dark) {   // light lettering on a dark background → black on white for the reader
+        const im = c.getImageData(0, 0, cw, ch), d = im.data;
+        for (let i = 0; i < d.length; i += 4) { d[i] = 255 - d[i]; d[i + 1] = 255 - d[i + 1]; d[i + 2] = 255 - d[i + 2]; }
+        c.putImageData(im, 0, 0);
+      }
+      const { data } = await this._worker.recognize(cv);
+      (data.words || []).forEach(w => {
+        const t = (w.text || '').trim(); if (!t) return;
+        const b = { x0: sx + w.bbox.x0 / k, y0: sy + w.bbox.y0 / k, x1: sx + w.bbox.x1 / k, y1: sy + w.bbox.y1 / k };
+        const box = this._boxToArtwork(b, view);
+        if (box.w > 0 && box.h > 0) out.push({ text: t, conf: w.confidence, box });
+      });
+    }
+    return out;
   },
 
   /**
@@ -268,69 +472,165 @@ const ArtworkTextCheck = {
         reading = await this._read(source, angle, this.READINGS);   // full reading in the right direction
       }
     }
+    say('reading', 'Reading each line of text…');
+    const lineSmall = await this._readLines(source, angle, 56);
+    const lineLarge = await this._readLines(source, angle, 100);
+    this._mergeInto(reading.words, lineSmall);
+    this._mergeInto(reading.words, lineLarge);
+    const allReadings = (reading.all || []).concat([lineSmall, lineLarge]);
+    reading.good = reading.words.filter(w => this._isGood(w)).length;
     const orientation = { angle, readable: reading.good >= 2, goodWords: reading.good, tried };
-    const issues = this._checkWords(reading.words, ctx.fileWords || []);
+    const W0 = source.naturalWidth || source.width, H0 = source.naturalHeight || source.height, M = Math.max(W0, H0) || 1;
+    const frame = b => this._frameBox(b, angle, W0 / M, H0 / M);
+    let issues = this._checkWords(reading.words, ctx.fileWords || [], allReadings, ctx.brands || [], frame);
+    if (issues.some(it => it.kind === 'word' || it.kind === 'verify')) {
+      const view = this._canvasFrom(source, { side: 2000, pad: 0 }, angle);
+      issues = issues.filter(it => !((it.kind === 'word' || it.kind === 'verify') && this._isCutOff(view, this._frameBox(it.box, angle, 1, 1))));
+    }
     say('done', '');
     return { available: true, orientation, words: reading.words, issues };
   },
 
   // ── checks ────────────────────────────────────────────────────────────
-  /** Group words into text lines by position (left → right) */
-  _lines(words) {
-    const order = words.map((w, i) => i).sort((a, b) => (words[a].box.y + words[a].box.h / 2) - (words[b].box.y + words[b].box.h / 2));
+  /**
+   * A word box (fractions of the upright artwork) seen the way the text runs: for sideways or
+   * upside-down text, "left → right" and "same line" must follow the reading direction.
+   * Units are the same on both axes (fractions of the longer artwork side).
+   */
+  _frameBox(b, angle, ax, ay) {
+    let x = b.x, y = b.y, w = b.w, h = b.h, sx = ax, sy = ay;
+    if (angle === 90) { x = 1 - b.y - b.h; y = b.x; w = b.h; h = b.w; sx = ay; sy = ax; }
+    else if (angle === 180) { x = 1 - b.x - b.w; y = 1 - b.y - b.h; }
+    else if (angle === 270) { x = b.y; y = 1 - b.x - b.w; w = b.h; h = b.w; sx = ay; sy = ax; }
+    return { x: x * sx, y: y * sy, w: w * sx, h: h * sy };
+  },
+
+  /** Group words into text lines by position (left → right in the reading direction) */
+  _lines(words, frame = b => b) {
+    const B = words.map(w => frame(w.box));
+    const order = words.map((w, i) => i).sort((a, b) => (B[a].y + B[a].h / 2) - (B[b].y + B[b].h / 2));
     const lines = [];
     order.forEach(i => {
-      const w = words[i], cy = w.box.y + w.box.h / 2;
-      const y0 = w.box.y, y1 = w.box.y + w.box.h;
+      const cy = B[i].y + B[i].h / 2;
+      const y0 = B[i].y, y1 = B[i].y + B[i].h;
       const line = lines.find(l => (Math.min(l.y1, y1) - Math.max(l.y0, y0)) >= 0.4 * Math.min(l.y1 - l.y0, y1 - y0));
       if (line) { line.idx.push(i); line.y0 = Math.min(line.y0, y0); line.y1 = Math.max(line.y1, y1); }
       else lines.push({ cy, y0, y1, idx: [i] });
     });
-    lines.forEach(l => l.idx.sort((a, b) => words[a].box.x - words[b].box.x));
+    lines.forEach(l => l.idx.sort((a, b) => B[a].x - B[b].x));
     return lines.map(l => l.idx);
   },
 
+  /**
+   * Is this word only a piece of a longer word? Stylised lettering is often read in pieces
+   * ("Toge" + "ther,", "Athl" + "etes.") or the piece is read in full elsewhere ("tal" in
+   * "Hospital"). Every reading of that spot is checked; a piece is not a spelling mistake.
+   */
+  _isFragment(w, word, words, allReadings, extra, frame) {
+    const lw = word.toLowerCase();
+    const letters = t => t.replace(/^[^A-Za-z]+|[^A-Za-z]+$/g, '');
+    const area = b => Math.max(1e-12, b.w * b.h);
+    const inter = (p, q) => Math.max(0, Math.min(p.x + p.w, q.x + q.w) - Math.max(p.x, q.x))
+      * Math.max(0, Math.min(p.y + p.h, q.y + q.h) - Math.max(p.y, q.y));
+    const lists = [words].concat(allReadings || []);
+    for (const list of lists) {
+      // the same spot read as a longer real word that contains this one
+      for (const t of list) {
+        if (t === w || t.conf < 15) continue;
+        const ct = letters(t.text).toLowerCase();
+        if (ct.length > lw.length && ct.includes(lw) && inter(t.box, w.box) >= 0.5 * area(w.box)
+            && (this._known(ct, extra) || (t.conf >= 60 && ct.length >= lw.length + 2))) return true;
+      }
+      // neighbours on the same line with (almost) no gap: joined they make a real word
+      const me = list.find(t => letters(t.text).toLowerCase() === lw && inter(t.box, w.box) >= 0.5 * Math.min(area(t.box), area(w.box)));
+      if (!me) continue;
+      const fm = frame(me.box);
+      const side = list.filter(t => t !== me && t.conf >= 30 && /[A-Za-z]/.test(t.text)).map(t => ({ t, f: frame(t.box) }))
+        .filter(o => (Math.min(o.f.y + o.f.h, fm.y + fm.h) - Math.max(o.f.y, fm.y)) >= 0.5 * Math.min(o.f.h, fm.h));
+      const tight = Math.max(fm.h, 1e-9) * 0.3;
+      const left = side.filter(o => Math.abs(fm.x - (o.f.x + o.f.w)) <= tight).map(o => letters(o.t.text));
+      const right = side.filter(o => Math.abs(o.f.x - (fm.x + fm.w)) <= tight).map(o => letters(o.t.text));
+      const joins = [];
+      left.forEach(a => { joins.push(a + lw); right.forEach(b => joins.push(a + lw + b)); });
+      right.forEach(b => joins.push(lw + b));
+      if (joins.some(j => j.length >= 5 && /^[A-Za-z]+$/.test(j) && this._known(j, extra))) return true;
+    }
+    return false;
+  },
+
   /** Spelling, brand-name and web-address checks on the words that were read */
-  _checkWords(words, fileWords) {
+  /** Distance to a brand name, allowing one letter that the reader could not read (missing or misread) */
+  _brandDist(joined, brand) {
+    const b = brand.toLowerCase();
+    let d = this._lev(joined, b);
+    for (let k = 0; k < b.length && d > 0; k++) {
+      d = Math.min(d, this._lev(joined, b.slice(0, k) + b.slice(k + 1)), this._lev(joined, b.slice(0, k) + '\u0000' + b.slice(k + 1)));
+    }
+    return d;
+  },
+
+  /** Spelling, brand-name and web-address checks on the words that were read */
+  _checkWords(words, fileWords, allReadings, extraBrands, frame = b => b) {
     const extra = new Set(fileWords.map(w => w.toLowerCase()));
     const issues = [];
     const used = new Set();
     const clean = t => t.replace(/^[^A-Za-z0-9@]+|[^A-Za-z0-9]+$/g, '');
-    const lines = this._lines(words);
+    const lines = this._lines(words, frame);
 
-    // 1. Brand names (also when OCR splits them: "Ez" + "Licnse", or misses a stylised letter)
-    lines.forEach(idx => {
-      for (let s = 0; s < idx.length; s++) {
-        for (let len = 3; len >= 1; len--) {
-          if (s + len > idx.length) continue;
-          const part = idx.slice(s, s + len);
-          if (part.some(i => used.has(i) || words[i].conf < this.MIN_CONF - 10)) continue;
-          const joined = this._lookalike(part.map(i => words[i].text).join('')).replace(/[^a-z0-9]/g, '');
-          if (joined.length < 5) continue;
-          for (const brand of this.BRANDS) {
-            const b = brand.toLowerCase();
-            const variants = [b].concat([...b].map((_, k) => b.slice(0, k) + b.slice(k + 1)));
-            const d = Math.min(...variants.map(v => this._lev(joined, v)));
-            if (d === 0) { part.forEach(i => used.add(i)); break; }
-            if (d <= (b.length >= 8 ? 2 : 1) && Math.abs(joined.length - b.length) <= 2) {
-              part.forEach(i => used.add(i));
-              issues.push({ kind: 'brand', text: part.map(i => words[i].text).join(' '), suggestion: brand,
-                box: this._union(part.map(i => words[i].box)), conf: Math.min(...part.map(i => words[i].conf)) });
-              break;
-            }
+    // 1. Brand names. Every reading is compared, because a stylised logo word reads differently each
+    //    time ("Ez\.icence", "E2 icence", "EzVicence"). A brand is wrong only when NO reading of that
+    //    spot matches it and at least one comes within 1–2 letters (one unreadable letter is allowed).
+    // The customer name from the order is compared too (not an e-mail / account number)
+    const brands = this.BRANDS.concat((extraBrands || []).filter(b => /[A-Za-z]{5,}/.test(b) && !/[@\d]/.test(b)));
+    const cands = [];
+    (allReadings && allReadings.length ? allReadings : [words]).forEach(list => {
+      this._lines(list, frame).forEach(idx => {
+        for (let s0 = 0; s0 < idx.length; s0++) {
+          for (let len = 1; len <= 3 && s0 + len <= idx.length; len++) {
+            const part = idx.slice(s0, s0 + len).map(i => list[i]);
+            const conf = Math.min(...part.map(w => w.conf));
+            if (conf < 25) continue;
+            const joined = this._lookalike(part.map(w => w.text).join('')).replace(/[^a-z0-9]/g, '');
+            if (joined.length < 5) continue;
+            brands.forEach(brand => {
+              const bl = brand.replace(/[^A-Za-z0-9]/g, '');
+              const d = this._brandDist(joined, bl);
+              if (d <= (bl.length >= 8 ? 2 : 1) && Math.abs(joined.length - bl.length) <= 2) {
+                cands.push({ brand, d, conf, text: part.map(w => w.text).join(' '), box: this._union(part.map(w => w.box)) });
+              }
+            });
           }
         }
-      }
+      });
+    });
+    const near = (p, q) => this._iou(p, q) > 0.2
+      || (q.x + q.w / 2 > p.x && q.x + q.w / 2 < p.x + p.w && q.y + q.h / 2 > p.y && q.y + q.h / 2 < p.y + p.h);
+    const groups = [];
+    cands.forEach(c => {
+      const g = groups.find(gr => gr.brand === c.brand && gr.items.some(o => near(o.box, c.box) || near(c.box, o.box)));
+      if (g) g.items.push(c); else groups.push({ brand: c.brand, items: [c] });
+    });
+    groups.forEach(g => {
+      const area = this._union(g.items.map(c => c.box));
+      words.forEach((w, i) => { if (near(area, w.box)) used.add(i); });     // brand words are not spell-checked as words
+      if (g.items.some(c => c.d === 0)) return;                            // read correctly at least once
+      const bestC = g.items.slice().sort((p, q) => p.d - q.d || q.conf - p.conf)[0];
+      if (bestC.conf < 30) return;
+      // A known brand spelt wrong is a mistake; a near-miss of the customer name is listed to verify
+      // (the order name may differ slightly from the name printed on the artwork)
+      issues.push({ kind: this.BRANDS.includes(g.brand) ? 'brand' : 'verify', text: bestC.text, suggestion: g.brand, box: area, conf: bestC.conf });
     });
 
     // A stylised first letter is often read on its own ("H" + "earts", "L" + "ittle"): join it back
-    const joinedWith = new Map();
+    const joinedWith = new Map(), joinedBox = new Map();
     lines.forEach(idx => {
       for (let k = 0; k + 1 < idx.length; k++) {
         const a = words[idx[k]], b = words[idx[k + 1]];
-        const gap = b.box.x - (a.box.x + a.box.w);
-        if (/^[A-Za-z]$/.test(clean(a.text)) && /^[a-z]/.test(clean(b.text)) && gap < Math.max(a.box.h, b.box.h) * 0.6) {
+        const fa = frame(a.box), fb = frame(b.box);
+        const gap = fb.x - (fa.x + fa.w);
+        if (/^[A-Z]$/.test(clean(a.text)) && /^[a-z]/.test(clean(b.text)) && gap < Math.max(fa.h, fb.h) * 0.6) {
           joinedWith.set(idx[k + 1], clean(a.text) + clean(b.text));
+          joinedBox.set(idx[k + 1], this._union([a.box, b.box]));
           used.add(idx[k]);
         }
       }
@@ -367,8 +667,11 @@ const ArtworkTextCheck = {
       if (word.includes('-') && word.split('-').every(p => p.length < 2 || this._known(p, extra))) return;
       // "Childrens" → OCR often drops the apostrophe of a possessive
       if (/s$/i.test(word) && this._known(word.slice(0, -1), extra)) return;
-      const top = this._suggest(word)[0];
-      if (!top) return;                                         // nothing close → a name or brand
+      if (!/[aeiouy]/i.test(word)) return;                       // no vowel → abbreviation or a cut-off piece ("rts")
+      if (!joinedWith.has(i) && this._isFragment(w, word, words, allReadings, extra, frame)) return;
+      const sugg = this._suggest(word)[0];
+      if (!sugg) return;                                        // nothing one letter away → a name or brand
+      const top = sugg.word;
       const dist = this._lev(word, top);
       if (dist > (word.length <= 4 ? 1 : 2)) return;
       const lower = word === word.toLowerCase();
@@ -376,13 +679,17 @@ const ArtworkTextCheck = {
       // letters at the start / end, or is a proper name — that is a reading fragment, not a typo
       const lt = top.toLowerCase(), lw = word.toLowerCase();
       if (lt.length > lw.length && (lt.endsWith(lw) || lt.startsWith(lw))) return;
-      if (lower && /^[A-Z]/.test(top)) return;
+      if (lower && sugg.proper) return;                       // "ther" → "Cher" is a fragment, not a typo
       // Lower-case words are ordinary words: a close dictionary match means a typo.
       // Capitalised / ALL-CAPS words are often names, so they count as typos only when the
       // difference is a typing slip; otherwise they are listed for the designer to verify.
-      const slip = this._isTypingSlip(word, top);
-      if (!(lower || slip) && word.length <= 3) return;          // too short to tell a name from a fragment
-      issues.push({ kind: (lower || slip) ? 'word' : 'verify', text: raw, word, suggestion: top, box: w.box, conf: w.conf });
+      const soundAlike = !sugg.proper && (sugg.rank === 3 || sugg.sound) && lt[0] === lw[0];
+      // a long word (GUARENTEED, LISENCED) that close to an ordinary word is a typo, not a name
+      const slip = this._isTypingSlip(word, top) || (soundAlike && word.length >= 7);
+      // A shorter capitalised word that is not a slip is most likely a name (CAIDEN, KADE, MOWEN): list it
+      // only when it differs from an ordinary word by a sound-alike letter inside the word (SERVISE → SERVICE)
+      if (!(lower || slip) && (word.length < 5 || !soundAlike)) return;
+      issues.push({ kind: (lower || slip) ? 'word' : 'verify', text: raw, word, suggestion: top, box: joinedBox.get(i) || w.box, conf: w.conf });
     });
     return issues;
   },
@@ -390,14 +697,85 @@ const ArtworkTextCheck = {
   /** Typical keyboard slips: doubled / undoubled letter, two letters swapped, a letter missing in a long word */
   _isTypingSlip(word, sug) {
     const a = word.toLowerCase(), b = sug.toLowerCase();
-    if (this._lev(a, b) !== 1) return false;
+    const d = this._lev(a, b);
     const undouble = t => t.replace(/(.)\1+/g, '$1');
-    if (undouble(a) === undouble(b)) return true;
+    if (d <= 2 && undouble(a) === undouble(b)) return true;
+    if (d !== 1) return false;
     if (a.length === b.length) {
       const diff = [...a].map((c, i) => (c !== b[i] ? i : -1)).filter(i => i >= 0);
       if (diff.length === 2 && diff[1] === diff[0] + 1 && a[diff[0]] === b[diff[1]] && a[diff[1]] === b[diff[0]]) return true;
     }
     return Math.abs(a.length - b.length) === 1 && a[0] === b[0] && Math.min(a.length, b.length) >= 7;
+  },
+
+  /**
+   * Do the letters carry on right beside this word (closer than a word space)? Then the reader only
+   * got a piece of a longer word ("tal" of "Hospital") and it is not a spelling mistake.
+   * @param view reading canvas (text upright); fb word box as fractions of that canvas
+   */
+  _isCutOff(view, fb) {
+    const cv = view.canvas, W = cv.width, H = cv.height;
+    const x0 = Math.round(fb.x * W), x1 = Math.round((fb.x + fb.w) * W);
+    const y0 = Math.max(0, Math.round(fb.y * H)), y1 = Math.min(H, Math.round((fb.y + fb.h) * H));
+    const h = y1 - y0;
+    if (h < 8 || x1 - x0 < 6) return false;
+    const reach = Math.max(4, Math.round(h * 0.35));                  // search window beside the word
+    const sx0 = Math.max(0, x0 - reach), sx1 = Math.min(W, x1 + reach), rw = sx1 - sx0;
+    const m = Math.max(2, Math.round(h * 0.1));                          // rows just above / below the word
+    const top = Math.max(0, y0 - m), bot = Math.min(H, y1 + m);
+    let data;
+    try { data = cv.getContext('2d').getImageData(sx0, top, rw, bot - top).data; } catch (e) { return false; }
+    const lum = (x, y) => { const i = ((y + y0 - top) * rw + (x - sx0)) * 4; return data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114; };
+    // letters vs background inside the word box (Otsu)
+    const hist = new Array(256).fill(0); let n = 0;
+    for (let y = 0; y < h; y++) for (let x = x0; x < x1; x++) { hist[lum(x, y) | 0]++; n++; }
+    let sum = 0; for (let t = 0; t < 256; t++) sum += t * hist[t];
+    let sB = 0, wB = 0, best = 0, th = 128, mDark = 0, mLight = 0;
+    for (let t = 0; t < 256; t++) {
+      wB += hist[t]; if (!wB) continue;
+      const wF = n - wB; if (!wF) break;
+      sB += t * hist[t];
+      const v = wB * wF * (sB / wB - (sum - sB) / wF) ** 2;
+      if (v > best) { best = v; th = t; mDark = sB / wB; mLight = (sum - sB) / wF; }
+    }
+    if (mLight - mDark < 50) return false;                             // too little contrast to tell
+    // Background = what lies just above and below the word (bold letters can fill the whole box);
+    // without room there, what the box edge mostly is
+    let ringDark = 0, ringN = 0;
+    for (let y = top - y0; y < bot - y0; y++) {
+      if (y >= 0 && y < h) continue;
+      for (let x = x0; x < x1; x++) { ringDark += lum(x, y) <= th; ringN++; }
+    }
+    if (ringN < 20) {
+      for (let x = x0; x < x1; x++) { ringDark += (lum(x, 0) <= th) + (lum(x, h - 1) <= th); ringN += 2; }
+      for (let y = 0; y < h; y++) { ringDark += (lum(x0, y) <= th) + (lum(x1 - 1, y) <= th); ringN += 2; }
+    }
+    const inkDark = ringDark < ringN / 2;
+    const isInk = v => (inkDark ? v <= th : v > th);
+    const b0 = Math.round(h * 0.2), b1 = Math.round(h * 0.8), need = Math.max(2, Math.round((b1 - b0) * 0.2));
+    const colInk = x => { let c = 0; for (let y = b0; y < b1; y++) c += isInk(lum(x, y)); return c; };
+    // The box edge can cut through its own first / last letter: walk past that ink, then look for a
+    // clear gap followed by another letter within letter-spacing distance
+    // Spacing between the letters of this word (fonts differ: Impact is tight, Georgia is loose)
+    const gaps = []; let run = 0, inked = false;
+    for (let x = x0; x < x1; x++) {
+      if (colInk(x) > 0) { if (inked && run > 0) gaps.push(run); run = 0; inked = true; } else if (inked) run++;
+    }
+    gaps.sort((p, q) => p - q);
+    const g = gaps.length ? gaps[Math.floor(gaps.length / 2)] : Math.round(h * 0.06);
+    const limit = Math.min(Math.max(2, Math.ceil(g * 1.8)), Math.max(2, Math.round(h * 0.22)));   // wider = a word space
+    const slop = Math.max(2, Math.round(h * 0.04));
+    const nextLetter = (start, step, end) => {
+      let x = start, k = 0;
+      while (x !== end && k < slop && colInk(x) > 0) { x += step; k++; }
+      for (let empty = 0; x !== end && empty <= limit; x += step) {
+        const c = colInk(x);
+        if (c >= need) return true;
+        if (c === 0) empty++;
+      }
+      return false;
+    };
+    return nextLetter(x0 - 1, -1, sx0 - 1) || nextLetter(x1, 1, sx1);
   },
 
   _union(boxes) {
