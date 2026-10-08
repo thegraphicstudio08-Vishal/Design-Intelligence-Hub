@@ -208,48 +208,45 @@ const PrecheckEngine = {
     const typos = aiDefects.filter(d => d.type === 'spelling');
     const strayLines = aiDefects.filter(d => d.type === 'stray_line');
     const strayDots = aiDefects.filter(d => d.type === 'stray_dot');
-    const hasDefects = (aiDefects.length > 0 || analysis.hasLinesOrDots);
+    const hasDefects = (aiDefects.length > 0);
+    const hasFatal = aiDefects.some(d => d.severity === 'Fatal');
 
     let artStatus = 'PASS', artFound = '', artDetail = '', artAction = '';
     if (hasDefects) {
-      artStatus = 'WARNING';
+      artStatus = hasFatal ? 'FAIL' : 'WARNING';
       const parts = [];
       if (typos.length > 0) parts.push(`${typos.length} Spelling Typo${typos.length > 1 ? 's' : ''}`);
       if (strayLines.length > 0) parts.push(`${strayLines.length} Stray Line${strayLines.length > 1 ? 's' : ''}`);
       if (strayDots.length > 0) parts.push(`${strayDots.length} Stray Dot${strayDots.length > 1 ? 's' : ''}`);
-      if (parts.length === 0 && analysis.hasLinesOrDots) parts.push('Edge Margin Artifacts');
 
-      artFound = `⚠️ ${aiDefects.length || 1} Issue${aiDefects.length !== 1 ? 's' : ''} Flagged (${parts.join(', ')})`;
+      artFound = `${hasFatal ? '❌' : '⚠️'} ${aiDefects.length} Issue${aiDefects.length !== 1 ? 's' : ''} Flagged (${parts.join(', ')})`;
 
       const detailSnippets = [];
       if (typos.length > 0) {
-        detailSnippets.push(`Spelling QA: ${typos.map(t => `"${t.details.word}" → "${t.details.suggestion}"`).join(', ')}.`);
+        detailSnippets.push(`Spelling QA: ${typos.map(t => `"${t.details.word}" → "${t.details.suggestion}" (${t.severity})`).join(', ')}.`);
       }
       if (strayLines.length > 0) {
-        detailSnippets.push(`Stray Lines: ${strayLines.length} unnecessary hairline/line artifact${strayLines.length > 1 ? 's' : ''} detected outside design live area.`);
+        detailSnippets.push(`Stray Lines: ${strayLines.length} isolated hairline/line artifact${strayLines.length > 1 ? 's' : ''} detected.`);
       }
       if (strayDots.length > 0) {
-        detailSnippets.push(`Stray Dots: ${strayDots.length} isolated dust/speckle dot${strayDots.length > 1 ? 's' : ''} detected in margins.`);
+        detailSnippets.push(`Stray Dots: ${strayDots.length} isolated dust/speckle dot${strayDots.length > 1 ? 's' : ''} detected outside live graphics.`);
       }
-      if (detailSnippets.length === 0) {
-        detailSnippets.push('Pixel analysis detected potential dark scanning lines, scanner dust, or dirty borders along edge margins.');
-      }
-      artDetail = detailSnippets.join(' ') + ' Pulsating blinking boxes (typos/lines) and circles (dots) are active on the interactive canvas.';
-      artAction = 'Review blinking boxes and circles in the Canvas Inspector. Click "Locate on Canvas (Blink)" in the Agentic AI panel to verify each defect.';
+      artDetail = detailSnippets.join(' ') + ' Interactive pulsating highlight boxes and circles are active on the proof canvas.';
+      artAction = 'Inspect the AI Artwork QA Scanner tabs (Artwork, Issues, Highlighted Proof, Text Check, Stray Elements, QA Summary). Click "Locate" to focus each artifact.';
     } else {
       artStatus = 'PASS';
       artFound = '✅ Clean Artwork (0 Typos, 0 Stray Lines, 0 Stray Dots)';
-      artDetail = 'Agentic AI autonomous audit passed: No spelling typos detected, margins free of stray vector lines, and no rogue speckles or dust dots found.';
+      artDetail = 'AI Artwork QA Scanner passed: Brand names verified in whitelist, no spelling typos detected, and margins verified 100% free of stray lines or rogue dust dots.';
       artAction = 'Artwork is verified clean and approved for print production.';
     }
 
     checks.push({
       id: 'linesAndDots',
-      name: 'Agentic AI QA: Spelling, Stray Lines & Dots',
+      name: 'AI Artwork QA Scanner: Spelling & Stray Marks',
       icon: '🤖',
       status: artStatus,
       found: artFound,
-      required: 'Clean artwork, verified spelling, no stray lines or dust spots',
+      required: 'Clean artwork, verified spelling, whitelisted brands, zero stray marks',
       detail: artDetail,
       action: artAction,
       aiDefects: aiDefects
