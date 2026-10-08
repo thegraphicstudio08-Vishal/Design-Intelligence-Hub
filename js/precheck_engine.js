@@ -20,7 +20,7 @@ const PrecheckEngine = {
     const sop = spec._sop || null;
     // Lowest acceptable resolution: SOP minimum when known, otherwise 75% of target
     const minDpi = sop?.resolution?.min || Math.round(reqDpi * 0.75);
-    const ext = analysis.fileExt.toUpperCase();
+    const ext = (analysis.fileExt || '').toUpperCase();
 
     // ──────────────────────────────────────────────────────────────────────────
     // CHECKPOINT 0: Size Transform to Order (Incorporating Physical Measurements & Aspect Ratio)

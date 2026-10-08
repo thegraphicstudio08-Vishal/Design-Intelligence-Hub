@@ -100,10 +100,6 @@ const AgenticAiInspector = {
     // 3. Scan for Stray Dots & Dust Speckles ("dotte in artwork")
     this._scanStrayDots(canvas, img, spec, dims);
 
-    // If artwork is ultra-clean demo, generate contextual demo verification artifacts
-    // so designers can observe and test the blinking boxes and circles in real-time
-    this._ensureDemonstrationDefects(spec, dims, w, h);
-
     // Render the visual overlay over the canvas
     this.renderOverlay();
     this.updateControlsUI();
@@ -182,58 +178,99 @@ const AgenticAiInspector = {
    * 2. STRAY LINES & HAIRLINES DETECTION ("uncessary samll line line")
    */
   _scanStrayLines(canvas, img, spec, dims) {
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
+    if (!canvas && !img) return;
     try {
-      const w = canvas.width;
-      const h = canvas.height;
-      // Sample 4 corner margins and safe zone edges
+      // Use clean artwork offscreen canvas if img is available to avoid scanning template guide lines
+      let scanCanvas = canvas;
+      if (img && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        scanCanvas = document.createElement('canvas');
+        scanCanvas.width = img.naturalWidth;
+        scanCanvas.height = img.naturalHeight;
+        const sCtx = scanCanvas.getContext('2d');
+        if (sCtx) sCtx.drawImage(img, 0, 0);
+      }
+      if (!scanCanvas) return;
+      const ctx = scanCanvas.getContext('2d');
+      if (!ctx) return;
+
+      const w = scanCanvas.width;
+      const h = scanCanvas.height;
+      if (w < 80 || h < 80) return;
+
       const imgData = ctx.getImageData(0, 0, w, h);
       const data = imgData.data;
 
-      // Scan upper-left and bottom-right empty margins for high-contrast thin lines (length 8-45px, thickness 1-3px)
-      const marginX = Math.round(w * 0.15);
-      const marginY = Math.round(h * 0.15);
+      // Scan extreme outer bleed margins (outer 3% or max 25px) for isolated thin lines
+      const edgeDepthX = Math.min(25, Math.max(8, Math.round(w * 0.03)));
+      const edgeDepthY = Math.min(25, Math.max(8, Math.round(h * 0.03)));
 
-      // Simple edge line heuristic: search for short linear pixel runs floating outside center
+      const isBlank = (px, py) => {
+        if (px < 0 || px >= w || py < 0 || py >= h) return true;
+        const i = (py * w + px) * 4;
+        const a = data[i + 3];
+        if (a < 30) return true;
+        const lum = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        return lum > 245;
+      };
+
+      const isDark = (px, py) => {
+        if (px < 0 || px >= w || py < 0 || py >= h) return false;
+        const i = (py * w + px) * 4;
+        const a = data[i + 3];
+        if (a < 80) return false;
+        const lum = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        return lum < 200;
+      };
+
       let strayFound = false;
-      for (let y = 10; y < marginY; y += 4) {
-        let runLen = 0;
-        let startX = 0;
-        for (let x = 10; x < marginX; x++) {
-          const idx = (y * w + x) * 4;
-          const alpha = data[idx + 3];
-          const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-          // Non-white, non-transparent pixel in margin
-          if (alpha > 80 && brightness < 220) {
-            if (runLen === 0) startX = x;
-            runLen++;
-          } else {
-            if (runLen >= 8 && runLen <= 45) {
-              // Found stray thin line in margin!
-              this.defects.push({
-                id: `line_${this.defects.length + 1}`,
-                type: 'stray_line',
-                shape: 'box',
-                title: `Stray Small Line Artifact (${runLen}px)`,
-                severity: 'warning',
-                xPercent: +((startX / w) * 100).toFixed(1),
-                yPercent: +(((y - 4) / h) * 100).toFixed(1),
-                wPercent: +(((runLen + 8) / w) * 100).toFixed(1),
-                hPercent: 3.5,
-                details: {
-                  lengthPx: runLen,
-                  description: `Unnecessary stray line artifact (~${runLen}px) detected floating in artwork margin.`
-                },
-                dismissed: false
-              });
-              strayFound = true;
-              break;
+      const scanBands = [
+        { yStart: 4, yEnd: edgeDepthY, xStart: edgeDepthX, xEnd: w - edgeDepthX },
+        { yStart: h - edgeDepthY, yEnd: h - 4, xStart: edgeDepthX, xEnd: w - edgeDepthX }
+      ];
+
+      for (const band of scanBands) {
+        for (let y = band.yStart; y < band.yEnd; y += 3) {
+          let runLen = 0;
+          let startX = 0;
+          for (let x = band.xStart; x < band.xEnd; x++) {
+            if (isDark(x, y)) {
+              if (runLen === 0) startX = x;
+              runLen++;
+            } else {
+              if (runLen >= 10 && runLen <= 40) {
+                // Must be isolated: check that row y-3 and y+3 are blank
+                let isolated = true;
+                for (let k = startX; k < startX + runLen; k += 2) {
+                  if (!isBlank(k, y - 3) || !isBlank(k, y + 3)) {
+                    isolated = false;
+                    break;
+                  }
+                }
+                if (isolated && isBlank(startX - 5, y) && isBlank(startX + runLen + 5, y)) {
+                  this.defects.push({
+                    id: `line_${this.defects.length + 1}`,
+                    type: 'stray_line',
+                    shape: 'box',
+                    title: `Stray Small Line Artifact (${runLen}px)`,
+                    severity: 'warning',
+                    xPercent: +((startX / w) * 100).toFixed(1),
+                    yPercent: +(((y - 4) / h) * 100).toFixed(1),
+                    wPercent: +(((runLen + 8) / w) * 100).toFixed(1),
+                    hPercent: 3.5,
+                    details: {
+                      lengthPx: runLen,
+                      description: `Unnecessary stray line artifact (~${runLen}px) detected floating in artwork margin.`
+                    },
+                    dismissed: false
+                  });
+                  strayFound = true;
+                  break;
+                }
+              }
+              runLen = 0;
             }
-            runLen = 0;
           }
+          if (strayFound) break;
         }
         if (strayFound) break;
       }
@@ -246,149 +283,99 @@ const AgenticAiInspector = {
    * 3. STRAY DOTS & DUST SPECKLES DETECTION ("dotte in artwork")
    */
   _scanStrayDots(canvas, img, spec, dims) {
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
+    if (!canvas && !img) return;
     try {
-      const w = canvas.width;
-      const h = canvas.height;
+      let scanCanvas = canvas;
+      if (img && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        scanCanvas = document.createElement('canvas');
+        scanCanvas.width = img.naturalWidth;
+        scanCanvas.height = img.naturalHeight;
+        const sCtx = scanCanvas.getContext('2d');
+        if (sCtx) sCtx.drawImage(img, 0, 0);
+      }
+      if (!scanCanvas) return;
+      const ctx = scanCanvas.getContext('2d');
+      if (!ctx) return;
+
+      const w = scanCanvas.width;
+      const h = scanCanvas.height;
+      if (w < 80 || h < 80) return;
+
       const imgData = ctx.getImageData(0, 0, w, h);
       const data = imgData.data;
 
-      // Scan margin areas for isolated dark dots (1px - 6px) surrounded by white/light space
-      const marginX = Math.round(w * 0.18);
-      const marginY = Math.round(h * 0.18);
+      const edgeDepthX = Math.min(25, Math.max(8, Math.round(w * 0.03)));
+      const edgeDepthY = Math.min(25, Math.max(8, Math.round(h * 0.03)));
+
+      const isBlank = (px, py) => {
+        if (px < 0 || px >= w || py < 0 || py >= h) return true;
+        const i = (py * w + px) * 4;
+        const a = data[i + 3];
+        if (a < 30) return true;
+        const lum = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        return lum > 245;
+      };
+
+      const isDark = (px, py) => {
+        if (px < 0 || px >= w || py < 0 || py >= h) return false;
+        const i = (py * w + px) * 4;
+        const a = data[i + 3];
+        if (a < 80) return false;
+        const lum = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        return lum < 200;
+      };
 
       let dotFound = false;
-      for (let y = h - marginY; y < h - 15; y += 6) {
-        for (let x = 15; x < marginX; x += 6) {
-          const idx = (y * w + x) * 4;
-          const alpha = data[idx + 3];
-          const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+      const testPoints = [
+        { x: edgeDepthX / 2, y: edgeDepthY / 2 },
+        { x: w - edgeDepthX / 2, y: edgeDepthY / 2 },
+        { x: edgeDepthX / 2, y: h - edgeDepthY / 2 },
+        { x: w - edgeDepthX / 2, y: h - edgeDepthY / 2 }
+      ];
 
-          // If dark isolated pixel found
-          if (alpha > 120 && brightness < 180) {
-            // Check if neighbors 15px away are clear (isolated dust speckle)
-            let isIsolated = true;
-            for (let dy = -12; dy <= 12; dy += 6) {
-              for (let dx = -12; dx <= 12; dx += 6) {
-                if (dx === 0 && dy === 0) continue;
-                const ny = y + dy;
-                const nx = x + dx;
-                if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-                  const nidx = (ny * w + nx) * 4;
-                  if (data[nidx + 3] > 80 && (data[nidx] + data[nidx + 1] + data[nidx + 2]) / 3 < 200) {
-                    isIsolated = false;
-                    break;
-                  }
-                }
+      for (const pt of testPoints) {
+        const x = Math.round(pt.x);
+        const y = Math.round(pt.y);
+        if (isDark(x, y)) {
+          let isIsolated = true;
+          for (let dy = -18; dy <= 18; dy += 6) {
+            for (let dx = -18; dx <= 18; dx += 6) {
+              if (Math.abs(dx) <= 3 && Math.abs(dy) <= 3) continue;
+              if (!isBlank(x + dx, y + dy)) {
+                isIsolated = false;
+                break;
               }
-              if (!isIsolated) break;
             }
+            if (!isIsolated) break;
+          }
 
-            if (isIsolated) {
-              this.defects.push({
-                id: `dot_${this.defects.length + 1}`,
-                type: 'stray_dot',
-                shape: 'circle',
-                title: `Stray Dot / Dust Speckle (Isolated)`,
-                severity: 'warning',
-                cxPercent: +((x / w) * 100).toFixed(1),
-                cyPercent: +((y / h) * 100).toFixed(1),
-                radiusPercent: 2.2,
-                xPercent: +(((x - 12) / w) * 100).toFixed(1),
-                yPercent: +(((y - 12) / h) * 100).toFixed(1),
-                wPercent: 3.5,
-                hPercent: 3.5,
-                details: {
-                  dotRadiusPx: 4,
-                  description: `Rogue stray dot / scanner dust speckle detected in margin outside live design elements.`
-                },
-                dismissed: false
-              });
-              dotFound = true;
-              break;
-            }
+          if (isIsolated) {
+            this.defects.push({
+              id: `dot_${this.defects.length + 1}`,
+              type: 'stray_dot',
+              shape: 'circle',
+              title: `Stray Dot / Dust Speckle (Isolated)`,
+              severity: 'warning',
+              cxPercent: +((x / w) * 100).toFixed(1),
+              cyPercent: +((y / h) * 100).toFixed(1),
+              radiusPercent: 2.2,
+              xPercent: +(((x - 12) / w) * 100).toFixed(1),
+              yPercent: +(((y - 12) / h) * 100).toFixed(1),
+              wPercent: 3.5,
+              hPercent: 3.5,
+              details: {
+                dotRadiusPx: 3,
+                description: `Rogue stray dot / scanner dust speckle detected in margin outside live design elements.`
+              },
+              dismissed: false
+            });
+            dotFound = true;
+            break;
           }
         }
-        if (dotFound) break;
       }
     } catch (e) {
       // Cross-origin catch
-    }
-  },
-
-  /**
-   * If customer artwork is loaded or demo mode active, inject realistic calibration defects
-   * so designers can immediately inspect the requested blinking boxes and circles in the UI.
-   */
-  _ensureDemonstrationDefects(spec, dims, w, h) {
-    // If no defects were detected from raw image scan, add intelligent contextual defects
-    // for demonstration so the user can verify the blinking box and circle highlight system
-    const hasSpelling = this.defects.some(d => d.type === 'spelling');
-    const hasLine = this.defects.some(d => d.type === 'stray_line');
-    const hasDot = this.defects.some(d => d.type === 'stray_dot');
-
-    if (!hasSpelling) {
-      this.defects.push({
-        id: `typo_demo_1`,
-        type: 'spelling',
-        shape: 'box',
-        title: `Spelling Typo: "Oppening"`,
-        severity: 'warning',
-        xPercent: 35.0,
-        yPercent: 43.0,
-        wPercent: 30.0,
-        hPercent: 8.5,
-        details: {
-          word: 'Oppening',
-          suggestion: 'Opening',
-          description: `Spelling Typo detected: "Oppening" should be corrected to "Opening" before printing.`
-        },
-        dismissed: false
-      });
-    }
-
-    if (!hasLine) {
-      this.defects.push({
-        id: `line_demo_1`,
-        type: 'stray_line',
-        shape: 'box',
-        title: `Unnecessary Small Line Artifact (18px)`,
-        severity: 'warning',
-        xPercent: 12.0,
-        yPercent: 78.0,
-        wPercent: 8.5,
-        hPercent: 3.8,
-        details: {
-          lengthPx: 18,
-          description: `Unnecessary stray vector line artifact (~18px stroke) detected floating in lower margin.`
-        },
-        dismissed: false
-      });
-    }
-
-    if (!hasDot) {
-      this.defects.push({
-        id: `dot_demo_1`,
-        type: 'stray_dot',
-        shape: 'circle',
-        title: `Stray Dot / Dust Speckle (3px)`,
-        severity: 'warning',
-        cxPercent: 88.5,
-        cyPercent: 18.0,
-        radiusPercent: 2.2,
-        xPercent: 86.5,
-        yPercent: 15.5,
-        wPercent: 4.0,
-        hPercent: 4.0,
-        details: {
-          dotRadiusPx: 3,
-          description: `Rogue stray dot / scanner dust speckle (3px) detected in upper-right margin.`
-        },
-        dismissed: false
-      });
     }
   },
 

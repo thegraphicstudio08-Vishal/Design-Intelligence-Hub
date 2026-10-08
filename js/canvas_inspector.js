@@ -1450,7 +1450,7 @@ const CanvasInspector = {
     } else if (tType === 'flag-rectangle') {
       this._drawFlagRectangleTemplate(w, h, printW, printH, safePxX, safePxY, ppiX);
     } else if (tType === 'magnet-rounded') {
-      this._drawMagneticSignTemplate(w, h, printW, printH, safePxX, safePxY);
+      this._drawMagneticSignTemplate(w, h, printW, printH, safePxX, safePxY, spec);
     } else if (tType === 'x-banner') {
       this._drawXBannerTemplate(w, h, printW, printH, safePxX, safePxY);
     } else if (tType === 'l-banner') {
@@ -1499,7 +1499,7 @@ const CanvasInspector = {
 
     // Agentic AI Quality Audit: Scan artwork and render animated blinking boxes & circles
     if (typeof AgenticAiInspector !== 'undefined') {
-      AgenticAiInspector.onCanvasRedraw(this.canvas, img, spec, dims);
+      AgenticAiInspector.onCanvasRedraw(this.canvas, this.currentImg || null, spec, dims);
     }
   },
 
@@ -1664,7 +1664,7 @@ const CanvasInspector = {
       }
       ctx.fillStyle = '#64748b';
       ctx.font = 'bold 9.5px Inter, sans-serif';
-      ctx.fillText('|| 4mm Vertical Flute Direction', 14, 20);
+      ctx.fillText('|| 4mm Vertical Flute Direction', Math.max(200, w - 180), 20);
       ctx.restore();
     }
 
@@ -1677,7 +1677,7 @@ const CanvasInspector = {
 
       ctx.fillStyle = '#fb7b48';
       ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.fillText(`✂️ YARD SIGN TRIM: ${printW}" × ${printH}" (4mm Corflute)`, 14, 38);
+      ctx.fillText(`✂️ YARD SIGN TRIM: ${printW}" × ${printH}" (4mm Corflute)`, 14, 20);
       ctx.restore();
     }
 
@@ -1691,7 +1691,7 @@ const CanvasInspector = {
 
       ctx.fillStyle = '#16a34a';
       ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.fillText(`🛡️ SAFE ZONE: 0.50" inside trim (No grommets on yard signs)`, safeX + 6, safeY + 16);
+      ctx.fillText(`🛡️ SAFE ZONE: 0.50" inside trim (No grommets on yard signs)`, Math.max(14, safeX + 6), Math.max(38, safeY + 14));
       ctx.restore();
     }
 
@@ -1861,8 +1861,10 @@ const CanvasInspector = {
   /**
    * 🧲 VEHICLE MAGNETIC SIGN TEMPLATE (Rounded Anti-Peel Corners, 30-Mil Bevel, NO Grommets)
    */
-  _drawMagneticSignTemplate(w, h, printW, printH, safeX, safeY) {
+  _drawMagneticSignTemplate(w, h, printW, printH, safeX, safeY, spec) {
     const ctx = this.ctx;
+    const currentSpec = spec || this.currentSpec || {};
+    const safeTxt = currentSpec.safeArea || '0.25"';
     const r = Math.min(26, Math.max(14, w * 0.05)); // 0.5" - 1.0" rounded corner radius
 
     const traceRoundedRect = (c, x, y, rw, rh, rad) => {
@@ -1888,7 +1890,7 @@ const CanvasInspector = {
     ctx.fill('evenodd');
     ctx.restore();
 
-    // 2. Rounded Cutline (Orange solid 3px)
+    // 2. Rounded Cutline (Orange solid 3px) - Clean top row
     if (this.guides.cutLine) {
       ctx.save();
       ctx.strokeStyle = '#fb7b48';
@@ -1898,11 +1900,11 @@ const CanvasInspector = {
 
       ctx.fillStyle = '#fb7b48';
       ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.fillText(`✂️ VEHICLE MAGNET DIE-CUT: ${printW}" × ${printH}" (0.5" Rounded Corners)`, 16, 26);
+      ctx.fillText(`✂️ VEHICLE MAGNET DIE-CUT: ${printW}" × ${printH}" (0.5" Rounded Corners)`, 16, 20);
       ctx.restore();
     }
 
-    // 3. 30-Mil Magnetic Backing & Bevel Shadow
+    // 3. 30-Mil Magnetic Backing & Bevel Shadow with protected pill badge
     if (this.guides.hardware) {
       ctx.save();
       ctx.strokeStyle = '#334155';
@@ -1910,13 +1912,20 @@ const CanvasInspector = {
       traceRoundedRect(ctx, 6, 6, w - 12, h - 12, r - 3);
       ctx.stroke();
 
-      ctx.fillStyle = '#1e293b';
+      // Pill badge at bottom to avoid collision with green dashed safe line
+      const labelText = '🧲 30-MIL HEAVY-DUTY VEHICLE MAGNETIC SUBSTRATE (Wind-Resistant)';
       ctx.font = 'bold 9.5px Inter, sans-serif';
-      ctx.fillText('🧲 30-MIL HEAVY-DUTY VEHICLE MAGNETIC SUBSTRATE (Wind-Resistant)', 16, h - 12);
+      const textMetrics = ctx.measureText(labelText);
+      const bgW = textMetrics.width + 12;
+      const badgeY = h - 16;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(14, badgeY - 11, bgW, 15);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillText(labelText, 20, badgeY);
       ctx.restore();
     }
 
-    // 4. Safe Area (0.5" inside rounded cutline)
+    // 4. Safe Area - Second row, dynamically referencing spec.safeArea (default 0.25")
     if (this.guides.safeArea) {
       ctx.save();
       ctx.strokeStyle = '#16a34a';
@@ -1927,7 +1936,7 @@ const CanvasInspector = {
 
       ctx.fillStyle = '#16a34a';
       ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.fillText(`🛡️ SAFE ZONE: 0.50" inside rounded cutline`, safeX + 8, safeY + 16);
+      ctx.fillText(`🛡️ SAFE ZONE: ${safeTxt} inside rounded cutline`, Math.max(16, safeX + 8), Math.max(38, safeY + 14));
       ctx.restore();
     }
 
@@ -1958,7 +1967,7 @@ const CanvasInspector = {
 
       ctx.fillStyle = '#fb7b48';
       ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.fillText(`✂️ X-BANNER TRIM: ${printW}" × ${printH}"`, 14, 24);
+      ctx.fillText(`✂️ X-BANNER TRIM: ${printW}" × ${printH}"`, 14, 20);
       ctx.restore();
     }
 
@@ -1972,7 +1981,7 @@ const CanvasInspector = {
 
       ctx.fillStyle = '#16a34a';
       ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.fillText(`🛡️ SAFE ZONE: 1.50" inside trim (Keep clear of 4 corner hooks)`, safeX + 6, safeY + 16);
+      ctx.fillText(`🛡️ SAFE ZONE: 1.50" inside trim (Keep clear of 4 corner hooks)`, Math.max(14, safeX + 6), Math.max(38, safeY + 14));
       ctx.restore();
     }
 
@@ -2190,7 +2199,7 @@ const CanvasInspector = {
 
       ctx.fillStyle = '#fb7b48';
       ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.fillText(`✂️ WINDOW GRAPHICS TRIM: ${printW}" × ${printH}" (60/40 Perforated Vinyl)`, 14, 24);
+      ctx.fillText(`✂️ WINDOW GRAPHICS TRIM: ${printW}" × ${printH}" (60/40 Perforated Vinyl)`, 14, 20);
       ctx.restore();
     }
 
@@ -2204,7 +2213,7 @@ const CanvasInspector = {
 
       ctx.fillStyle = '#16a34a';
       ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.fillText(`🛡️ SAFE ZONE: 0.50" inside trim (No grommets on window film)`, safeX + 6, safeY + 16);
+      ctx.fillText(`🛡️ SAFE ZONE: 0.50" inside trim (No grommets on window film)`, Math.max(14, safeX + 6), Math.max(38, safeY + 14));
       ctx.restore();
     }
   },
@@ -3215,7 +3224,7 @@ const CanvasInspector = {
 
       ctx.fillStyle = '#16a34a';
       ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.fillText(`🛡️ SAFE ZONE: ${spec?.safeArea || '1.25"'} inside trim`, safeX + 6, safeY + 14);
+      ctx.fillText(`🛡️ SAFE ZONE: ${spec?.safeArea || '1.25"'} inside trim`, Math.max(10, safeX + 6), Math.max(36, safeY + 14));
       ctx.restore();
     }
 
