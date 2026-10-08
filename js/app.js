@@ -1130,6 +1130,7 @@ function renderResults(report, previousOrders) {
             ` : ''}
           </div>
         </div>
+      ` : ''}
     </div>
 
     <!-- Agentic AI Quality Audit Panel (Spelling Typos, Stray Lines & Dots with Blinking Highlights) -->

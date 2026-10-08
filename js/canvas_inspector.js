@@ -995,6 +995,8 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
+    }
+
     const activeDefects = (typeof AgenticAiInspector !== 'undefined') ? AgenticAiInspector.getDefects() : [];
     const aiBtnHtml = `
       <button type="button" class="btn-vi-mode" onclick="AgenticAiInspector.toggleBlinking()" style="background:#fff7ed; border:1px solid #fed7aa; color:#c2410c; font-weight:800; font-size:11px;" title="Agentic AI: Click to toggle blinking animated boxes and circles">
