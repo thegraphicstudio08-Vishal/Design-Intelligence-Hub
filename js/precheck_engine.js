@@ -167,51 +167,7 @@ const PrecheckEngine = {
     });
 
     // ──────────────────────────────────────────────────────────────────────────
-    // CHECKPOINT 2: Resolution (DPI) Check
-    // ──────────────────────────────────────────────────────────────────────────
-    let resStatus = 'PASS', resFound = '', resDetail = '', resAction = '';
-    if (analysis.isVector && !analysis.embeddedRasterFound) {
-      resStatus = 'PASS';
-      resFound = 'Infinite (Pure Vector)';
-      resDetail = 'Scale-independent vector graphics (0 raster elements). Zero pixelation regardless of output dimensions.';
-      resAction = 'Vector artboard prints sharp at 100% scale at any size.';
-    } else if (analysis.effectiveDpi) {
-      const isHybrid = analysis.isVector && analysis.embeddedRasterFound;
-      const hybridPrefix = isHybrid ? 'Hybrid Vector + Inside Raster: ' : '';
-      if (analysis.effectiveDpi >= reqDpi) {
-        resStatus = 'PASS';
-        resFound = `${analysis.effectiveDpi} DPI${isHybrid ? ' (Raster Component)' : ''}`;
-        resDetail = `${hybridPrefix}Pixel density meets or exceeds SOP requirement (${analysis.effectiveDpi} DPI vs required ${spec.resolution} at ${printW}"×${printH}").`;
-      } else if (analysis.effectiveDpi >= minDpi) {
-        resStatus = 'WARNING';
-        resFound = `${analysis.effectiveDpi} DPI${isHybrid ? ' (Raster Component)' : ''}`;
-        resDetail = `${hybridPrefix}Resolution is slightly below SOP target (${analysis.effectiveDpi} DPI vs required ${spec.resolution} at ${printW}"×${printH}").`;
-        resAction = 'Inspect artwork at 100% zoom. Flag potential softness to customer if viewed closely.';
-      } else {
-        resStatus = 'FAIL';
-        resFound = `${analysis.effectiveDpi} DPI${isHybrid ? ' (Raster Component)' : ''}`;
-        resDetail = `${hybridPrefix}Critical low resolution: ${analysis.effectiveDpi} DPI at ${printW}"×${printH}" (required ${spec.resolution}). Severe pixelation will occur on raster areas.`;
-        resAction = `Provide 100% crop proof to customer illustrating blurriness, and request replacement file (min ${reqDpi} DPI).`;
-      }
-    } else {
-      resStatus = 'WARNING';
-      resFound = `${ext} file`;
-      resDetail = 'Pixel dimensions could not be extracted directly in browser. Manual verification required.';
-      resAction = 'Open in Adobe Photoshop/Illustrator and verify resolution at print size.';
-    }
-    checks.push({
-      id: 'resolution',
-      name: 'Resolution (DPI)',
-      icon: '🖼️',
-      status: resStatus,
-      found: resFound,
-      required: spec.resolution,
-      detail: resDetail,
-      action: resAction
-    });
-
-    // ──────────────────────────────────────────────────────────────────────────
-    // CHECKPOINT 3: Orientation Check
+    // CHECKPOINT 2: Orientation Check
     // ──────────────────────────────────────────────────────────────────────────
     let orientStatus = 'PASS', orientFound = '', orientDetail = '', orientAction = '';
     orientFound = `Artwork: ${analysis.orientationArtwork} · Order: ${analysis.orientationOrder}`;
