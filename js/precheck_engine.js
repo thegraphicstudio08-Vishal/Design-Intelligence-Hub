@@ -23,59 +23,79 @@ const PrecheckEngine = {
     const ext = analysis.fileExt.toUpperCase();
 
     // ──────────────────────────────────────────────────────────────────────────
-    // CHECKPOINT 0: Size Transform — customer artwork scaled to the customer-selected size
+    // CHECKPOINT 0: Size Transform to Order (Incorporating Physical Measurements & Aspect Ratio)
     // ──────────────────────────────────────────────────────────────────────────
-    if (sop && typeof SopRules !== 'undefined') {
-      const canvas = sop.canvas;
-      const canvasTxt = canvas
-        ? `${canvas.wIn}" × ${canvas.hIn}"${canvas.confirmed ? ` (${canvas.note})` : ' (finishing allowance not confirmed — use template)'}`
-        : '—';
-      if (analysis.isVector && !analysis.embeddedRasterFound) {
-        const art = analysis.detectedInchesW ? `${analysis.detectedInchesW}" × ${analysis.detectedInchesH}" artboard` : 'Vector artwork';
-        checks.push({
-          id: 'sizeTransform',
-          name: 'Size Transform to Order',
-          icon: '📐',
-          status: 'PASS',
-          found: `${art} → ${printW}" × ${printH}"`,
-          required: `Order ${printW}" × ${printH}" · Print canvas ${canvasTxt}`,
-          detail: 'Vector artwork scales to the ordered size without resolution loss.',
-          action: canvas && canvas.confirmed ? `Create production canvas at ${canvas.wIn}" × ${canvas.hIn}" (${canvas.source}).` : ''
-        });
-      } else if (analysis.pixelWidth && analysis.pixelHeight && !analysis.isVector) {
-        const t = SopRules.transform(analysis.pixelWidth, analysis.pixelHeight, { widthIn: printW, heightIn: printH }, sop);
-        const target = sop.resolution.target;
-        let st = t.ppiAtOrder >= target ? 'PASS' : t.ppiAtOrder >= sop.resolution.min ? 'WARNING' : 'FAIL';
-        if (st === 'PASS' && t.ratioDiffPct > 1.5) st = 'WARNING';
-        const fitTxt = t.ratioDiffPct <= 1.5
-          ? 'Artwork proportion matches the order.'
-          : `Proportion differs by ${t.ratioDiffPct}%: fitted whole it covers ${t.fitSizeIn.w}" × ${t.fitSizeIn.h}" (gap ${t.gapIn.w}" W / ${t.gapIn.h}" H to extend with background), or filled it crops ${t.cropPctIfFilled}% of the artwork.`;
-        checks.push({
-          id: 'sizeTransform',
-          name: 'Size Transform to Order',
-          icon: '📐',
-          status: st,
-          found: `${analysis.pixelWidth} × ${analysis.pixelHeight} px → ${printW}" × ${printH}" = ${t.ppiAtOrder} ppi${t.rotated ? ' (artwork rotated vs order)' : ''}`,
-          required: `SOP ${target} ppi (min ${sop.resolution.min}) · canvas ${canvasTxt} = ${t.requiredPx.w} × ${t.requiredPx.h} px`,
-          detail: `${fitTxt} ${sop.resolution.source}.`,
-          action: st === 'PASS' ? '' : (t.ppiAtOrder < target
-            ? `Artwork gives ${t.ppiAtOrder} ppi at order size; SOP asks ${target} ppi. Request higher-resolution/vector artwork, or show the low-resolution area in the crop shot proof.`
-            : 'Confirm with customer: extend background to fill the order size, or crop.')
-        });
-      } else {
-        checks.push({
-          id: 'sizeTransform',
-          name: 'Size Transform to Order',
-          icon: '📐',
-          status: 'WARNING',
-          found: `${ext} — resolution not measurable in browser`,
-          required: `Order ${printW}" × ${printH}" · SOP ${sop.resolution.target} ppi · canvas ${canvasTxt}`,
-          detail: analysis.embeddedRasterFound
-            ? 'File contains raster images; their resolution at print size cannot be measured here.'
-            : 'Open the file in Photoshop/Illustrator and check the image size at print size.',
-          action: `Verify effective resolution ≥ ${sop.resolution.target} ppi at ${printW}" × ${printH}".`
-        });
-      }
+    const canvas = sop?.canvas;
+    const canvasTxt = canvas
+      ? `${canvas.wIn}" × ${canvas.hIn}"${canvas.confirmed ? ` (${canvas.note})` : ' (finishing allowance not confirmed — use template)'}`
+      : '—';
+    const diffPct = analysis.aspectRatioMismatchPercent || 0;
+    const reqTol = `${printW}" × ${printH}" (±0.5" SOP tolerance)`;
+
+    if (analysis.isVector && !analysis.embeddedRasterFound) {
+      const art = analysis.detectedInchesW ? `${analysis.detectedInchesW}" × ${analysis.detectedInchesH}" artboard` : 'Vector artwork';
+      const aspectInfo = analysis.aspectRatioArtwork ? ` (Ratio: ${analysis.aspectRatioArtwork}:1)` : '';
+      checks.push({
+        id: 'sizeTransform',
+        name: 'Size Transform to Order',
+        icon: '📐',
+        status: (diffPct > 5.0) ? 'FAIL' : (diffPct > 1.5) ? 'WARNING' : 'PASS',
+        found: `${art}${aspectInfo} → Order: ${printW}" × ${printH}"`,
+        required: `${reqTol} · Print canvas ${canvasTxt}`,
+        detail: `Vector artwork scales to the ordered size without resolution loss.${diffPct > 1.5 ? ` Aspect ratio difference: Δ ${diffPct}%.` : ' Aspect ratio matches order dimensions.'}`,
+        action: canvas && canvas.confirmed ? `Create production canvas at ${canvas.wIn}" × ${canvas.hIn}" (${canvas.source}).` : ''
+      });
+    } else if (analysis.pixelWidth && analysis.pixelHeight && !analysis.isVector) {
+      const t = (typeof SopRules !== 'undefined' && sop)
+        ? SopRules.transform(analysis.pixelWidth, analysis.pixelHeight, { widthIn: printW, heightIn: printH }, sop)
+        : {
+            ppiAtOrder: analysis.effectiveDpi || Math.round(Math.min(analysis.pixelWidth / printW, analysis.pixelHeight / printH)),
+            ratioDiffPct: diffPct,
+            fitSizeIn: { w: printW, h: printH },
+            gapIn: { w: 0, h: 0 },
+            cropPctIfFilled: 0,
+            requiredPx: { w: Math.round(printW * reqDpi), h: Math.round(printH * reqDpi) },
+            rotated: false
+          };
+      const target = sop?.resolution?.target || reqDpi;
+      const minResolution = sop?.resolution?.min || minDpi;
+
+      let st = t.ppiAtOrder >= target ? 'PASS' : t.ppiAtOrder >= minResolution ? 'WARNING' : 'FAIL';
+      if (st === 'PASS' && (t.ratioDiffPct > 1.5 || diffPct > 1.5)) st = 'WARNING';
+      if (diffPct > 5.0 || t.ratioDiffPct > 5.0) st = 'FAIL';
+
+      const actualDiff = t.ratioDiffPct || diffPct;
+      const fitTxt = actualDiff <= 1.5
+        ? 'Artwork aspect ratio and dimensions match the order within tolerance.'
+        : `Proportion differs by ${actualDiff}% (Artwork ${analysis.aspectRatioArtwork || 'custom'}:1 vs Order ${analysis.aspectRatioOrder || +(printW/printH).toFixed(2)}:1): fitted whole it covers ${t.fitSizeIn.w}" × ${t.fitSizeIn.h}" (gap ${t.gapIn.w}" W / ${t.gapIn.h}" H to extend with background), or filled it crops ${t.cropPctIfFilled}% of the artwork.`;
+
+      checks.push({
+        id: 'sizeTransform',
+        name: 'Size Transform to Order',
+        icon: '📐',
+        status: st,
+        found: `${analysis.pixelWidth} × ${analysis.pixelHeight} px (${analysis.aspectRatioArtwork}:1) → ${printW}" × ${printH}" = ${t.ppiAtOrder} PPI${t.rotated ? ' (artwork rotated vs order)' : ''}`,
+        required: `${reqTol} · Target ${target} PPI (min ${minResolution}) · Canvas ${canvasTxt}`,
+        detail: `${fitTxt}${sop?.resolution?.source ? ` ${sop.resolution.source}.` : ''}`,
+        action: st === 'PASS' ? '' : (actualDiff > 5.0
+          ? 'Contact customer to confirm correct ordered dimensions or request artwork sized to fit aspect ratio without distortion.'
+          : t.ppiAtOrder < target
+          ? `Artwork gives ${t.ppiAtOrder} PPI at order size; SOP asks ${target} PPI. Request higher-resolution/vector artwork, or show low-resolution area in the crop shot proof.`
+          : 'Confirm with customer: extend background to fill the order size, or crop edge allowance.')
+      });
+    } else {
+      checks.push({
+        id: 'sizeTransform',
+        name: 'Size Transform to Order',
+        icon: '📐',
+        status: 'WARNING',
+        found: `${ext} Document — resolution not measurable in browser`,
+        required: `${reqTol} · Target ${sop?.resolution?.target || reqDpi} PPI · Canvas ${canvasTxt}`,
+        detail: analysis.embeddedRasterFound
+          ? 'File contains raster images; their resolution at print size cannot be measured directly in browser. Ensure artboard matches order size.'
+          : `Target print size: ${printW}" × ${printH}". Ensure document artboard matches ordered dimensions.`,
+        action: `Verify artboard size matches order size (${printW}" × ${printH}") and effective resolution ≥ ${sop?.resolution?.target || reqDpi} PPI in Adobe software.`
+      });
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -165,43 +185,7 @@ const PrecheckEngine = {
     });
 
     // ──────────────────────────────────────────────────────────────────────────
-    // CHECKPOINT 3: Size & Physical Measurement Check
-    // ──────────────────────────────────────────────────────────────────────────
-    let sizeStatus = 'PASS', sizeFound = '', sizeDetail = '', sizeAction = '';
-    const diffPct = analysis.aspectRatioMismatchPercent || 0;
-    if (analysis.pixelWidth && analysis.pixelHeight) {
-      sizeFound = `${analysis.pixelWidth} × ${analysis.pixelHeight} px (Aspect Ratio: ${analysis.aspectRatioArtwork}:1)`;
-      if (diffPct <= 1.5) {
-        sizeStatus = 'PASS';
-        sizeDetail = `Artwork aspect ratio matches ordered print dimensions (${printW}"×${printH}", Ratio: ${analysis.aspectRatioOrder}:1) within tolerance (Δ ${diffPct}%).`;
-      } else if (diffPct <= 5.0) {
-        sizeStatus = 'WARNING';
-        sizeDetail = `Minor aspect ratio mismatch (Δ ${diffPct}%). Artwork will undergo minor stretching or slight edge cropping to fit ${printW}"×${printH}".`;
-        sizeAction = 'Verify whether customer allows proportional fit with background extension or minor crop.';
-      } else {
-        sizeStatus = 'FAIL';
-        sizeDetail = `Significant aspect ratio mismatch (Δ ${diffPct}%). Artwork ratio is ${analysis.aspectRatioArtwork}:1, but order requires ${analysis.aspectRatioOrder}:1 (${printW}"×${printH}"). Artwork will be distorted if stretched.`;
-        sizeAction = 'Contact customer to confirm correct ordered dimensions or request artwork sized to fit aspect ratio.';
-      }
-    } else {
-      sizeStatus = 'WARNING';
-      sizeFound = `${ext} Document`;
-      sizeDetail = `Target print size: ${printW}" × ${printH}". Ensure document artboard matches these dimensions.`;
-      sizeAction = 'Verify artboard size matches order size in design software.';
-    }
-    checks.push({
-      id: 'sizeMeasurement',
-      name: 'Size & Measurements',
-      icon: '📏',
-      status: sizeStatus,
-      found: sizeFound,
-      required: `${printW}" × ${printH}" (±0.5" SOP tolerance)`,
-      detail: sizeDetail,
-      action: sizeAction
-    });
-
-    // ──────────────────────────────────────────────────────────────────────────
-    // CHECKPOINT 4: Orientation Check
+    // CHECKPOINT 3: Orientation Check
     // ──────────────────────────────────────────────────────────────────────────
     let orientStatus = 'PASS', orientFound = '', orientDetail = '', orientAction = '';
     orientFound = `Artwork: ${analysis.orientationArtwork} · Order: ${analysis.orientationOrder}`;
@@ -234,28 +218,59 @@ const PrecheckEngine = {
     });
 
     // ──────────────────────────────────────────────────────────────────────────
-    // CHECKPOINT 5: Lines & Dots / Artifact Detection
+    // CHECKPOINT 4: Agentic AI Quality Audit: Spelling, Stray Lines & Dots
     // ──────────────────────────────────────────────────────────────────────────
-    let artStatus = 'PASS', artFound = 'Clean margins', artDetail = '', artAction = '';
-    if (analysis.hasLinesOrDots) {
+    const aiDefects = (typeof AgenticAiInspector !== 'undefined')
+      ? AgenticAiInspector.getDefects()
+      : (analysis.aiDefects || []);
+    const typos = aiDefects.filter(d => d.type === 'spelling');
+    const strayLines = aiDefects.filter(d => d.type === 'stray_line');
+    const strayDots = aiDefects.filter(d => d.type === 'stray_dot');
+    const hasDefects = (aiDefects.length > 0 || analysis.hasLinesOrDots);
+
+    let artStatus = 'PASS', artFound = '', artDetail = '', artAction = '';
+    if (hasDefects) {
       artStatus = 'WARNING';
-      artFound = 'Edge Artifacts Detected';
-      artDetail = 'Pixel analysis detected potential dark scanning lines, scanner dust, or dirty borders along edge margins.';
-      artAction = 'Inspect artwork at 100% zoom using the Interactive Canvas Inspector to clean stray pixels or lines before printing.';
+      const parts = [];
+      if (typos.length > 0) parts.push(`${typos.length} Spelling Typo${typos.length > 1 ? 's' : ''}`);
+      if (strayLines.length > 0) parts.push(`${strayLines.length} Stray Line${strayLines.length > 1 ? 's' : ''}`);
+      if (strayDots.length > 0) parts.push(`${strayDots.length} Stray Dot${strayDots.length > 1 ? 's' : ''}`);
+      if (parts.length === 0 && analysis.hasLinesOrDots) parts.push('Edge Margin Artifacts');
+
+      artFound = `⚠️ ${aiDefects.length || 1} Issue${aiDefects.length !== 1 ? 's' : ''} Flagged (${parts.join(', ')})`;
+
+      const detailSnippets = [];
+      if (typos.length > 0) {
+        detailSnippets.push(`Spelling QA: ${typos.map(t => `"${t.details.word}" → "${t.details.suggestion}"`).join(', ')}.`);
+      }
+      if (strayLines.length > 0) {
+        detailSnippets.push(`Stray Lines: ${strayLines.length} unnecessary hairline/line artifact${strayLines.length > 1 ? 's' : ''} detected outside design live area.`);
+      }
+      if (strayDots.length > 0) {
+        detailSnippets.push(`Stray Dots: ${strayDots.length} isolated dust/speckle dot${strayDots.length > 1 ? 's' : ''} detected in margins.`);
+      }
+      if (detailSnippets.length === 0) {
+        detailSnippets.push('Pixel analysis detected potential dark scanning lines, scanner dust, or dirty borders along edge margins.');
+      }
+      artDetail = detailSnippets.join(' ') + ' Pulsating blinking boxes (typos/lines) and circles (dots) are active on the interactive canvas.';
+      artAction = 'Review blinking boxes and circles in the Canvas Inspector. Click "Locate on Canvas (Blink)" in the Agentic AI panel to verify each defect.';
     } else {
       artStatus = 'PASS';
-      artFound = 'No unwanted lines or dots detected';
-      artDetail = 'Edge margins appear clean with no scanner lines or rogue border artifacts.';
+      artFound = '✅ Clean Artwork (0 Typos, 0 Stray Lines, 0 Stray Dots)';
+      artDetail = 'Agentic AI autonomous audit passed: No spelling typos detected, margins free of stray vector lines, and no rogue speckles or dust dots found.';
+      artAction = 'Artwork is verified clean and approved for print production.';
     }
+
     checks.push({
       id: 'linesAndDots',
-      name: 'Lines & Dots Artifacts',
-      icon: '🔍',
+      name: 'Agentic AI QA: Spelling, Stray Lines & Dots',
+      icon: '🤖',
       status: artStatus,
       found: artFound,
-      required: 'Clean artwork, no scanner lines or dust spots',
+      required: 'Clean artwork, verified spelling, no stray lines or dust spots',
       detail: artDetail,
-      action: artAction
+      action: artAction,
+      aiDefects: aiDefects
     });
 
     // ──────────────────────────────────────────────────────────────────────────

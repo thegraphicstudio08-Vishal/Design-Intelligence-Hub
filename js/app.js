@@ -854,6 +854,16 @@ async function runPreCheck() {
       });
     }
 
+    // 1.5 Scan with Agentic AI Quality Inspector (Spelling, Stray Lines & Dots)
+    if (typeof AgenticAiInspector !== 'undefined') {
+      const artSrc = analysis?.previewDataUrl || appState.previewDataUrl;
+      const dummyCanvas = document.createElement('canvas');
+      dummyCanvas.width = analysis?.pixelWidth || 800;
+      dummyCanvas.height = analysis?.pixelHeight || 600;
+      AgenticAiInspector.scanArtwork(dummyCanvas, { src: artSrc }, effectiveSpec, appState.userDims);
+      analysis.aiDefects = AgenticAiInspector.getDefects();
+    }
+
     // 2. Evaluate SOP Checkpoints
     const report = PrecheckEngine.evaluate(analysis, effectiveSpec, appState.userDims, appState.overrides);
     appState.report = report;
@@ -871,6 +881,12 @@ async function runPreCheck() {
       appState.product,
       appState.userDims
     );
+
+    // 6. Mount Agentic AI blinking overlay on active canvas
+    if (typeof AgenticAiInspector !== 'undefined') {
+      AgenticAiInspector.renderOverlay();
+      AgenticAiInspector.updateControlsUI();
+    }
   } catch (err) {
     console.error('Pre-check error:', err);
     alert('An error occurred during pre-check analysis: ' + err.message);
@@ -1034,10 +1050,14 @@ function renderResults(report, previousOrders) {
             ` : ''}
           </div>
         </div>
-      ` : ''}
     </div>
 
-    <!-- 10 SOP Check Cards -->
+    <!-- Agentic AI Quality Audit Panel (Spelling Typos, Stray Lines & Dots with Blinking Highlights) -->
+    <div id="ai-inspector-panel-container">
+      ${(typeof AgenticAiInspector !== 'undefined') ? AgenticAiInspector.renderAuditPanel() : ''}
+    </div>
+
+    <!-- SOP Pre-Check Evaluation Cards -->
     <div class="checks-list">
       ${checks.map(c => renderCheckCard(c)).join('')}
     </div>
