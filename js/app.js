@@ -21,13 +21,71 @@ const appState = {
   history: []
 };
 
-// ── DOM Content Loaded Initialization ──
-document.addEventListener('DOMContentLoaded', () => {
+// ── Global Upload and Drag-Drop Handlers ──
+function triggerArtworkUpload() {
+  const fileInput = document.getElementById('file-input');
+  if (fileInput) {
+    fileInput.value = '';
+    fileInput.click();
+  }
+}
+window.triggerArtworkUpload = triggerArtworkUpload;
+
+function handleDragOver(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  const dropZone = document.getElementById('upload-zone');
+  if (dropZone) dropZone.classList.add('drag-over');
+}
+window.handleDragOver = handleDragOver;
+
+function handleDragLeave(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  const dropZone = document.getElementById('upload-zone');
+  if (dropZone) dropZone.classList.remove('drag-over');
+}
+window.handleDragLeave = handleDragLeave;
+
+function handleDrop(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  const dropZone = document.getElementById('upload-zone');
+  if (dropZone) dropZone.classList.remove('drag-over');
+  if (e && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+    handleFile(e.dataTransfer.files[0]);
+  }
+}
+window.handleDrop = handleDrop;
+
+function onFileInputChange(e) {
+  if (e && e.target && e.target.files && e.target.files.length) {
+    handleFile(e.target.files[0]);
+  }
+}
+window.onFileInputChange = onFileInputChange;
+
+// ── Application Initialization (Runs immediately if DOM is ready, or on DOMContentLoaded) ──
+function initApp() {
   initCategories();
   initProofProductDropdown();
   setupEventListeners();
-  CanvasInspector.init('artwork-canvas');
-});
+  if (typeof CanvasInspector !== 'undefined' && CanvasInspector.init) {
+    CanvasInspector.init('artwork-canvas');
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
 
 /**
  * Initialize Category and Product Dropdowns
@@ -280,19 +338,27 @@ function setupEventListeners() {
   const fileInput = document.getElementById('file-input');
 
   if (dropZone && fileInput) {
-    dropZone.addEventListener('click', () => fileInput.click());
-    dropZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      dropZone.classList.add('drag-over');
+    dropZone.addEventListener('click', (e) => {
+      // Prevent double trigger if clicked directly
+      triggerArtworkUpload();
     });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        triggerArtworkUpload();
+      }
+    });
+    dropZone.addEventListener('dragover', (e) => {
+      handleDragOver(e);
+    });
+    dropZone.addEventListener('dragleave', (e) => {
+      handleDragLeave(e);
+    });
     dropZone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dropZone.classList.remove('drag-over');
-      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+      handleDrop(e);
     });
     fileInput.addEventListener('change', (e) => {
-      if (e.target.files.length) handleFile(e.target.files[0]);
+      onFileInputChange(e);
     });
   }
 
@@ -926,20 +992,34 @@ function renderResults(report, previousOrders) {
   // 1. VECTOR "GOOD FOR PRINT" HERO BANNER
   let vectorBannerHtml = '';
   if (analysis.isVector) {
+    const isHybrid = !!analysis.embeddedRasterFound;
+    const heroTitle = isHybrid
+      ? 'Hybrid Vector + Raster Artwork Identified'
+      : 'Pure Vector Artwork Identified — Resolution Independent';
+    const heroDesc = isHybrid
+      ? `File format <strong>.${analysis.fileExt.toUpperCase()}</strong> contains scale-independent vector curves & text alongside ${analysis.embeddedRasterCount || 1} embedded raster graphic(s). Primary raster component is <strong>${analysis.pixelWidth}×${analysis.pixelHeight} px</strong> delivering <strong>${analysis.effectiveDpi} DPI</strong> (${analysis.colorSpace || 'DeviceCMYK'}).`
+      : `File format <strong>.${analysis.fileExt.toUpperCase()}</strong> is composed of mathematical geometric paths and curves. It will print 100% razor sharp at any scale with zero pixelation or degradation.`;
+
+    const heroSpecs = isHybrid
+      ? `
+        <span class="v-tag">✓ Vector Contours: Infinitely Scalable</span>
+        <span class="v-tag" style="background:#fff7ed; border-color:#fdba74; color:#c2410c; font-weight:700;">🖼️ Embedded Raster: ${analysis.pixelWidth}×${analysis.pixelHeight} px · ${analysis.effectiveDpi} DPI</span>
+        <span class="v-tag" style="background:#f1f5f9; border-color:#cbd5e1; color:#334155;">🎨 ${analysis.colorSpace || 'DeviceCMYK'} (${analysis.bitsPerComponent || 8}-bit)</span>
+      `
+      : `
+        <span class="v-tag">✓ Scale-Independent (Infinite DPI)</span>
+        <span class="v-tag">✓ Clean Contours</span>
+        <span class="v-tag">✓ Pure Vector Graphics</span>
+      `;
+
     vectorBannerHtml = `
-      <div class="vector-hero-banner">
-        <div class="vector-hero-icon">⭐</div>
+      <div class="vector-hero-banner" style="${isHybrid ? 'border-left: 4px solid #ea580c;' : ''}">
+        <div class="vector-hero-icon">${isHybrid ? '⚡' : '⭐'}</div>
         <div class="vector-hero-content">
-          <div class="vector-hero-badge">🌟 Good for Print Protocol</div>
-          <div class="vector-hero-title">Vector Artwork Identified — Resolution Independent</div>
-          <div class="vector-hero-desc">
-            File format <strong>.${analysis.fileExt.toUpperCase()}</strong> is composed of mathematical geometric paths and curves. It will print 100% razor sharp at any scale with zero pixelation or degradation.
-          </div>
-          <div class="vector-hero-specs">
-            <span class="v-tag">✓ Scale-Independent (Infinite DPI)</span>
-            <span class="v-tag">✓ Clean Contours</span>
-            ${analysis.embeddedRasterFound ? '<span class="v-tag" style="background:rgba(230,119,0,0.3); border-color:#e67700;">⚠ Embedded Photos Detected</span>' : '<span class="v-tag">✓ Pure Vector Graphics</span>'}
-          </div>
+          <div class="vector-hero-badge">${isHybrid ? '⚡ Hybrid Vector & Raster Inspection' : '🌟 Good for Print Protocol'}</div>
+          <div class="vector-hero-title">${heroTitle}</div>
+          <div class="vector-hero-desc">${heroDesc}</div>
+          <div class="vector-hero-specs">${heroSpecs}</div>
         </div>
       </div>
     `;

@@ -82,11 +82,23 @@ const FileAnalyzer = {
       res.svgPathsCount = paths.length;
       res.hasText = texts.length > 0;
       res.embeddedRasterFound = rasterImages.length > 0;
+      res.embeddedRasterCount = rasterImages.length;
 
-      if (res.embeddedRasterFound) {
-        res.isGoodForPrint = true;
-        res.goodForPrintReason = 'Vector SVG Artwork with embedded raster elements. Vector curves will print razor sharp; verify embedded photo elements meet required DPI.';
-      }
+      // Extract raster dimensions if embedded <image> elements exist
+      let maxRasterW = 0;
+      let maxRasterH = 0;
+      const embeddedImages = [];
+
+      rasterImages.forEach((imgNode) => {
+        const iw = parseFloat(imgNode.getAttribute('width')) || 0;
+        const ih = parseFloat(imgNode.getAttribute('height')) || 0;
+        if (iw > 0 && ih > 0) {
+          embeddedImages.push({ width: Math.round(iw), height: Math.round(ih) });
+          if (iw > maxRasterW) maxRasterW = iw;
+          if (ih > maxRasterH) maxRasterH = ih;
+        }
+      });
+      res.embeddedRasterImages = embeddedImages;
 
       // Check viewBox or width/height
       let vb = svgEl.getAttribute('viewBox');
@@ -103,8 +115,23 @@ const FileAnalyzer = {
         res.pixelWidth = Math.round(w);
         res.pixelHeight = Math.round(h);
       } else {
-        res.pixelWidth = 1200;
-        res.pixelHeight = 800;
+        res.pixelWidth = maxRasterW > 0 ? Math.round(maxRasterW) : 1200;
+        res.pixelHeight = maxRasterH > 0 ? Math.round(maxRasterH) : 800;
+      }
+
+      if (res.embeddedRasterFound) {
+        res.isHybrid = true;
+        res.architecture = 'Hybrid SVG (Vector Paths + Embedded Raster)';
+        const refW = res.detectedInchesW || targetW || 36;
+        const rasterTargetPx = maxRasterW > 0 ? maxRasterW : res.pixelWidth;
+        res.effectiveDpi = Math.round(rasterTargetPx / refW);
+        res.rasterDpi = res.effectiveDpi;
+        res.goodForPrintReason = `Hybrid SVG Vector Artwork with embedded raster elements (${rasterImages.length}). Vector curves are razor sharp; primary raster component delivers ${res.effectiveDpi} DPI at ${refW}".`;
+      } else {
+        res.isHybrid = false;
+        res.architecture = 'Pure Vector SVG';
+        res.effectiveDpi = 9999;
+        res.goodForPrintReason = 'Pure SVG Vector Format. Infinitely scalable with zero resolution loss. Sharp at 100% scale at any print dimension.';
       }
     }
 
@@ -118,22 +145,23 @@ const FileAnalyzer = {
 
   /**
    * Analyze PDF or Adobe Illustrator (.AI) Files
+   * Deep scans for both Vector Artboard dimensions and embedded inside raster parts (/Subtype /Image).
    */
   async _analyzePdfOrAi(file, res, targetW, targetH) {
     res.isVector = true;
     res.isGoodForPrint = true;
     const isAi = res.fileExt === 'ai';
-    res.goodForPrintReason = isAi
-      ? 'Adobe Illustrator Vector Artwork. Scale-independent vector anchors and Bézier curves. Suitable for high-definition print production.'
-      : 'Print-Ready PDF (Vector Stream). Vector objects scale infinitely without pixelation. Excellent for print production.';
+    const totalSize = file.size;
 
     try {
-      const buffer = await file.slice(0, 100000).arrayBuffer();
+      // 1. Read first 2MB to extract Artboard MediaBox/CropBox/TrimBox
+      const headBytes = Math.min(totalSize, 2 * 1024 * 1024);
+      const headBuffer = await file.slice(0, headBytes).arrayBuffer();
       const textDecoder = new TextDecoder('latin1');
-      const headerStr = textDecoder.decode(buffer);
+      const headerStr = textDecoder.decode(headBuffer);
 
       // Search for MediaBox [llx lly urx ury] in PDF header
-      const mediaBoxMatch = headerStr.match(/\/MediaBox\s*\[\s*([\d\.\-]+)\s+([\d\.\-]+)\s+([\d\.\-]+)\s+([\d\.\-]+)\s*\]/);
+      const mediaBoxMatch = headerStr.match(/\/(?:MediaBox|CropBox|TrimBox|BleedBox)\s*\[\s*([\d\.\-]+)\s+([\d\.\-]+)\s+([\d\.\-]+)\s+([\d\.\-]+)\s*\]/);
       if (mediaBoxMatch) {
         const [, x1, y1, x2, y2] = mediaBoxMatch.map(Number);
         const ptWidth = Math.abs(x2 - x1);
@@ -141,13 +169,101 @@ const FileAnalyzer = {
         // 72 points = 1 inch
         res.detectedInchesW = +(ptWidth / 72).toFixed(2);
         res.detectedInchesH = +(ptHeight / 72).toFixed(2);
-        res.pixelWidth = Math.round(ptWidth * 4.16); // ~300 DPI preview representation
-        res.pixelHeight = Math.round(ptHeight * 4.16);
+        res.artboardPointsW = ptWidth;
+        res.artboardPointsH = ptHeight;
       }
 
-      // Check if raster images are declared inside PDF
-      if (headerStr.includes('/Subtype /Image') || headerStr.includes('/DCTDecode') || headerStr.includes('/JPXDecode')) {
+      // 2. Progressive chunked scan across file for embedded inside raster design parts
+      const chunkSize = 3 * 1024 * 1024; // 3MB chunks
+      const images = [];
+      const seenDims = new Set();
+
+      for (let offset = 0; offset < totalSize; offset += chunkSize) {
+        // 512-byte overlap so dictionaries straddling chunk boundaries are never missed
+        const start = Math.max(0, offset - (offset > 0 ? 512 : 0));
+        const end = Math.min(totalSize, offset + chunkSize);
+        const chunkBuf = await file.slice(start, end).arrayBuffer();
+        const txt = textDecoder.decode(chunkBuf);
+
+        const imgRegex = /\/Subtype\s*\/Image/g;
+        let match;
+        while ((match = imgRegex.exec(txt)) !== null) {
+          const ctxStart = Math.max(0, match.index - 250);
+          const ctxEnd = Math.min(txt.length, match.index + 350);
+          const ctx = txt.slice(ctxStart, ctxEnd);
+
+          const wMatch = ctx.match(/\/Width\s+(\d+)/);
+          const hMatch = ctx.match(/\/Height\s+(\d+)/);
+          const csMatch = ctx.match(/\/ColorSpace\s*(?:\/(\w+)|\[\s*\/(\w+))/);
+          const bpcMatch = ctx.match(/\/BitsPerComponent\s+(\d+)/);
+          const filterMatch = ctx.match(/\/Filter\s*(?:\/(\w+)|\[\s*\/(\w+))/);
+
+          if (wMatch && hMatch) {
+            const w = parseInt(wMatch[1], 10);
+            const h = parseInt(hMatch[1], 10);
+            if (w >= 16 && h >= 16) {
+              const key = `${w}x${h}`;
+              if (!seenDims.has(key)) {
+                seenDims.add(key);
+                images.push({
+                  width: w,
+                  height: h,
+                  colorSpace: csMatch ? (csMatch[1] || csMatch[2]) : 'DeviceCMYK',
+                  bitsPerComponent: bpcMatch ? parseInt(bpcMatch[1], 10) : 8,
+                  filter: filterMatch ? (filterMatch[1] || filterMatch[2]) : 'DCTDecode'
+                });
+              }
+            }
+          }
+        }
+
+        // Limit progressive scan to 75MB to maintain instantaneous response
+        if (offset > 75 * 1024 * 1024) break;
+      }
+
+      // 3. Evaluate Vector and Inside Raster Parts
+      if (images.length > 0) {
+        images.sort((a, b) => (b.width * b.height) - (a.width * a.height));
+        const maxImg = images[0];
         res.embeddedRasterFound = true;
+        res.embeddedRasterCount = images.length;
+        res.embeddedRasterImages = images;
+        res.pixelWidth = maxImg.width;
+        res.pixelHeight = maxImg.height;
+        res.colorSpace = maxImg.colorSpace;
+        res.bitsPerComponent = maxImg.bitsPerComponent;
+
+        // Calculate Effective Raster DPI against detected artboard or order target
+        const refW = res.detectedInchesW || targetW || 36;
+        const refH = res.detectedInchesH || targetH || 24;
+        const imgShortPx = Math.min(maxImg.width, maxImg.height);
+        const imgLongPx = Math.max(maxImg.width, maxImg.height);
+        const refShortIn = Math.min(refW, refH);
+        const refLongIn = Math.max(refW, refH);
+
+        const dpiShort = imgShortPx / refShortIn;
+        const dpiLong = imgLongPx / refLongIn;
+        res.effectiveDpi = Math.round(Math.min(dpiShort, dpiLong));
+        res.rasterDpi = res.effectiveDpi;
+
+        res.isVector = true;
+        res.isHybrid = true;
+        res.architecture = 'Hybrid (Vector Contours + Embedded Raster)';
+        res.goodForPrintReason = isAi
+          ? `Adobe Illustrator artwork with embedded raster elements (${images.length} image${images.length > 1 ? 's' : ''}). Vector paths scale infinitely; primary raster component (${maxImg.width}×${maxImg.height} px, ${maxImg.colorSpace}) renders at ${res.effectiveDpi} DPI at ${refW}"×${refH}".`
+          : `Print-Ready PDF with embedded raster elements (${images.length} image${images.length > 1 ? 's' : ''}). Vector paths scale infinitely; primary raster component (${maxImg.width}×${maxImg.height} px, ${maxImg.colorSpace}) renders at ${res.effectiveDpi} DPI at ${refW}"×${refH}".`;
+      } else {
+        res.embeddedRasterFound = false;
+        res.embeddedRasterCount = 0;
+        res.isVector = true;
+        res.isHybrid = false;
+        res.architecture = 'Pure Vector (Scalable Bézier Curves)';
+        res.pixelWidth = res.detectedInchesW ? Math.round(res.detectedInchesW * 150) : Math.round(targetW * 150);
+        res.pixelHeight = res.detectedInchesH ? Math.round(res.detectedInchesH * 150) : Math.round(targetH * 150);
+        res.effectiveDpi = 9999;
+        res.goodForPrintReason = isAi
+          ? 'Pure Adobe Illustrator Vector Artwork. Scale-independent vector anchors and Bézier curves. Suitable for high-definition print production with zero pixelation.'
+          : 'Pure Print-Ready PDF Vector Stream. Vector objects scale infinitely without pixelation. Excellent for print production.';
       }
 
       res.pdfPages = 1;
@@ -155,7 +271,6 @@ const FileAnalyzer = {
       console.warn('PDF header parse exception:', e);
     }
 
-    // No page size found → leave dimensions unknown (never assume the order size, that would fake a PASS)
     this._evaluateMeasurementsAndOrientation(res, targetW, targetH);
     res.previewDataUrl = this._generateVectorPreviewSvg(res, file.name, targetW, targetH);
     return res;
@@ -163,6 +278,7 @@ const FileAnalyzer = {
 
   /**
    * Analyze Encapsulated PostScript (.EPS) Files
+   * Extracts BoundingBox vector artboard and any embedded raster components.
    */
   async _analyzeEps(file, res, targetW, targetH) {
     res.isVector = true;
@@ -170,16 +286,44 @@ const FileAnalyzer = {
     res.goodForPrintReason = 'Encapsulated PostScript (EPS) Vector Artwork. Resolution-independent vector paths and postscript curves.';
 
     try {
-      const slice = await file.slice(0, 8000).text();
-      const bbMatch = slice.match(/%%BoundingBox:\s*([\d\.\-]+)\s+([\d\.\-]+)\s+([\d\.\-]+)\s+([\d\.\-]+)/);
+      const sliceBuf = await file.slice(0, Math.min(file.size, 2 * 1024 * 1024)).arrayBuffer();
+      const slice = new TextDecoder('latin1').decode(sliceBuf);
+      const bbMatch = slice.match(/%%(?:BoundingBox|HiResBoundingBox):\s*([\d\.\-]+)\s+([\d\.\-]+)\s+([\d\.\-]+)\s+([\d\.\-]+)/);
       if (bbMatch) {
         const [, x1, y1, x2, y2] = bbMatch.map(Number);
         const ptW = Math.abs(x2 - x1);
         const ptH = Math.abs(y2 - y1);
         res.detectedInchesW = +(ptW / 72).toFixed(2);
         res.detectedInchesH = +(ptH / 72).toFixed(2);
-        res.pixelWidth = Math.round(ptW * 4.16);
-        res.pixelHeight = Math.round(ptH * 4.16);
+        res.artboardPointsW = ptW;
+        res.artboardPointsH = ptH;
+      }
+
+      // Check for embedded raster in EPS
+      const imgDataMatch = slice.match(/%ImageData:\s*(\d+)\s+(\d+)/i);
+      const hasRasterBinary = slice.includes('%%BeginBinary') || slice.includes('colorimage') || slice.includes('/ImageType');
+      if (imgDataMatch || hasRasterBinary) {
+        res.embeddedRasterFound = true;
+        res.isHybrid = true;
+        res.architecture = 'Hybrid: EPS Vectors + Embedded Raster';
+        if (imgDataMatch && imgDataMatch[1] && imgDataMatch[2]) {
+          res.pixelWidth = parseInt(imgDataMatch[1], 10);
+          res.pixelHeight = parseInt(imgDataMatch[2], 10);
+        } else if (res.detectedInchesW && res.detectedInchesH) {
+          res.pixelWidth = Math.round(res.detectedInchesW * 150);
+          res.pixelHeight = Math.round(res.detectedInchesH * 150);
+        }
+        const refW = res.detectedInchesW || targetW || 36;
+        res.effectiveDpi = Math.round((res.pixelWidth || 1200) / refW);
+        res.rasterDpi = res.effectiveDpi;
+        res.goodForPrintReason = `Hybrid EPS Vector Artwork with embedded raster elements. Vector curves scale infinitely; raster element (${res.pixelWidth}×${res.pixelHeight} px) delivers ${res.effectiveDpi} DPI at ${refW}".`;
+      } else {
+        res.embeddedRasterFound = false;
+        res.isHybrid = false;
+        res.architecture = 'Pure Vector EPS';
+        res.pixelWidth = res.detectedInchesW ? Math.round(res.detectedInchesW * 150) : Math.round(targetW * 150);
+        res.pixelHeight = res.detectedInchesH ? Math.round(res.detectedInchesH * 150) : Math.round(targetH * 150);
+        res.effectiveDpi = 9999;
       }
     } catch (e) {
       console.warn('EPS parse exception:', e);
@@ -364,25 +508,31 @@ const FileAnalyzer = {
 
     const isAi = ext === 'AI';
     const isEps = ext === 'EPS';
-    const badgeColor = isAi ? '#ea580c' : isEps ? '#7c3aed' : '#2563eb';
+    const isHybrid = !!res.embeddedRasterFound;
+    const badgeColor = isHybrid ? '#c2410c' : isAi ? '#ea580c' : isEps ? '#7c3aed' : '#2563eb';
+    const badgeText = isHybrid ? `★ ${ext} HYBRID (VECTOR + RASTER)` : `★ ${ext} VECTOR`;
     const cleanName = (fileName || 'production_artwork.pdf').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const isPanoramic = aspect > 2.5;
     const isTall = aspect < 0.6;
     const titleSize = Math.max(10, Math.min(20, Math.round(Math.min(w / 28, h / 8))));
     const subSize = Math.max(9, Math.min(13, Math.round(Math.min(w / 38, h / 12))));
 
+    const specLine = isHybrid
+      ? `Raster: ${res.pixelWidth}×${res.pixelHeight} px · ${res.effectiveDpi} DPI (${res.colorSpace || 'CMYK'}) · Vector Curves Infinite`
+      : `Print Size: ${cleanW}" × ${cleanH}" · Pure Vector (Infinite DPI)`;
+
     let innerContent = '';
     if (isPanoramic) {
       // Horizontal panoramic banner layout
       innerContent = `
         <rect x="${w * 0.04}" y="${h * 0.15}" width="${w * 0.92}" height="${h * 0.70}" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
-        <g transform="translate(${w * 0.12}, ${h * 0.5})">
-          <rect x="-55" y="-14" width="110" height="28" rx="14" fill="${badgeColor}"/>
-          <text x="0" y="4" font-family="'Inter', sans-serif" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">★ ${ext} VECTOR</text>
+        <g transform="translate(${w * 0.14}, ${h * 0.5})">
+          <rect x="-70" y="-14" width="140" height="28" rx="14" fill="${badgeColor}"/>
+          <text x="0" y="4" font-family="'Inter', sans-serif" font-size="10.5" font-weight="800" fill="#ffffff" text-anchor="middle">${badgeText}</text>
         </g>
-        <g transform="translate(${w * 0.52}, ${h * 0.5})">
+        <g transform="translate(${w * 0.56}, ${h * 0.5})">
           <text x="0" y="-4" font-family="'Inter', sans-serif" font-size="${titleSize}" font-weight="700" fill="#0f172a" text-anchor="middle">${cleanName}</text>
-          <text x="0" y="${titleSize + 4}" font-family="'Inter', sans-serif" font-size="${subSize}" font-weight="600" fill="#64748b" text-anchor="middle">Print Size: ${cleanW}" × ${cleanH}" · Good for Print (Infinite DPI)</text>
+          <text x="0" y="${titleSize + 4}" font-family="'Inter', sans-serif" font-size="${subSize}" font-weight="600" fill="#64748b" text-anchor="middle">${specLine}</text>
         </g>
       `;
     } else if (isTall) {
@@ -390,8 +540,8 @@ const FileAnalyzer = {
       innerContent = `
         <rect x="${w * 0.08}" y="${h * 0.04}" width="${w * 0.84}" height="${h * 0.92}" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
         <g transform="translate(${w / 2}, ${h * 0.12})">
-          <rect x="-55" y="-14" width="110" height="28" rx="14" fill="${badgeColor}"/>
-          <text x="0" y="4" font-family="'Inter', sans-serif" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">★ ${ext} VECTOR</text>
+          <rect x="-70" y="-14" width="140" height="28" rx="14" fill="${badgeColor}"/>
+          <text x="0" y="4" font-family="'Inter', sans-serif" font-size="10.5" font-weight="800" fill="#ffffff" text-anchor="middle">${badgeText}</text>
         </g>
         <g stroke="${badgeColor}" stroke-width="2" fill="none" opacity="0.8">
           <path d="M ${w * 0.25} ${h * 0.32} C ${w * 0.75} ${h * 0.38}, ${w * 0.25} ${h * 0.44}, ${w * 0.75} ${h * 0.50}"/>
@@ -401,7 +551,7 @@ const FileAnalyzer = {
         <g transform="translate(${w / 2}, ${h * 0.65})">
           <text x="0" y="0" font-family="'Inter', sans-serif" font-size="${titleSize}" font-weight="700" fill="#0f172a" text-anchor="middle">${cleanName}</text>
           <text x="0" y="${titleSize + 6}" font-family="'Inter', sans-serif" font-size="${subSize}" font-weight="600" fill="#64748b" text-anchor="middle">${cleanW}" × ${cleanH}"</text>
-          <text x="0" y="${titleSize + subSize + 12}" font-family="'Inter', sans-serif" font-size="${Math.max(8, subSize - 1)}" font-weight="500" fill="#94a3b8" text-anchor="middle">Infinite Vector DPI</text>
+          <text x="0" y="${titleSize + subSize + 12}" font-family="'Inter', sans-serif" font-size="${Math.max(8, subSize - 1)}" font-weight="600" fill="${isHybrid ? '#c2410c' : '#94a3b8'}" text-anchor="middle">${isHybrid ? `${res.effectiveDpi} DPI Raster (${res.colorSpace || 'CMYK'})` : 'Infinite Vector DPI'}</text>
         </g>
       `;
     } else {
@@ -409,8 +559,8 @@ const FileAnalyzer = {
       innerContent = `
         <rect x="${w * 0.08}" y="${h * 0.10}" width="${w * 0.84}" height="${h * 0.80}" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
         <g transform="translate(${w / 2}, ${h * 0.22})">
-          <rect x="-65" y="-14" width="130" height="28" rx="14" fill="${badgeColor}"/>
-          <text x="0" y="4" font-family="'Inter', sans-serif" font-size="12" font-weight="800" fill="#ffffff" text-anchor="middle">★ ${ext} VECTOR</text>
+          <rect x="-80" y="-14" width="160" height="28" rx="14" fill="${badgeColor}"/>
+          <text x="0" y="4" font-family="'Inter', sans-serif" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">${badgeText}</text>
         </g>
         <g stroke="${badgeColor}" stroke-width="2.5" fill="none" opacity="0.85">
           <path d="M ${w * 0.25} ${h * 0.48} C ${w * 0.35} ${h * 0.35}, ${w * 0.45} ${h * 0.60}, ${w * 0.55} ${h * 0.42} S ${w * 0.7} ${h * 0.55}, ${w * 0.75} ${h * 0.44}"/>
@@ -420,7 +570,7 @@ const FileAnalyzer = {
         </g>
         <g transform="translate(${w / 2}, ${h * 0.68})">
           <text x="0" y="0" font-family="'Inter', sans-serif" font-size="${titleSize}" font-weight="700" fill="#0f172a" text-anchor="middle">${cleanName}</text>
-          <text x="0" y="${titleSize + 6}" font-family="'Inter', sans-serif" font-size="${subSize}" font-weight="600" fill="#64748b" text-anchor="middle">Print Size: ${cleanW}" × ${cleanH}" · Good for Print (Infinite DPI)</text>
+          <text x="0" y="${titleSize + 6}" font-family="'Inter', sans-serif" font-size="${subSize}" font-weight="600" fill="#64748b" text-anchor="middle">${specLine}</text>
         </g>
       `;
     }

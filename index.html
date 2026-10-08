@@ -205,12 +205,12 @@
           </div>
 
           <div class="lp-title">Upload Customer Artwork</div>
-          <div class="upload-zone" id="upload-zone">
+          <div class="upload-zone" id="upload-zone" onclick="triggerArtworkUpload()" ondragover="handleDragOver(event)" ondragenter="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" role="button" tabindex="0" title="Click or drag artwork file to upload" style="cursor: pointer;">
             <span class="upload-icon">📁</span>
             <div class="upload-text-main">Click or drag artwork here</div>
             <div class="upload-text-sub">SVG · AI · EPS · PDF · JPG · PNG · TIFF · PSD</div>
           </div>
-          <input type="file" class="hidden-input" id="file-input" accept=".svg,.ai,.eps,.pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff,.psd,.bmp" />
+          <input type="file" class="hidden-input" id="file-input" onchange="onFileInputChange(event)" accept=".svg,.ai,.eps,.pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff,.psd,.bmp" />
 
           <!-- Filename Auto-Detection Banner -->
           <div class="fn-banner" id="fn-banner"></div>

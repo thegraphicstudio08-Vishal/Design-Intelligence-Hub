@@ -45,7 +45,7 @@ const PrecheckEngine = {
         detail: `Vector artwork scales to the ordered size without resolution loss.${diffPct > 1.5 ? ` Aspect ratio difference: Δ ${diffPct}%.` : ' Aspect ratio matches order dimensions.'}`,
         action: canvas && canvas.confirmed ? `Create production canvas at ${canvas.wIn}" × ${canvas.hIn}" (${canvas.source}).` : ''
       });
-    } else if (analysis.pixelWidth && analysis.pixelHeight && !analysis.isVector) {
+    } else if (analysis.pixelWidth && analysis.pixelHeight) {
       const t = (typeof SopRules !== 'undefined' && sop)
         ? SopRules.transform(analysis.pixelWidth, analysis.pixelHeight, { widthIn: printW, heightIn: printH }, sop)
         : {
@@ -65,16 +65,20 @@ const PrecheckEngine = {
       if (diffPct > 5.0 || t.ratioDiffPct > 5.0) st = 'FAIL';
 
       const actualDiff = t.ratioDiffPct || diffPct;
+      const isHybrid = analysis.isVector && analysis.embeddedRasterFound;
       const fitTxt = actualDiff <= 1.5
-        ? 'Artwork aspect ratio and dimensions match the order within tolerance.'
+        ? (isHybrid
+            ? `Hybrid Design: Vector contours scale infinitely; embedded raster (${analysis.pixelWidth}×${analysis.pixelHeight} px) matches order aspect ratio within tolerance.`
+            : 'Artwork aspect ratio and dimensions match the order within tolerance.')
         : `Proportion differs by ${actualDiff}% (Artwork ${analysis.aspectRatioArtwork || 'custom'}:1 vs Order ${analysis.aspectRatioOrder || +(printW/printH).toFixed(2)}:1): fitted whole it covers ${t.fitSizeIn.w}" × ${t.fitSizeIn.h}" (gap ${t.gapIn.w}" W / ${t.gapIn.h}" H to extend with background), or filled it crops ${t.cropPctIfFilled}% of the artwork.`;
 
+      const hybridLabel = isHybrid ? 'Hybrid Vector + Raster: ' : '';
       checks.push({
         id: 'sizeTransform',
         name: 'Size Transform to Order',
         icon: '📐',
         status: st,
-        found: `${analysis.pixelWidth} × ${analysis.pixelHeight} px (${analysis.aspectRatioArtwork}:1) → ${printW}" × ${printH}" = ${t.ppiAtOrder} PPI${t.rotated ? ' (artwork rotated vs order)' : ''}`,
+        found: `${hybridLabel}${analysis.pixelWidth} × ${analysis.pixelHeight} px (${analysis.aspectRatioArtwork}:1) → ${printW}" × ${printH}" = ${t.ppiAtOrder} PPI${t.rotated ? ' (artwork rotated vs order)' : ''}`,
         required: `${reqTol} · Target ${target} PPI (min ${minResolution}) · Canvas ${canvasTxt}`,
         detail: `${fitTxt}${sop?.resolution?.source ? ` ${sop.resolution.source}.` : ''}`,
         action: st === 'PASS' ? '' : (actualDiff > 5.0
@@ -103,13 +107,32 @@ const PrecheckEngine = {
     // ──────────────────────────────────────────────────────────────────────────
     let vStatus = 'PASS', vFound = '', vDetail = '', vAction = '';
     if (analysis.isVector) {
-      // A PDF/AI holding placed photos is only as sharp as those photos
-      vStatus = analysis.embeddedRasterFound ? 'WARNING' : 'PASS';
-      vFound = `Vector · ${ext} Format`;
-      vDetail = `🌟 GOOD FOR PRINT: ${analysis.goodForPrintReason}`;
-      vAction = analysis.embeddedRasterFound
-        ? 'Vector artwork contains embedded raster images (photos/textures). Verify those embedded elements meet resolution requirements.'
-        : 'File is resolution-independent vector. Ready for high-definition production at any scale.';
+      if (analysis.embeddedRasterFound) {
+        // Hybrid Vector Artwork with embedded inside raster graphics
+        const rDpi = analysis.effectiveDpi || 0;
+        if (rDpi >= reqDpi) {
+          vStatus = 'PASS';
+          vFound = `Hybrid Vector + Raster (${rDpi} DPI)`;
+          vDetail = `🌟 GOOD FOR PRINT: Scale-independent vector contours with embedded raster design (${analysis.pixelWidth}×${analysis.pixelHeight} px, ${analysis.colorSpace || 'DeviceCMYK'}). Effective raster resolution of ${rDpi} DPI meets SOP target (${spec.resolution}) at ${printW}"×${printH}".`;
+          vAction = 'Vector curves and embedded raster elements are production-ready.';
+        } else if (rDpi >= minDpi) {
+          vStatus = 'WARNING';
+          vFound = `Hybrid Vector + Raster (${rDpi} DPI)`;
+          vDetail = `Borderline Raster Resolution: Scale-independent vector paths, but inside raster graphic delivers ${rDpi} DPI (SOP standard: ${spec.resolution} at ${printW}"×${printH}").`;
+          vAction = 'Inspect embedded photo elements at 100% zoom. Flag potential softness to customer.';
+        } else {
+          vStatus = 'WARNING';
+          vFound = `Hybrid Vector + Low-Res Raster (${rDpi || 'Low'} DPI)`;
+          vDetail = `Low-Res Raster Warning: Vector curves will print razor sharp, but embedded raster element (${analysis.pixelWidth}×${analysis.pixelHeight} px) is only ${rDpi} DPI at ${printW}"×${printH}" (required ${spec.resolution}).`;
+          vAction = `Notify customer: vector lines are sharp, but embedded photos will appear pixelated. Request higher-resolution source image (min ${reqDpi} DPI).`;
+        }
+      } else {
+        // Pure Vector
+        vStatus = 'PASS';
+        vFound = `Pure Vector · .${ext.toUpperCase()}`;
+        vDetail = `🌟 GOOD FOR PRINT: ${analysis.goodForPrintReason || 'Scale-independent mathematical vector curves. 100% razor sharp at any print dimensions.'}`;
+        vAction = 'File is resolution-independent vector. Ready for high-definition production at any scale.';
+      }
     } else {
       if (analysis.isGoodForPrint) {
         vStatus = 'PASS';
@@ -147,24 +170,27 @@ const PrecheckEngine = {
     // CHECKPOINT 2: Resolution (DPI) Check
     // ──────────────────────────────────────────────────────────────────────────
     let resStatus = 'PASS', resFound = '', resDetail = '', resAction = '';
-    if (analysis.isVector) {
+    if (analysis.isVector && !analysis.embeddedRasterFound) {
       resStatus = 'PASS';
-      resFound = 'Infinite (Vector)';
-      resDetail = 'Scale-independent vector graphics. Zero pixelation regardless of output dimensions.';
+      resFound = 'Infinite (Pure Vector)';
+      resDetail = 'Scale-independent vector graphics (0 raster elements). Zero pixelation regardless of output dimensions.';
+      resAction = 'Vector artboard prints sharp at 100% scale at any size.';
     } else if (analysis.effectiveDpi) {
+      const isHybrid = analysis.isVector && analysis.embeddedRasterFound;
+      const hybridPrefix = isHybrid ? 'Hybrid Vector + Inside Raster: ' : '';
       if (analysis.effectiveDpi >= reqDpi) {
         resStatus = 'PASS';
-        resFound = `${analysis.effectiveDpi} DPI`;
-        resDetail = `Pixel density meets or exceeds SOP requirement (${analysis.effectiveDpi} DPI vs required ${spec.resolution} at ${printW}"×${printH}").`;
+        resFound = `${analysis.effectiveDpi} DPI${isHybrid ? ' (Raster Component)' : ''}`;
+        resDetail = `${hybridPrefix}Pixel density meets or exceeds SOP requirement (${analysis.effectiveDpi} DPI vs required ${spec.resolution} at ${printW}"×${printH}").`;
       } else if (analysis.effectiveDpi >= minDpi) {
         resStatus = 'WARNING';
-        resFound = `${analysis.effectiveDpi} DPI`;
-        resDetail = `Resolution is slightly below SOP target (${analysis.effectiveDpi} DPI vs required ${spec.resolution}).`;
+        resFound = `${analysis.effectiveDpi} DPI${isHybrid ? ' (Raster Component)' : ''}`;
+        resDetail = `${hybridPrefix}Resolution is slightly below SOP target (${analysis.effectiveDpi} DPI vs required ${spec.resolution} at ${printW}"×${printH}").`;
         resAction = 'Inspect artwork at 100% zoom. Flag potential softness to customer if viewed closely.';
       } else {
         resStatus = 'FAIL';
-        resFound = `${analysis.effectiveDpi} DPI`;
-        resDetail = `Critical low resolution: ${analysis.effectiveDpi} DPI at ${printW}"×${printH}". Severe pixelation will occur.`;
+        resFound = `${analysis.effectiveDpi} DPI${isHybrid ? ' (Raster Component)' : ''}`;
+        resDetail = `${hybridPrefix}Critical low resolution: ${analysis.effectiveDpi} DPI at ${printW}"×${printH}" (required ${spec.resolution}). Severe pixelation will occur on raster areas.`;
         resAction = `Provide 100% crop proof to customer illustrating blurriness, and request replacement file (min ${reqDpi} DPI).`;
       }
     } else {

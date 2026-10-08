@@ -332,10 +332,18 @@ body {
   border-radius: var(--radius-lg);
   padding: 24px 16px;
   text-align: center;
-  cursor: pointer;
+  cursor: pointer !important;
   background: var(--surface-2);
   transition: all 0.2s ease;
   position: relative;
+  user-select: none;
+}
+.upload-zone:focus {
+  outline: 2px solid var(--bb-orange);
+  outline-offset: 2px;
+}
+.upload-zone * {
+  pointer-events: none;
 }
 .upload-zone:hover, .upload-zone.drag-over {
   border-color: var(--bb-orange);
