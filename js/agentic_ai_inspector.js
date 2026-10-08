@@ -66,6 +66,10 @@ const ArtworkMarkDetector = {
       ['x', 'y', 'w', 'h', 'cx', 'cy', 'lengthPx', 'isolationPx'].forEach(f => { m[f] = Math.round(m[f] * k); });
       m.thicknessPx = Math.max(1, Math.round(m.thicknessPx * k));
     });
+    (res.textRowMarks || []).forEach(m => {
+      ['x', 'y', 'w', 'h', 'cx', 'cy', 'lengthPx', 'isolationPx', 'textRowReach'].forEach(f => { m[f] = Math.round(m[f] * k); });
+      m.thicknessPx = Math.max(1, Math.round(m.thicknessPx * k));
+    });
     res.edgeLines.forEach(e => { e.thicknessPx = Math.max(1, Math.round(e.thicknessPx * k)); });
     res.width = origW; res.height = origH; res.scanScale = +scale.toFixed(3);
     return res;
@@ -240,7 +244,7 @@ const ArtworkMarkDetector = {
         if (dy >= best) continue;
         for (let x = x0; x <= x1; x++) {
           const l = label[y * W + x];
-          if (!l || l === c.id) continue;
+          if (!l || l === c.id || touchesEdge(comps[l - 1])) continue;   // a frame round the artwork is not "artwork nearby"
           const d = Math.hypot(Math.max(0, c.minX - x, x - c.maxX), dy);
           if (d < best) best = d;
         }
@@ -264,7 +268,14 @@ const ArtworkMarkDetector = {
     const ringTest = (c, pad) => {
       const x0 = c.minX - pad, x1 = c.maxX + pad, y0 = c.minY - pad, y1 = c.maxY + pad;
       const px = [];
-      const take = (x, y) => { if (x >= 0 && y >= 0 && x < W && y < H) { const i = y * W + x; if (opaque[i]) px.push(i); } };
+      const take = (x, y) => {
+        if (x < 0 || y < 0 || x >= W || y >= H) return;
+        const i = y * W + x;
+        if (!opaque[i]) return;
+        const l = label[i];
+        if (l && l !== c.id && touchesEdge(comps[l - 1])) return;   // the image frame is not the mark's surround
+        px.push(i);
+      };
       for (let x = x0; x <= x1; x++) { take(x, y0); take(x, y1); }
       for (let y = y0 + 1; y < y1; y++) { take(x0, y); take(x1, y); }
       if (px.length < 8) return null;
@@ -300,15 +311,20 @@ const ArtworkMarkDetector = {
     const endJoinsArtwork = (c) => {
       const horiz = (c.maxX - c.minX) >= (c.maxY - c.minY);
       const r = isoPx * 2, cy = Math.round((c.minY + c.maxY) / 2), cx = Math.round((c.minX + c.maxX) / 2);
-      const ends = horiz ? [[c.minX, cy], [c.maxX, cy]] : [[cx, c.minY], [cx, c.maxY]];
-      for (const [ex, ey] of ends) {
-        for (let y = Math.max(0, ey - r); y <= Math.min(H - 1, ey + r); y++) {
+      // search areas just beyond each end (in the line's direction, and r to either side for corners)
+      const areas = horiz
+        ? [[c.minX - r, c.minX + 2, cy - r, cy + r], [c.maxX - 2, c.maxX + r, cy - r, cy + r]]
+        : [[cx - r, cx + r, c.minY - r, c.minY + 2], [cx - r, cx + r, c.maxY - 2, c.maxY + r]];
+      for (const [xa, xb, ya, yb] of areas) {
+        for (let y = Math.max(0, ya); y <= Math.min(H - 1, yb); y++) {
           const rowB = ((y / B) | 0) * bw;
-          for (let x = Math.max(0, ex - r); x <= Math.min(W - 1, ex + r); x++) {
+          for (let x = Math.max(0, xa); x <= Math.min(W - 1, xb); x++) {
             const t = bType[rowB + ((x / B) | 0)];
             if (t === 2 || t === 3) return true;
             const l = label[y * W + x];
-            if (l && l !== c.id && !touchesEdge(comps[l - 1])) return true;
+            if (!l || l === c.id) continue;
+            const o = comps[l - 1];
+            if (!touchesEdge(o) && Math.max(o.maxX - o.minX, o.maxY - o.minY) + 1 > dotMax) return true;
           }
         }
       }
@@ -343,6 +359,7 @@ const ArtworkMarkDetector = {
 
     // ── 5. Keep small / thin, isolated marks on a clean surround ────────
     const raw = [];
+    const textRow = [];
     const rejected = [];
     comps.forEach(c => {
       const drop = (why) => { if (this.DEBUG) rejected.push({ x: c.minX, y: c.minY, w: c.maxX - c.minX + 1, h: c.maxY - c.minY + 1, why }); };
@@ -357,10 +374,8 @@ const ArtworkMarkDetector = {
       if (!kind) return;                                          // larger shape = part of the design
 
       const iso = Math.min(nearestOther(c, isoPx * 3), busyDist(c, isoPx * 3));
-      if (iso < isoPx) return drop('touches artwork');             // i-dot, texture, part of a shape
+      if (iso < isoPx || (kind === 'dot' && iso < isoPx + 2)) return drop('touches artwork'); // i-dot, texture, fragment of a shape
       if (kind !== 'dot' && iso < isoPx * 1.5) return drop('close to artwork'); // lines / bigger marks stand well apart
-      // punctuation (dots) sits within a few letter-spaces of a word; dividers/rules (lines) further out
-      if (inTextRow(c, kind === 'dot' ? isoPx * 5 : isoPx * 8)) return drop('text row');
       if (kind === 'line' && endJoinsArtwork(c)) return drop('line joins artwork'); // frame / box / shape edge
       if (crowded(c)) return drop('crowded');                      // sparkle / speckle texture
       if (kind === 'mark' && Math.min(cw, ch) >= dotMax && symmetric(c)) return drop('symmetric shape'); // star, icon
@@ -375,13 +390,22 @@ const ArtworkMarkDetector = {
         + 0.20 * Math.min(1, (contrast - 30) / 90)
         + 0.12 * Math.min(1, (iso - isoPx) / (2 * isoPx))
         + (pure ? 0.08 : 0));
-      raw.push({
+      const mark = {
         kind, x: c.minX, y: c.minY, w: cw, h: ch, cx: c.sx / c.area, cy: c.sy / c.area,
         area: c.area, lengthPx: Math.round(len), thicknessPx: Math.max(1, Math.round(thick)),
         orientation: cw >= ch ? 'Horizontal' : 'Vertical',
         color: [Math.round(mr), Math.round(mg), Math.round(mb)], contrast: Math.round(contrast),
         isolationPx: Math.round(iso === Infinity ? isoPx * 3 : iso), onSolidColour: pure, confidence: +conf.toFixed(2)
-      });
+      };
+      // Something on the same row (left / right): punctuation beside a word or a divider beside text?
+      // That needs real words beside it, which only the text reader knows — so the mark waits for OCR.
+      const rowReach = kind === 'dot' ? isoPx * 5 : isoPx * 8;
+      if (inTextRow(c, rowReach)) {
+        mark.textRowReach = rowReach;
+        textRow.push(mark);
+        return drop('text row (decided after text reading)');
+      }
+      raw.push(mark);
     });
 
     // Pattern filter: look-alike marks repeated across the design are a design element
@@ -398,7 +422,9 @@ const ArtworkMarkDetector = {
         const colOk = Math.hypot(o.color[0] - m.color[0], o.color[1] - m.color[1], o.color[2] - m.color[2]) <= 40;
         if (sizeOk && colOk) group.push(j);
       });
-      if (group.length >= (m.kind === 'dot' ? 4 : 3)) {
+      // Dust specks look alike too, so a dot pattern (confetti, stars) needs 6+ dots of real size
+      const avgArea = group.reduce((a, k) => a + raw[k].area, 0) / group.length;
+      if (m.kind === 'dot' ? (group.length >= 6 && avgArea >= 9) : group.length >= 3) {
         group.forEach(k => used.add(k));
         patterns.push({ kind: m.kind, count: group.length, color: m.color });
       }
@@ -421,7 +447,7 @@ const ArtworkMarkDetector = {
       checkedPct: Math.round((opaqueBlocks ? checkedBlocks / opaqueBlocks : 0) * 100),
       transparentPct: Math.round((1 - opaqueBlocks / Math.max(1, NB)) * 100),
       isolationPx: isoPx,
-      marks, edgeLines, patterns
+      marks, edgeLines, patterns, textRowMarks: textRow
     };
   },
 
@@ -593,6 +619,7 @@ const AgenticAiInspector = {
       ? { status: 'done', text: '' }
       : { status: 'unavailable', text: (typeof ArtworkTextCheck !== 'undefined' && ArtworkTextCheck.statusText) || 'The text reader is unavailable — proofread the text manually.' };
     this.defects = this.defects.filter(d => d.type !== 'spelling');
+    if (this.textResult) this._restoreTextRowMarks(res.words);
     if (this.textResult) {
       const pct = v => +(v * 100).toFixed(2);
       const LABEL = { brand: 'Brand name', web: 'Web / e-mail address', word: 'Spelling' };
@@ -1015,44 +1042,8 @@ const AgenticAiInspector = {
     const W = res.width, H = res.height;
     const pct = v => +(v * 100).toFixed(2);
 
-    res.marks.forEach((m, i) => {
-      const likely = m.confidence >= 0.8;
-      const where = m.onSolidColour ? 'on a solid-colour area' : 'on a smooth / gradient area';
-      const sizeTxt = m.kind === 'line' ? `${m.lengthPx} px long, ${m.thicknessPx} px thick` : `${m.w} × ${m.h} px`;
-      const name = m.kind === 'line' ? 'stray line' : m.kind === 'mark' ? 'stray mark / smudge' : 'stray dot';
-      const isLine = m.kind === 'line';
-      this.defects.push({
-        id: `${isLine ? 'line' : 'dot'}_${i + 1}`,
-        type: isLine ? 'stray_line' : 'stray_dot',
-        kind: m.kind,
-        category: 'Stray Elements',
-        shape: m.kind === 'dot' ? 'circle' : 'box',
-        // A mark on solid colour is almost always unwanted; on a gradient it may be part of the image
-        severity: m.onSolidColour ? 'Minor' : 'Review',
-        title: `${likely ? 'Likely' : 'Possible'} ${name}`,
-        confidence: m.confidence,
-        cxPercent: pct(m.cx / W),
-        cyPercent: pct(m.cy / H),
-        xPercent: pct(m.x / W),
-        yPercent: pct(m.y / H),
-        wPercent: Math.max(pct(m.w / W), 1.2),
-        hPercent: Math.max(pct(m.h / H), 1.2),
-        metrics: {
-          sizePx: [m.w, m.h],
-          lengthPx: m.lengthPx,
-          thicknessPx: m.thicknessPx,
-          orientation: m.orientation,
-          contrast: m.contrast,
-          isolationDistPx: m.isolationPx,
-          color: m.color
-        },
-        details: {
-          description: `${sizeTxt} at (${m.x}, ${m.y}) px, ${where}. Nothing else within ${m.isolationPx} px; colour rgb(${m.color.join(', ')}) stands out from its surround (contrast ${m.contrast}). Zoom in to confirm, then remove it or mark it intentional.`
-        },
-        intentional: false,
-        dismissed: false
-      });
-    });
+    this._textRowMarks = res.textRowMarks || [];
+    res.marks.forEach((m, i) => this.defects.push(this._markDefect(m, `${i + 1}`, W, H)));
 
     if (res.edgeLines.length) {
       const sides = res.edgeLines.map(e => e.side);
@@ -1073,6 +1064,66 @@ const AgenticAiInspector = {
         dismissed: false
       });
     }
+  },
+
+  /** One stray-mark finding (dot, line or smudge) in the defect format used by the panel and overlay */
+  _markDefect(m, idSuffix, W, H, note) {
+    const pct = v => +(v * 100).toFixed(2);
+    const likely = m.confidence >= 0.8;
+    const where = m.onSolidColour ? 'on a solid-colour area' : 'on a smooth / gradient area';
+    const sizeTxt = m.kind === 'line' ? `${m.lengthPx} px long, ${m.thicknessPx} px thick` : `${m.w} × ${m.h} px`;
+    const name = m.kind === 'line' ? 'stray line' : m.kind === 'mark' ? 'stray mark / smudge' : 'stray dot';
+    const isLine = m.kind === 'line';
+    return {
+      id: `${isLine ? 'line' : 'dot'}_${idSuffix}`,
+      type: isLine ? 'stray_line' : 'stray_dot',
+      kind: m.kind,
+      category: 'Stray Elements',
+      shape: m.kind === 'dot' ? 'circle' : 'box',
+      // A mark on solid colour is almost always unwanted; on a gradient it may be part of the image
+      severity: m.onSolidColour ? 'Minor' : 'Review',
+      title: `${likely ? 'Likely' : 'Possible'} ${name}`,
+      confidence: m.confidence,
+      cxPercent: pct(m.cx / W),
+      cyPercent: pct(m.cy / H),
+      xPercent: pct(m.x / W),
+      yPercent: pct(m.y / H),
+      wPercent: Math.max(pct(m.w / W), 1.2),
+      hPercent: Math.max(pct(m.h / H), 1.2),
+      metrics: {
+        sizePx: [m.w, m.h], lengthPx: m.lengthPx, thicknessPx: m.thicknessPx, orientation: m.orientation,
+        contrast: m.contrast, isolationDistPx: m.isolationPx, color: m.color
+      },
+      details: {
+        description: `${sizeTxt} at (${m.x}, ${m.y}) px, ${where}. Nothing else within ${m.isolationPx} px; colour rgb(${m.color.join(', ')}) stands out from its surround (contrast ${m.contrast}).${note ? ' ' + note : ''} Zoom in to confirm, then remove it or mark it intentional.`
+      },
+      intentional: false,
+      dismissed: false
+    };
+  },
+
+  /**
+   * Marks held back because something sits on the same row: they are punctuation / dividers only
+   * when real words are beside them. Once OCR has read the text, the others are reported.
+   */
+  _restoreTextRowMarks(words) {
+    const r = this.scanResult;
+    this.defects = this.defects.filter(d => !/_r\d+$/.test(d.id));
+    if (!r || !this._textRowMarks || !this._textRowMarks.length) return;
+    const W = r.width, H = r.height;
+    const boxes = words
+      .filter(w => w.conf >= 60 && /[A-Za-z0-9]{2,}/.test(w.text))
+      .map(w => ({ x0: w.box.x * W, y0: w.box.y * H, x1: (w.box.x + w.box.w) * W, y1: (w.box.y + w.box.h) * H }));
+    this._textRowMarks.forEach((m, i) => {
+      if (m.kind === 'mark' || m.confidence < 0.75) return;
+      const y0 = m.y - 2, y1 = m.y + m.h + 2;
+      const besideText = boxes.some(b => {
+        if (Math.min(b.y1, y1) - Math.max(b.y0, y0) <= 0) return false;           // not on this row
+        const gap = Math.max(b.x0 - (m.x + m.w), m.x - b.x1, 0);
+        return gap <= m.textRowReach;
+      });
+      if (!besideText) this.defects.push(this._markDefect(m, `r${i + 1}`, W, H, 'No words beside it, so it is not punctuation or a divider.'));
+    });
   },
 
   /**
