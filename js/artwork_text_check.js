@@ -660,7 +660,7 @@ const ArtworkTextCheck = {
       }
 
       // 3. Ordinary words
-      const word = joinedWith.get(i) || clean(raw);
+      let word = joinedWith.get(i) || clean(raw);
       if (word.length < 3 || /\d/.test(word) || !/^[A-Za-z][A-Za-z'’-]*$/.test(word)) return;
       if (word.length <= 3 && word === word.toUpperCase()) return;   // acronyms (HBC, LLC)
       if (this._known(word, extra)) return;
@@ -669,7 +669,19 @@ const ArtworkTextCheck = {
       if (/s$/i.test(word) && this._known(word.slice(0, -1), extra)) return;
       if (!/[aeiouy]/i.test(word)) return;                       // no vowel → abbreviation or a cut-off piece ("rts")
       if (!joinedWith.has(i) && this._isFragment(w, word, words, allReadings, extra, frame)) return;
-      const sugg = this._suggest(word)[0];
+      let sugg = this._suggest(word)[0];
+      let text = raw;
+      if (!sugg && !joinedWith.has(i)) {
+        // Another reading of the same spot may have read the letters better (Impact "BRITHDRY" in one
+        // reading, "BRITHDAY" in another): use the reading that is a recognisable misspelling
+        (allReadings || []).forEach(list => list.forEach(t => {
+          if (t.conf < 60 || this._iou(t.box, w.box) < 0.5) return;
+          const alt = clean(t.text);
+          if (alt === word || alt.length !== word.length || !/^[A-Za-z][A-Za-z'’-]*$/.test(alt) || this._known(alt, extra)) return;
+          const s = this._suggest(alt)[0];
+          if (s && (!sugg || s.rank < sugg.rank)) { sugg = s; word = alt; text = t.text; }
+        }));
+      }
       if (!sugg) return;                                        // nothing one letter away → a name or brand
       const top = sugg.word;
       const dist = this._lev(word, top);
@@ -689,7 +701,7 @@ const ArtworkTextCheck = {
       // A shorter capitalised word that is not a slip is most likely a name (CAIDEN, KADE, MOWEN): list it
       // only when it differs from an ordinary word by a sound-alike letter inside the word (SERVISE → SERVICE)
       if (!(lower || slip) && (word.length < 5 || !soundAlike)) return;
-      issues.push({ kind: (lower || slip) ? 'word' : 'verify', text: raw, word, suggestion: top, box: joinedBox.get(i) || w.box, conf: w.conf });
+      issues.push({ kind: (lower || slip) ? 'word' : 'verify', text, word, suggestion: top, box: joinedBox.get(i) || w.box, conf: w.conf });
     });
     return issues;
   },

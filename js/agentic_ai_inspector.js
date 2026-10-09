@@ -663,6 +663,56 @@ const AgenticAiInspector = {
     this.renderOverlay();
     this.updateControlsUI();
     this.syncPrecheckReport();
+    // Tell the designer straight away: pop-up alert with each mistake and its correct spelling,
+    // and open the Spelling card of the report
+    if (this.getDefects().some(d => d.type === 'spelling')) {
+      this._renderSpellingAlert(true);
+      const card = document.getElementById('cc-spelling');
+      if (card) card.classList.add('open');
+    }
+  },
+
+  /**
+   * Pop-up alert listing every spelling, brand-name and web-address mistake with its correct spelling.
+   * create = false only refreshes an alert that is already showing (after Close / Mark intentional).
+   */
+  _renderSpellingAlert(create) {
+    let box = document.getElementById('spell-alert');
+    if (!box && !create) return;
+    const open = this.getDefects().filter(d => d.type === 'spelling' && !d.intentional);
+    if (!open.length) { if (box) box.remove(); return; }
+    const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const KIND = { brand: 'Brand name', web: 'Web / e-mail address', word: 'Spelling' };
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'spell-alert';
+      box.className = 'spell-alert';
+      box.setAttribute('role', 'alert');
+      document.body.appendChild(box);
+    }
+    box.innerHTML = `
+      <div class="spell-alert-head">⚠️ <span>${open.length} spelling mistake${open.length > 1 ? 's' : ''} found on the artwork</span>
+        <button class="spell-alert-close" title="Close" onclick="AgenticAiInspector.closeSpellingAlert()">×</button></div>
+      <div class="spell-alert-note">Correct spelling shown in green. Confirm with the customer before creating the design file.</div>
+      ${open.map(d => `
+        <div class="spell-alert-row">
+          <div class="spell-alert-words"><span class="spell-alert-kind">${KIND[d.kind] || 'Spelling'}</span>
+            <span class="spell-alert-wrong">${esc(d.details.word)}</span> → <span class="spell-alert-right">${esc(d.details.suggestion)}</span></div>
+          <button class="spell-alert-show" onclick="AgenticAiInspector.showSpellingMistake('${d.id}')">Show</button>
+        </div>`).join('')}`;
+  },
+
+  closeSpellingAlert() {
+    const box = document.getElementById('spell-alert');
+    if (box) box.remove();
+  },
+
+  /** Bring the artwork into view with this word's marker highlighted */
+  showSpellingMistake(defectId) {
+    this.locateDefect(defectId);
+    const marker = document.getElementById(`marker-${defectId}`);
+    const target = marker || document.querySelector('.canvas-viewport-wrap');
+    if (target) setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
   },
 
   /** Spelling card of the pre-check report: what was read, what looks wrong, what a person must still check */
@@ -691,7 +741,10 @@ const AgenticAiInspector = {
       : '';
     const base = `Read ${nWords} word${nWords !== 1 ? 's' : ''} on the artwork (OCR) and checked them against US + UK English dictionaries, brand names and web-address endings.${verifyNote} Phone numbers and dates cannot be verified automatically.`;
     if (open.length) {
-      const list = open.slice(0, 3).map(d => `"${d.details.word}" → "${d.details.suggestion}"`).join(', ') + (open.length > 3 ? ` +${open.length - 3} more` : '');
+      const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      // Each mistake with its correct spelling (wrong in red, correct in green)
+      const list = open.slice(0, 8).map(d => `<span style="color:#b91c1c; font-weight:700; text-decoration:line-through;">${esc(d.details.word)}</span> → <span style="color:#15803d; font-weight:800;">${esc(d.details.suggestion)}</span>`).join(', ')
+        + (open.length > 8 ? ` +${open.length - 8} more` : '');
       // A word that is not in the dictionary but one or two letters from a real word is a spelling
       // mistake the customer must fix or confirm — the check fails until it is resolved
       return { status: 'FAIL',
@@ -753,6 +806,7 @@ const AgenticAiInspector = {
     this.extractedText = [];
     this.scanResult = null;
     this.scanSkipReason = skip;
+    this.closeSpellingAlert();                       // a new artwork: the previous file's alert no longer applies
 
     const w = loaded ? img.naturalWidth : (analysis && analysis.pixelWidth) || 0;
     const h = loaded ? img.naturalHeight : (analysis && analysis.pixelHeight) || 0;
@@ -892,6 +946,7 @@ const AgenticAiInspector = {
       }
     });
     this._refreshSummaryCard(report);
+    this._renderSpellingAlert(false);   // keep an open alert in step with closed / intentional findings
   },
 
   /** Recount pass / warning / fail after the scan (same scoring as PrecheckEngine.evaluate). */
@@ -1155,6 +1210,53 @@ const AgenticAiInspector = {
   },
 
   /**
+   * Markers are placed in artwork coordinates, so the overlay covers exactly the rectangle where the
+   * artwork is drawn (inside hem / bleed / letterbox). In template or mockup view, or when rotated,
+   * the artwork is not drawn 1:1, so markers are hidden rather than shown in the wrong place.
+   * artRect undefined = an older canvas_inspector.js (no artwork rectangle): fall back to the whole canvas
+   */
+  _placeOverlay(overlay, canvas) {
+    const ci = (typeof CanvasInspector !== 'undefined') ? CanvasInspector : null;
+    const art = ci && ci.artRect === undefined ? { x: 0, y: 0, w: canvas.width, h: canvas.height } : (ci ? ci.artRect : null);
+    const sx = canvas.width ? canvas.offsetWidth / canvas.width : 1;
+    const sy = canvas.height ? canvas.offsetHeight / canvas.height : 1;
+    overlay.style.position = 'absolute';
+    overlay.style.left = (canvas.offsetLeft + (art ? art.x * sx : 0)) + 'px';
+    overlay.style.top = (canvas.offsetTop + (art ? art.y * sy : 0)) + 'px';
+    overlay.style.width = (art ? art.w * sx : canvas.offsetWidth) + 'px';
+    overlay.style.height = (art ? art.h * sy : canvas.offsetHeight) + 'px';
+    overlay.style.pointerEvents = 'none';
+    overlay.style.overflow = 'visible';
+    overlay.style.zIndex = '15';
+    overlay.style.display = (this.options.enabled && art) ? 'block' : 'none';
+  },
+
+  /**
+   * The canvas is shown at whatever size the page layout gives it, and that size changes after the
+   * markers are drawn (results panel opening, window resize, scrollbar, browser zoom). Re-place the
+   * overlay whenever the canvas or its frame changes size, so markers stay on the words / marks.
+   */
+  _followCanvasSize(wrap, canvas) {
+    const w = this._sizeWatch;
+    if (w && w.wrap === wrap && w.canvas === canvas) return;
+    if (w && w.ro) w.ro.disconnect();
+    let queued = false;
+    const replace = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        const overlay = document.getElementById('ai-defect-overlay');
+        if (overlay && canvas.isConnected) this._placeOverlay(overlay, canvas);
+      });
+    };
+    let ro = null;
+    if (typeof ResizeObserver !== 'undefined') { ro = new ResizeObserver(replace); ro.observe(canvas); ro.observe(wrap); }
+    if (!this._resizeHooked) { window.addEventListener('resize', () => this._sizeWatch && this._sizeWatch.replace()); this._resizeHooked = true; }
+    this._sizeWatch = { wrap, canvas, ro, replace };
+  },
+
+  /**
    * Render interactive animated blinking highlights directly over the artwork canvas
    */
   renderOverlay(containerEl, canvasEl) {
@@ -1170,23 +1272,8 @@ const AgenticAiInspector = {
       wrap.appendChild(overlay);
     }
 
-    // Markers are placed in artwork coordinates, so the overlay covers exactly the rectangle where the
-    // artwork is drawn (inside hem / bleed / letterbox). In template or mockup view, or when rotated,
-    // the artwork is not drawn 1:1, so markers are hidden rather than shown in the wrong place.
-    // artRect undefined = an older canvas_inspector.js (no artwork rectangle): fall back to the whole canvas
-    const ci = (typeof CanvasInspector !== 'undefined') ? CanvasInspector : null;
-    const art = ci && ci.artRect === undefined ? { x: 0, y: 0, w: canvas.width, h: canvas.height } : (ci ? ci.artRect : null);
-    const sx = canvas.width ? canvas.offsetWidth / canvas.width : 1;
-    const sy = canvas.height ? canvas.offsetHeight / canvas.height : 1;
-    overlay.style.position = 'absolute';
-    overlay.style.left = (canvas.offsetLeft + (art ? art.x * sx : 0)) + 'px';
-    overlay.style.top = (canvas.offsetTop + (art ? art.y * sy : 0)) + 'px';
-    overlay.style.width = (art ? art.w * sx : canvas.offsetWidth) + 'px';
-    overlay.style.height = (art ? art.h * sy : canvas.offsetHeight) + 'px';
-    overlay.style.pointerEvents = 'none';
-    overlay.style.overflow = 'visible';
-    overlay.style.zIndex = '15';
-    overlay.style.display = (this.options.enabled && art) ? 'block' : 'none';
+    this._placeOverlay(overlay, canvas);
+    this._followCanvasSize(wrap, canvas);
 
     const visibleDefects = this.defects.filter(d => {
       if (d.dismissed || d.shape === 'none') return false;   // no real position → listed only, never drawn
@@ -1257,21 +1344,28 @@ const AgenticAiInspector = {
       } else {
         const isTypo = (defect.type === 'spelling');
         const isFatal = (defect.severity === 'Fatal');
-        const blinkClass = isBlinking && !isIntentional ? (isTypo ? 'ai-blink-typo-box' : 'ai-blink-line-box') : '';
+        // Spelling boxes glow without fading, so the correction label on them stays readable
+        const blinkClass = isBlinking && !isIntentional ? (isTypo ? 'ai-blink-typo-glow' : 'ai-blink-line-box') : '';
         const activeClass = isActive ? 'ai-pulse-active' : '';
-        const boxBorderColor = isIntentional ? '#22c55e' : isFatal ? '#ef4444' : isTypo ? '#f59e0b' : '#ea580c';
-        const tagBg = isIntentional ? '#15803d' : isFatal ? '#991b1b' : isTypo ? '#b45309' : defect.severity === 'Review' ? '#475569' : '#c2410c';
-        const tagText = isIntentional ? '🟢 Marked intentional' : `${defect.title}${confTxt}`;
+        const boxBorderColor = isIntentional ? '#22c55e' : isFatal ? '#ef4444' : isTypo ? '#dc2626' : '#ea580c';
+        const tagBg = isIntentional ? '#15803d' : isFatal ? '#991b1b' : isTypo ? '#991b1b' : defect.severity === 'Review' ? '#475569' : '#c2410c';
+        const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        // A spelling marker always shows the wrong word and the correct spelling
+        const tagHtml = isIntentional ? '🟢 Marked intentional'
+          : isTypo ? `<span class="ai-tag-wrong">✗ ${esc(defect.details.word)}</span> → <span class="ai-tag-right">✓ ${esc(defect.details.suggestion)}</span>`
+          : `${defect.title}${confTxt}`;
+        // Label below the box when the word is at the very top of the artwork
+        const tagPos = isTypo && defect.yPercent < 10 ? 'bottom:auto; top:calc(100% + 6px);' : '';
         // Pad the box so a 1 px line is still easy to see
         const padX = 0.6, padY = 0.8;
 
         html += `
           <div class="ai-highlight-item ${blinkClass} ${activeClass}"
                id="marker-${defect.id}"
-               style="left:${Math.max(0, defect.xPercent - padX)}%; top:${Math.max(0, defect.yPercent - padY)}%; width:${defect.wPercent + 2 * padX}%; height:${defect.hPercent + 2 * padY}%; border:2.5px solid ${boxBorderColor}; background:rgba(0,0,0,0.05); border-radius:4px;"
+               style="left:${Math.max(0, defect.xPercent - padX)}%; top:${Math.max(0, defect.yPercent - padY)}%; width:${defect.wPercent + 2 * padX}%; height:${defect.hPercent + 2 * padY}%; border:${isTypo ? 3 : 2.5}px solid ${boxBorderColor}; background:${isTypo ? 'rgba(220,38,38,0.10)' : 'rgba(0,0,0,0.05)'}; border-radius:4px;"
                onclick="AgenticAiInspector.handleMarkerClick('${defect.id}', event)"
                title="${tip}">
-            ${showTag ? `<div class="ai-marker-tag" style="background:${tagBg}; color:#ffffff;">${tagText}</div>` : ''}
+            ${showTag || isTypo ? `<div class="ai-marker-tag${isTypo ? ' ai-tag-spelling' : ''}" style="background:${tagBg}; color:#ffffff; ${tagPos}">${tagHtml}</div>` : ''}
           </div>
         `;
       }
