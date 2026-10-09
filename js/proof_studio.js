@@ -139,6 +139,71 @@ const ProofStudio = {
     };
   },
 
+  /**
+   * Pixel size of the artwork image (cached per image). The crop shot must keep the artwork's own
+   * proportions — sizing it to the order's width × height stretches it whenever the two differ.
+   * Returns null while an image is still loading; onReady is called once its size is known.
+   */
+  _artworkSize(src, onReady) {
+    if (!src) return null;
+    const key = src.length + ':' + src.slice(0, 80) + src.slice(-80);
+    this._sizeCache = this._sizeCache || {};
+    if (this._sizeCache[key]) return this._sizeCache[key];
+    const ci = (typeof CanvasInspector !== 'undefined') ? CanvasInspector.currentImg : null;
+    if (ci && ci.src === src && ci.naturalWidth > 0) {
+      return (this._sizeCache[key] = { w: ci.naturalWidth, h: ci.naturalHeight });
+    }
+    if (this._sizeLoading !== key) {
+      this._sizeLoading = key;
+      const im = new Image();
+      im.onload = () => {
+        this._sizeLoading = null;
+        if (im.naturalWidth > 0 && im.naturalHeight > 0) {
+          this._sizeCache[key] = { w: im.naturalWidth, h: im.naturalHeight };
+          if (onReady) onReady();
+        }
+      };
+      im.onerror = () => { this._sizeLoading = null; };
+      im.src = src;
+    }
+    return null;
+  },
+
+  /**
+   * The artwork turned the way the designer turned it on the canvas (preview for the customer), cached.
+   * Only for the customer's own artwork shown on the canvas — never for a designer-uploaded custom slot.
+   */
+  _turnedArtwork(src) {
+    const ci = (typeof CanvasInspector !== 'undefined') ? CanvasInspector : null;
+    const angle = ci ? ci.currentRotation : 0;
+    const img = ci ? ci.currentImg : null;
+    if (!angle || !src || this.slots.overall?.isCustom || !img || img.src !== src || !img.naturalWidth) return { src, angle: 0 };
+    const key = src.length + ':' + src.slice(-64) + ':' + angle;
+    if (this._turnCache && this._turnCache.key === key) return { src: this._turnCache.url, angle };
+    const k = Math.min(1, 6000 / Math.max(img.naturalWidth, img.naturalHeight));   // keep it quick for huge files
+    const w = Math.round(img.naturalWidth * k), h = Math.round(img.naturalHeight * k);
+    const side = angle % 180 !== 0;
+    const cv = document.createElement('canvas');
+    cv.width = side ? h : w;
+    cv.height = side ? w : h;
+    const ctx = cv.getContext('2d');
+    ctx.translate(cv.width / 2, cv.height / 2);
+    ctx.rotate(angle * Math.PI / 180);
+    ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    let url;
+    try { url = cv.toDataURL(/^data:image\/(png|svg)/i.test(src) ? 'image/png' : 'image/jpeg', 0.92); } catch (e) { return { src, angle: 0 }; }
+    this._turnCache = { key, url };
+    return { src: url, angle };
+  },
+
+  /** Crop-shot image size: the artwork fitted inside its print size (same rule as the canvas — never stretched) */
+  _cropImageSize(cropScaleInfo, artSize) {
+    const boxW = cropScaleInfo.physicalW, boxH = cropScaleInfo.physicalH;
+    if (!artSize || !artSize.w || !artSize.h) return { w: boxW, h: boxH };
+    const k = Math.min(boxW / artSize.w, boxH / artSize.h);
+    return { w: Math.round(artSize.w * k), h: Math.round(artSize.h * k) };
+  },
+
   handleArtworkClick(e) {
     if (!this.options.enableCropShot || this.slots.crop?.dataUrl) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -658,19 +723,29 @@ const ProofStudio = {
 
     const finalOrderNum = orderNum || analysis?.orderNum || 'ORD-2395441';
     const finalProdName = (spec && spec.name) || analysis?.productName || 'Custom Vinyl Banners';
-    const printW = dims?.widthIn || spec.defaultW || 36;
-    const printH = dims?.heightIn || spec.defaultH || 24;
-    
+    let printW = dims?.widthIn || spec.defaultW || 36;
+    let printH = dims?.heightIn || spec.defaultH || 24;
+    // Orientation preview from the canvas (SOP 1_Banners slide 26 mockup): the order shown turned
+    const ci = (typeof CanvasInspector !== 'undefined') ? CanvasInspector : null;
+    const orderTurned = !!(ci && ci.previewOrderTurned);
+    if (orderTurned) [printW, printH] = [printH, printW];
+
     // Format human-friendly dimensions (e.g. 5 ft x 3 ft or 36" x 24")
     let dimsDisplay = `${printW}" W × ${printH}" H`;
-    if (analysis?.rawDim) {
+    if (analysis?.rawDim && !orderTurned) {
       dimsDisplay = `${analysis.rawDim.replace(/_/g, ' ')} (${printW}" × ${printH}")`;
     }
 
     const today = new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
-    
+
     // Choose artwork source: user uploaded > analysis preview > default BB Proof illustration
-    const artworkSrc = this.slots.overall?.dataUrl || analysis?.previewDataUrl || this.getDefaultArtworkSvg();
+    const baseArtworkSrc = this.slots.overall?.dataUrl || analysis?.previewDataUrl || this.getDefaultArtworkSvg();
+    // Artwork turned on the canvas (Rotate 90° / orientation alert): the customer proof shows it the same way
+    const turned = this._turnedArtwork(baseArtworkSrc);
+    const artworkSrc = turned.src;
+    const orientNote = turned.angle
+      ? `Shown turned ${turned.angle}° to fit the ordered ${printW}" × ${printH}" size — please confirm this orientation.`
+      : orderTurned ? `Shown at ${printW}" W × ${printH}" H to match your artwork's orientation — please confirm the size and orientation.` : '';
     
     // Resolve official BannerBuzz template & mockup from QNAP registry
     const officialTemplate = (typeof getOfficialProductTemplate === 'function')
@@ -741,6 +816,12 @@ const ProofStudio = {
 
     // Calculate SOP Crop Scale: >72" -> 100%, <=72" -> 114.4%
     const cropScaleInfo = this.calculateCropScale(printW, printH, spec);
+    // The artwork keeps its own proportions inside that print size; until its pixel size is known the
+    // proof is drawn once more as soon as the image has loaded
+    const artSize = this._artworkSize(artworkSrc, () => {
+      if (document.getElementById(targetElementId)) this.renderProof(orderData, targetElementId);
+    });
+    const cropImg = this._cropImageSize(cropScaleInfo, artSize);
 
     // Auto-center default focus if not explicitly set
     let cropX = (this.options.cropX !== null && this.options.cropX !== undefined) ? this.options.cropX : 50;
@@ -751,8 +832,8 @@ const ProofStudio = {
     }
 
     // Reticle dimensions for Section 1 (indicates visible viewport on the artwork)
-    const reticleW = Math.max(8, Math.min(100, Math.round((750 / cropScaleInfo.physicalW) * 100)));
-    const reticleH = Math.max(8, Math.min(100, Math.round((240 / cropScaleInfo.physicalH) * 100)));
+    const reticleW = Math.max(8, Math.min(100, Math.round((750 / cropImg.w) * 100)));
+    const reticleH = Math.max(8, Math.min(100, Math.round((240 / cropImg.h) * 100)));
 
     let visualSectionsHtml = '';
     let specSectionNum = 3;
@@ -769,6 +850,7 @@ const ProofStudio = {
               <div>
                 <h2 style="font-size:13.5px; font-weight:800; color:#111c38; margin:0;">Entire Artwork Proof</h2>
                 <div style="font-size:10.5px; color:#64748b;">This is the complete artwork that will be printed on your product.</div>
+                ${orientNote ? `<div style="font-size:10.5px; color:#b45309; font-weight:700; margin-top:2px;">↻ ${orientNote}</div>` : ''}
               </div>
             </div>
             ${!hasCustomCrop ? `
@@ -827,12 +909,12 @@ const ProofStudio = {
               <div style="position:relative; width:100%; height:100%; overflow:hidden; pointer-events:none;">
                 <img id="proof-crop-img" src="${artworkSrc}" alt="Print Quality Zoom" class="proof-zoom-img" style="
                   position: absolute;
-                  width: ${cropScaleInfo.physicalW}px;
-                  height: ${cropScaleInfo.physicalH}px;
+                  width: ${cropImg.w}px;
+                  height: ${cropImg.h}px;
                   max-width: none !important;
                   max-height: none !important;
-                  left: calc(50% - ${Math.round(cropScaleInfo.physicalW * (cropX / 100))}px);
-                  top: calc(50% - ${Math.round(cropScaleInfo.physicalH * (cropY / 100))}px);
+                  left: calc(50% - ${Math.round(cropImg.w * (cropX / 100))}px);
+                  top: calc(50% - ${Math.round(cropImg.h * (cropY / 100))}px);
                   transition: left 0.12s ease, top 0.12s ease;
                   display: block;
                 " />
@@ -871,6 +953,7 @@ const ProofStudio = {
             <div>
               <h2 style="font-size:13.5px; font-weight:800; color:#111c38; margin:0;">Entire Artwork Proof</h2>
               <div style="font-size:10.5px; color:#64748b;">This is the complete artwork that will be printed on your product.</div>
+              ${orientNote ? `<div style="font-size:10.5px; color:#b45309; font-weight:700; margin-top:2px;">↻ ${orientNote}</div>` : ''}
             </div>
           </div>
           <div style="border:1px solid #e2e8f0; border-radius:4px; padding:8px; background:#ffffff; text-align:center; height:180px; display:flex; align-items:center; justify-content:center;">
@@ -1099,7 +1182,7 @@ const ProofStudio = {
     setTimeout(() => {
       this.updateSidebarControls();
       if (!isMockupView && !hasCustomCrop) {
-        this.initCropPan(document.getElementById('proof-crop-viewport'), cropScaleInfo.physicalW, cropScaleInfo.physicalH);
+        this.initCropPan(document.getElementById('proof-crop-viewport'), cropImg.w, cropImg.h);
       }
     }, 10);
   },

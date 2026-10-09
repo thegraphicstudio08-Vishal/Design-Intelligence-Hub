@@ -962,7 +962,7 @@ body {
   pointer-events: none;
 }
 .zoom-loupe::before {
-  content: '🔍 100% SOP Zoom';
+  content: attr(data-label);   /* set by the loupe: 100% SOP Zoom / 2× Zoom (low-res artwork) / 3× Zoom */
   position: absolute;
   top: -14px;
   left: 50%;
@@ -975,6 +975,9 @@ body {
   border-radius: 10px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   white-space: nowrap;
+}
+.zoom-loupe:not([data-label])::before {
+  content: '🔍 100% SOP Zoom';
 }
 
 /* ── PREVIOUS ORDERS LIST ── */
@@ -1562,23 +1565,83 @@ body {
   font-weight: 800;
 }
 
-/* Spelling alert: pops up when the text check finds mistakes */
-.spell-alert {
+/* Pre-check pop-up alerts (orientation, spelling), stacked top-right */
+.precheck-alerts {
   position: fixed;
   top: 104px;
   right: 18px;
-  width: 360px;
+  width: 370px;
   max-width: calc(100vw - 32px);
-  max-height: 70vh;
-  overflow: auto;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 9000;
+  pointer-events: none;
+}
+
+.precheck-alerts > * { pointer-events: auto; }
+
+/* Spelling alert: pops up when the text check finds mistakes */
+.spell-alert {
+  position: relative;
+  flex-shrink: 0;
   background: #ffffff;
   border: 2px solid #dc2626;
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.28);
-  z-index: 9000;
   font-family: 'Inter', sans-serif;
   animation: spellAlertIn 0.25s ease-out;
 }
+
+/* Orientation alert (same card, amber for a warning, red for a fail) */
+.orient-alert.is-warn { border-color: #d97706; }
+.orient-alert.is-warn .spell-alert-head { background: #d97706; }
+
+.orient-alert-facts {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px 2px;
+  font-size: 12.5px;
+}
+
+.orient-alert-facts div { display: flex; justify-content: space-between; gap: 10px; }
+.orient-alert-facts span { color: #64748b; font-weight: 600; }
+.orient-alert-facts strong { color: #0f172a; text-align: right; }
+
+.orient-alert-preview {
+  margin: 6px 12px 0;
+  padding: 6px 8px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.orient-alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px 12px;
+}
+
+.orient-alert-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.orient-alert-btn.primary { background: #d97706; border-color: #d97706; color: #ffffff; }
+.orient-alert.is-fail .orient-alert-btn.primary { background: #dc2626; border-color: #dc2626; }
+.orient-alert-btn:hover { filter: brightness(0.95); }
 
 @keyframes spellAlertIn {
   from { transform: translateY(-10px); opacity: 0; }

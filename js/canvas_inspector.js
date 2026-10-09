@@ -130,6 +130,7 @@ const CanvasInspector = {
     this.currentSpec = spec;
     this.currentDims = dims;
     this.currentRotation = 0;
+    this.previewOrderTurned = false;
 
     // Resolve official BannerBuzz template & mockup from QNAP registry (using spec AND dimensions)
     const lookupSlug = (typeof appState !== 'undefined' && appState.parsedFilename && appState.parsedFilename.productSlug) || spec?.slug || spec?.name;
@@ -1142,11 +1143,48 @@ const CanvasInspector = {
   },
 
   /**
-   * Rotate artwork by 90 degrees
+   * Rotate the artwork by 90° on the ordered size (preview only — the order size never changes)
    */
   rotate90() {
     this.currentRotation = (this.currentRotation + 90) % 360;
+    this.previewOrderTurned = false;   // one preview at a time: artwork turned on the ordered size
     this.redraw();
+    if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderOrientationAlert) AgenticAiInspector._renderOrientationAlert();
+  },
+
+  /** Turn the artwork to a given angle (0 / 90 / 180 / 270) — used by the orientation alert */
+  setRotation(angle) {
+    this.currentRotation = ((angle % 360) + 360) % 360;
+    if (this.currentRotation) this.previewOrderTurned = false;
+    this.redraw();
+    if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderOrientationAlert) AgenticAiInspector._renderOrientationAlert();
+  },
+
+  /** Show the ordered size turned (preview for the customer mockup), or back to the ordered size */
+  setOrderTurned(on) {
+    this.previewOrderTurned = !!on;
+    if (on) this.currentRotation = 0;   // one preview at a time: the order turned, artwork as supplied
+    this.redraw();
+    if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderOrientationAlert) AgenticAiInspector._renderOrientationAlert();
+  },
+
+  /** A turned artwork / order is a preview: say so on the canvas, so nobody takes it for the customer's file */
+  _drawRotationNote() {
+    if (!this.canvas || !this.ctx || !this.currentImg || !(this.currentRotation || this.previewOrderTurned)) return;
+    if (this.inspectorMode && this.inspectorMode !== 'artwork') return;
+    const ctx = this.ctx, w = this.canvas.width, h = this.canvas.height;
+    const d = this.currentDims || {};
+    const txt = this.previewOrderTurned
+      ? `⤾ Order shown turned to ${+(+d.heightIn).toFixed(2)}" × ${+(+d.widthIn).toFixed(2)}" — mockup preview, order unchanged`
+      : `↻ Artwork turned ${this.currentRotation}° — preview only, confirm with the customer`;
+    ctx.save();
+    ctx.font = 'bold 10.5px Inter, sans-serif';
+    const tw = Math.min(w - 8, ctx.measureText(txt).width + 16);
+    ctx.fillStyle = 'rgba(180, 83, 9, 0.92)';
+    ctx.fillRect(4, h - 24, tw, 20);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(txt, 12, h - 10, tw - 16);
+    ctx.restore();
   },
 
   /**
@@ -1288,7 +1326,9 @@ const CanvasInspector = {
    */
   redraw() {
     this.artRect = null;
+    this._loupeCanvasUrl = null;   // the zoom loupe's picture of the canvas is out of date
     this._redrawCanvas();
+    this._drawRotationNote();
     // Stray line & dot scan + markers: always on the real artwork image, whichever layout drew it
     if (typeof AgenticAiInspector !== 'undefined' && this.canvas && this.currentImg) {
       AgenticAiInspector.onCanvasRedraw(this.canvas, this.currentImg, this.currentSpec, this.currentDims);
@@ -1304,6 +1344,9 @@ const CanvasInspector = {
     const dims = this.currentDims || {};
     let printW = parseFloat(dims.widthIn) || spec.defaultW || 36;
     let printH = parseFloat(dims.heightIn) || spec.defaultH || 24;
+    // Orientation preview: the order shown turned (e.g. 36" × 72" as 72" × 36") for the customer mockup —
+    // SOP 1_Banners slide 26; the order size itself is changed on admin only after approval
+    if (this.previewOrderTurned) [printW, printH] = [printH, printW];
 
     const isRotated = (this.currentRotation === 90 || this.currentRotation === 270);
     // Real template: the canvas is the template's own bleed size
@@ -1331,25 +1374,15 @@ const CanvasInspector = {
       }
     }
     // Banner: the canvas is the SOP production canvas (order + hem / pole pocket), as in the real print files
-    let bannerSop = this._bannerSop(spec, { widthIn: printW, heightIn: printH });
-    if (bannerSop && isRotated) {
-      bannerSop = {
-        ...bannerSop,
-        orderW: bannerSop.orderH,
-        orderH: bannerSop.orderW,
-        canvasW: bannerSop.canvasH,
-        canvasH: bannerSop.canvasW,
-        hemX: bannerSop.hemTop,
-        hemTop: bannerSop.hemX,
-        hemBottom: bannerSop.hemX
-      };
-    }
+    const bannerSop = this._bannerSop(spec, { widthIn: printW, heightIn: printH });
     if (bannerSop) {
       printW = bannerSop.canvasW;
       printH = bannerSop.canvasH;
     }
-    const viewW = bannerSop ? printW : (isRotated ? printH : printW);
-    const viewH = bannerSop ? printH : (isRotated ? printW : printH);
+    // Rotate 90° turns the ARTWORK on the ordered size (landscape artwork → vertical order): the canvas
+    // always keeps the order's own width × height, so the designer sees how it fits the product bought
+    const viewW = printW;
+    const viewH = printH;
 
     // Viewport scaling strictly preserving physical product aspect ratio (never squeeze or stretch!)
     const maxViewportW = 860;
@@ -3848,8 +3881,12 @@ const CanvasInspector = {
   _setupLoupeEvents() {
     const loupe = document.getElementById('zoom-loupe');
     if (!loupe || !this.canvas) return;
+    // Listen on the canvas frame, not the canvas: spelling / stray-mark markers lie on top of the canvas and
+    // would otherwise swallow the mouse exactly where the designer wants to zoom in
+    const area = this.canvas.parentElement || this.canvas;
+    if (area !== this.canvas) { this.canvas.onmousemove = null; this.canvas.onmouseleave = null; }
 
-    this.canvas.onmousemove = (e) => {
+    area.onmousemove = (e) => {
       if (!this.guides.loupe || !this.currentImg) {
         loupe.style.display = 'none';
         return;
@@ -3886,13 +3923,52 @@ const CanvasInspector = {
       loupe.style.left = `${loupeLeft}px`;
       loupe.style.top = `${loupeTop}px`;
 
-      const zoomRatio = 3;
-      loupe.style.backgroundImage = `url(${this.currentImg.src})`;
-      loupe.style.backgroundSize = `${rect.width * zoomRatio}px ${rect.height * zoomRatio}px`;
-      loupe.style.backgroundPosition = `-${mouseX * zoomRatio - 80}px -${mouseY * zoomRatio - 80}px`;
+      const HALF = 80;                                    // loupe is 160 px across
+      const kx = this.canvas.width / rect.width, ky = this.canvas.height / rect.height;   // canvas px per screen px
+      // What the canvas shows, magnified: the frame, hems and guides around the artwork (and the whole
+      // picture in template / mockup / rotated views, where the artwork is not drawn 1:1)
+      if (this._loupeCanvasUrl === null || this._loupeCanvasUrl === undefined) {
+        try { this._loupeCanvasUrl = this.canvas.toDataURL('image/png'); } catch (err) { this._loupeCanvasUrl = ''; }
+        this._loupeCanvasVer = (this._loupeCanvasVer || 0) + 1;
+      }
+      const hasCanvas = !!this._loupeCanvasUrl;
+      const canvasLayer = (z) => ({ size: `${rect.width * z}px ${rect.height * z}px`, pos: `${HALF - mouseX * z}px ${HALF - mouseY * z}px` });
+
+      const img = this.currentImg, art = this.artRect;
+      let mode, sizes, positions, label;
+      if (art && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        // Artwork view: the real artwork pixels, in their own proportions (never stretched to the canvas).
+        // 100% = one artwork pixel per screen pixel, as in Photoshop; low-resolution artwork is shown 2×.
+        const artX = art.x / kx, artY = art.y / ky, artW = art.w / kx, artH = art.h / ky;
+        const actual = img.naturalWidth / artW;
+        const z = Math.max(actual, 2);
+        mode = hasCanvas ? 'art+canvas' : 'art';
+        sizes = [`${artW * z}px ${artH * z}px`];
+        positions = [`${HALF - (mouseX - artX) * z}px ${HALF - (mouseY - artY) * z}px`];
+        if (hasCanvas) { const c = canvasLayer(z); sizes.push(c.size); positions.push(c.pos); }
+        label = z === actual ? '🔍 100% SOP Zoom' : '🔍 2× Zoom (low-res artwork)';
+      } else {
+        if (!hasCanvas) { loupe.style.display = 'none'; return; }
+        const c = canvasLayer(3);
+        mode = 'canvas';
+        sizes = [c.size];
+        positions = [c.pos];
+        label = '🔍 3× Zoom';
+      }
+      // The pictures only change with the artwork / a redraw — not on every mouse move (they can be MBs)
+      const key = `${mode}|${this._loupeCanvasVer}`;
+      if (this._loupeBgKey !== key || this._loupeBgImg !== img) {
+        const pics = mode === 'canvas' ? [this._loupeCanvasUrl] : mode === 'art' ? [img.src] : [img.src, this._loupeCanvasUrl];
+        loupe.style.backgroundImage = pics.map(u => `url("${u}")`).join(', ');
+        this._loupeBgKey = key;
+        this._loupeBgImg = img;
+      }
+      loupe.style.backgroundSize = sizes.join(', ');
+      loupe.style.backgroundPosition = positions.join(', ');
+      if (loupe.dataset.label !== label) loupe.dataset.label = label;
     };
 
-    this.canvas.onmouseleave = () => {
+    area.onmouseleave = () => {
       loupe.style.display = 'none';
     };
   },

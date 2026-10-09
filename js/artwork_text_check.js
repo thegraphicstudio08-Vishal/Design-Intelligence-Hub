@@ -45,6 +45,11 @@ const ArtworkTextCheck = {
   // Distinctive brand names matched fuzzily (a near miss is a brand misspelling)
   BRANDS: ['EzLicence', 'BannerBuzz', 'BestOfSigns', 'Caterpillar', 'Syntopic', 'Qpex'],
   // Words accepted although not in the dictionaries (print / signage / web vocabulary)
+  // Days, months and holidays are names in the dictionary, but on signage they are everyday words:
+  // "Mondy" must become "Monday", not the rare word "monody"
+  CALENDAR_WORDS: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'january', 'february',
+    'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december', 'christmas',
+    'easter', 'halloween', 'thanksgiving', 'hanukkah', 'diwali', 'valentine', 'valentines', 'ramadan', 'eid'],
   EXTRA_WORDS: ['coroplast', 'corflute', 'grommet', 'grommets', 'hemmed', 'diecut', 'signage', 'lamination', 'laminated',
     'retractable', 'backdrop', 'teardrop', 'pvc', 'cmyk', 'rgb', 'pantone', 'qr', 'llc', 'ltd', 'inc', 'pty', 'usa', 'aus',
     'facebook', 'instagram', 'tiktok', 'youtube', 'linkedin', 'whatsapp', 'gmail', 'hotmail', 'outlook', 'yahoo', 'www', 'http', 'https',
@@ -92,7 +97,7 @@ const ArtworkTextCheck = {
       const [dicts, worker] = await Promise.all([Promise.all(dictJobs), workerJob]);
       this._dicts = dicts;
       this._worker = worker;
-      this._extra = new Set(this.EXTRA_WORDS);
+      this._extra = new Set(this.EXTRA_WORDS.concat(this.CALENDAR_WORDS));
     })();
     this._loading.catch(() => { this._loading = null; });
     return this._loading;
@@ -197,6 +202,9 @@ const ArtworkTextCheck = {
     const lw = word.toLowerCase();
     const letters = 'abcdefghijklmnopqrstuvwxyz';
     const SIMILAR = { s: 'cz', c: 'sk', k: 'c', z: 's', a: 'eiou', e: 'aiou', i: 'aeoy', o: 'aeiu', u: 'aeio', y: 'i', m: 'n', n: 'm', v: 'w', w: 'v', f: 'v', g: 'j', j: 'g' };
+    // Letters the reader mixes up on printed artwork (C/G, E/C, I/L, N/H, U/V): "CLEARENGE" → CLEARANCE
+    const LOOKALIKE = { c: 'ge', g: 'c', e: 'c', o: 'c', l: 'i', i: 'l', n: 'h', h: 'n', u: 'v', v: 'u' };
+    const alike = ch => (SIMILAR[ch] || '') + (LOOKALIKE[ch] || '');
     const cands = new Map();   // candidate -> rank (lower = more likely)
     const add = (c, rank) => { if (c && c !== lw && (!cands.has(c) || cands.get(c) > rank)) cands.set(c, rank); };
     for (let i = 0; i <= lw.length; i++) {
@@ -205,7 +213,7 @@ const ArtworkTextCheck = {
       if (b.length > 1) add(a + b[1] + b[0] + b.slice(2), 1);                             // two letters swapped
       for (const ch of letters) {
         add(a + ch + b, i === 0 ? 4 : 2);                                                 // missing letter
-        if (b) add(a + ch + b.slice(1), (SIMILAR[b[0]] || '').includes(ch) ? 3 : 4);      // wrong letter
+        if (b) add(a + ch + b.slice(1), alike(b[0]).includes(ch) ? 3 : 4);                // wrong letter
       }
     }
     const style = t => (word === word.toUpperCase() ? t.toUpperCase() : /^[A-Z]/.test(word) ? t[0].toUpperCase() + t.slice(1) : t);
@@ -214,7 +222,10 @@ const ArtworkTextCheck = {
       if (c.length < 2) return;
       const common = this._dicts.some(d => d.check(c)) || this._extra.has(c);
       const proper = !common && this._dicts.some(d => d.check(c[0].toUpperCase() + c.slice(1)));
-      if (common || proper) out.push({ word: proper ? c[0].toUpperCase() + c.slice(1) : style(c), proper, rank: rank + (proper ? 10 : 0) });
+      if (!(common || proper)) return;
+      const cal = this.CALENDAR_WORDS.includes(c);
+      out.push({ word: proper || cal ? c[0].toUpperCase() + (word === word.toUpperCase() ? c.slice(1).toUpperCase() : c.slice(1)) : style(c),
+        proper, rank: rank + (proper ? 10 : 0), everyday: cal || this._extra.has(c) });
     });
     if (!out.length && lw.length >= 7 && /^[a-z]+$/.test(lw)) {
       // Two changes of the kinds people really make (sound-alike letter, swapped pair, doubled /
@@ -226,7 +237,7 @@ const ArtworkTextCheck = {
           if (b.length > 1 && b[0] !== b[1]) emit(a + b[1] + b[0] + b.slice(2), 1);
           if (b && i > 0) emit(a + b[0] + b, 0);
           if (i > 0) for (const v of 'aeiou') emit(a + v + b, 2);
-          if (b) for (const ch of (SIMILAR[b[0]] || '')) emit(a + ch + b.slice(1), 3);
+          if (b) for (const ch of alike(b[0])) emit(a + ch + b.slice(1), 3);
         }
       };
       const first = new Map();
@@ -244,7 +255,8 @@ const ArtworkTextCheck = {
       }));
       found.forEach(v => out.push(v));
     }
-    out.sort((p, q) => p.rank - q.rank || Math.abs(p.word.length - word.length) - Math.abs(q.word.length - word.length));
+    out.sort((p, q) => p.rank - q.rank || (q.everyday ? 1 : 0) - (p.everyday ? 1 : 0)
+      || Math.abs(p.word.length - word.length) - Math.abs(q.word.length - word.length));
     this._sugCache.set(word, out);
     return out;
   },
@@ -482,6 +494,7 @@ const ArtworkTextCheck = {
     const orientation = { angle, readable: reading.good >= 2, goodWords: reading.good, tried };
     const W0 = source.naturalWidth || source.width, H0 = source.naturalHeight || source.height, M = Math.max(W0, H0) || 1;
     const frame = b => this._frameBox(b, angle, W0 / M, H0 / M);
+    this._srcMax = M;                     // frame units → pixels of the customer's file (letter height)
     let issues = this._checkWords(reading.words, ctx.fileWords || [], allReadings, ctx.brands || [], frame);
     if (issues.some(it => it.kind === 'word' || it.kind === 'verify')) {
       const view = this._canvasFrom(source, { side: 2000, pad: 0 }, angle);
@@ -641,7 +654,10 @@ const ArtworkTextCheck = {
       const raw = w.text;
       // Web addresses read with lower confidence (dots, small letters); words need a clear reading
       const looksWeb = raw.includes('@') || /^(www\.|https?:|\.)/i.test(raw) || /[a-z0-9]\.[a-z]{2,}/i.test(raw);
-      if (w.conf < (looksWeb ? 45 : this.MIN_CONF)) return;
+      if (looksWeb && w.conf < 45) return;
+      // A misspelt word is not in the reader's own dictionary, so it often gets a lower certainty:
+      // below MIN_CONF it still counts when two separate readings saw exactly the same letters
+      if (!looksWeb && w.conf < this.MIN_CONF && !(w.conf >= 55 && this._readTimes(w, allReadings) >= 2)) return;
 
       // 2. Web / e-mail addresses: the ending must be a real domain ending (.com.auu, .con → wrong)
       const trimmed = raw.replace(/[,;:!?)]+$/, '').replace(/\.$/, '');
@@ -688,22 +704,64 @@ const ArtworkTextCheck = {
       if (dist > (word.length <= 4 ? 1 : 2)) return;
       const lower = word === word.toLowerCase();
       // A cut-off piece of a stylised word ("ratory" → "Oratory", "rts" → "Arts"): the fix only adds
-      // letters at the start / end, or is a proper name — that is a reading fragment, not a typo
+      // letters at the start, or is a proper name — that is a reading fragment, not a typo. (A missing
+      // LAST letter — "STOR", "Fre" — is a real typo; pieces cut at the end are caught by the pixel test.)
       const lt = top.toLowerCase(), lw = word.toLowerCase();
-      if (lt.length > lw.length && (lt.endsWith(lw) || lt.startsWith(lw))) return;
+      if (lt.length > lw.length && lt.endsWith(lw)) return;
       if (lower && sugg.proper) return;                       // "ther" → "Cher" is a fragment, not a typo
       // Lower-case words are ordinary words: a close dictionary match means a typo.
-      // Capitalised / ALL-CAPS words are often names, so they count as typos only when the
-      // difference is a typing slip; otherwise they are listed for the designer to verify.
-      const soundAlike = !sugg.proper && (sugg.rank === 3 || sugg.sound) && lt[0] === lw[0];
-      // a long word (GUARENTEED, LISENCED) that close to an ordinary word is a typo, not a name
-      const slip = this._isTypingSlip(word, top) || (soundAlike && word.length >= 7);
-      // A shorter capitalised word that is not a slip is most likely a name (CAIDEN, KADE, MOWEN): list it
-      // only when it differs from an ordinary word by a sound-alike letter inside the word (SERVISE → SERVICE)
-      if (!(lower || slip) && (word.length < 5 || !soundAlike)) return;
-      issues.push({ kind: (lower || slip) ? 'word' : 'verify', text, word, suggestion: top, box: joinedBox.get(i) || w.box, conf: w.conf });
+      // Capitalised / ALL-CAPS words may be names. Like a proofreader, look at the words around it:
+      //  · in a line of ordinary words ("QUALTY FOOD AND FRIENDLY SERVCE", "Plase call us") it is a typo
+      //  · among other names (a team roster: "LIAM SCHUCK", "NOAH COWAN") it is a name, unless a typing slip
+      const base = sugg.proper ? sugg.rank - 10 : sugg.rank;
+      const sameStart = lt[0] === lw[0];
+      const soundAlike = !sugg.proper && (sugg.rank === 3 || sugg.sound) && sameStart;
+      const likely = sameStart && (sugg.sound || base <= 3 || (word.length >= 8 && base <= 4));
+      const common = this._commonWordsOnLine(i, words, lines, extra, frame);
+      const inSentence = common >= (word.length <= 4 ? 2 : 1);
+      // Tiny lettering (under ~12 px in the customer's file) is often misread one letter at a time
+      // ("Made" read as "Mado"): only a misspelling seen the same way by two readings counts there
+      const fb = frame(w.box);
+      const tiny = this._srcMax && fb.h * this._srcMax < 12;
+      if (tiny && (word.length < 5 || this._readTimes(w, allReadings) < 2)) return;
+      const typo = this._isTypingSlip(word, top)
+        || (soundAlike && word.length >= 7)                                   // GUARENTEED, LISENCED
+        || (likely && !sugg.proper && (inSentence || word.length >= 8))       // QUALTY FOOD…, Congradulations Mom…
+        || (likely && sugg.proper && base <= 2 && inSentence && word.length >= 4);   // Open Mondy to Saturday
+      if (!(lower || typo) && (word.length < 5 || !soundAlike)) return;
+      issues.push({ kind: (lower || typo) ? 'word' : 'verify', text, word, suggestion: top, box: joinedBox.get(i) || w.box, conf: w.conf });
     });
     return issues;
+  },
+
+  /**
+   * Ordinary words (in the dictionary in lower case — "food", "call", "to"; not names like "Liam") on the
+   * same text line as word i. Tells a typo in a sentence / headline from a name in a list of names.
+   */
+  _commonWordsOnLine(i, words, lines, extra, frame = b => b) {
+    // Real neighbours only: the same row (overlapping, similar letter height) and close by — a tall stray
+    // reading must not join rows of a roster into one "sentence"
+    const me = frame(words[i].box);
+    return words.filter((w, k) => {
+      if (k === i || w.conf < 75) return false;
+      const t = w.text.toLowerCase().replace(/[’']s$/, '').replace(/[^a-z]/g, '');
+      if (t.length < 3) return false;
+      const f = frame(w.box);
+      const ratio = f.h / Math.max(1e-9, me.h);
+      if (ratio < 0.55 || ratio > 1.8) return false;
+      if (Math.min(f.y + f.h, me.y + me.h) - Math.max(f.y, me.y) < 0.5 * Math.min(f.h, me.h)) return false;
+      const gap = Math.max(f.x - (me.x + me.w), me.x - (f.x + f.w), 0);
+      if (gap > 8 * me.h) return false;
+      return this._extra.has(t) || (extra && extra.has(t)) || this._dicts.some(d => d.check(t));
+    }).length;
+  },
+
+  /** In how many separate readings the same letters were read at this spot */
+  _readTimes(w, allReadings) {
+    const letters = t => t.toLowerCase().replace(/[^a-z]/g, '');
+    const lw = letters(w.text);
+    if (!lw) return 0;
+    return (allReadings || []).filter(list => list.some(t => letters(t.text) === lw && this._iou(t.box, w.box) >= 0.4)).length;
   },
 
   /** Typical keyboard slips: doubled / undoubled letter, two letters swapped, a letter missing in a long word */

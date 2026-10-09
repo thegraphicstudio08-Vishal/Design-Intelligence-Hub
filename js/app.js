@@ -294,6 +294,21 @@ function onUnitChange() {
 }
 
 /**
+ * The ordered size decides orientation, canvas, safe area and grommets: when the designer changes it after
+ * the artwork is loaded, the pre-check runs again (once typing pauses) so nothing shows the old size.
+ * Runs only when the size really changed — runPreCheck() itself calls onDimensionInput().
+ */
+function scheduleRecheckAfterSizeChange(before) {
+  setTimeout(() => {   // after onDimensionInput has stored the new size
+    const after = [appState.userDims && appState.userDims.widthIn, appState.userDims && appState.userDims.heightIn].join('x');
+    if (after === before) return;
+    clearTimeout(scheduleRecheckAfterSizeChange._timer);
+    if (!appState.file || !appState.product || !appState.report) return;
+    scheduleRecheckAfterSizeChange._timer = setTimeout(() => runPreCheck(), 700);
+  }, 0);
+}
+
+/**
  * One-line SOP requirement for the filename banner (resolution, safe area, production canvas)
  */
 function sopSummaryText(spec, parsed) {
@@ -314,6 +329,8 @@ function onDimensionInput() {
   const h = parseFloat(document.getElementById('print-h').value) || 24;
   const unit = document.getElementById('dim-unit').value;
   if (!appState.userDims) appState.userDims = { unit: 'in' };
+  const before = [appState.userDims.widthIn, appState.userDims.heightIn].join('x');
+  scheduleRecheckAfterSizeChange(before);
 
   if (unit === 'ft') {
     appState.userDims.widthIn = +(w * 12).toFixed(2);
@@ -401,7 +418,9 @@ function checkAndApplyAutoOrientation(artW, artH) {
   // The order size is what the customer bought — it is never changed automatically.
   // SOP 1_Banners slide 26: an orientation change is made on admin only after the customer approves
   // a mockup. A mismatch is shown here and judged by the Orientation check of the pre-check report.
-  const banner = document.getElementById('fn-banner');
+  // Shown right under the ordered size (always visible), not inside the filename banner — that banner is
+  // hidden when the file does not have a BannerBuzz production filename
+  const sizeGroup = document.querySelector('.dim-input-group');
   const old = document.getElementById('fn-orient-badge');
   if (!artW || !artH || !appState.userDims) { if (old) old.remove(); return false; }
   const curW = appState.userDims.widthIn || 0;
@@ -410,15 +429,18 @@ function checkAndApplyAutoOrientation(artW, artH) {
   const isOrderLandscape = curW > curH * 1.05, isOrderPortrait = curH > curW * 1.05;
   const mismatch = (isArtLandscape && isOrderPortrait) || (isArtPortrait && isOrderLandscape);
   if (!mismatch) { if (old) old.remove(); return false; }
-  if (banner) {
+  const host = sizeGroup ? sizeGroup.parentElement : document.getElementById('fn-banner');
+  if (host) {
     let badge = old;
-    if (!badge) {
+    if (!badge || badge.parentElement !== host) {
+      if (badge) badge.remove();
       badge = document.createElement('div');
       badge.id = 'fn-orient-badge';
-      banner.appendChild(badge);
+      host.appendChild(badge);
     }
-    badge.style.cssText = 'margin-top:6px; background:#fffbeb; border:1px solid #fcd34d; border-radius:6px; padding:6px 10px; font-size:11.5px; color:#92400e; font-weight:700; display:flex; align-items:center; gap:6px;';
-    badge.innerHTML = `<span>⚠️</span> <span>Artwork is ${isArtLandscape ? 'landscape' : 'portrait'}, order is ${isOrderLandscape ? 'landscape' : 'portrait'} (${curW}&quot; × ${curH}&quot;). Order size kept — see the Orientation check.</span>`;
+    badge.style.cssText = 'margin-top:8px; background:#fffbeb; border:1px solid #f59e0b; border-left:4px solid #d97706; border-radius:6px; padding:7px 10px; font-size:11.5px; color:#92400e; font-weight:700; display:flex; align-items:flex-start; gap:6px; line-height:1.4;';
+    const fmt = v => +(+v).toFixed(2);
+    badge.innerHTML = `<span>⚠️</span> <span>Orientation mismatch: artwork is <u>${isArtLandscape ? 'landscape' : 'portrait'}</u>, ordered size is <u>${isOrderLandscape ? 'landscape' : 'portrait'}</u> (${fmt(curW)}&quot; W × ${fmt(curH)}&quot; H). Order size kept — see the Orientation check.</span>`;
   }
   return false;
 }
@@ -500,6 +522,10 @@ function handleFile(file) {
           }
           if (appState.product) {
             runPreCheck();
+          } else if (typeof AgenticAiInspector !== 'undefined') {
+            // No product chosen yet: spelling (and stray marks) do not depend on it — start reading the
+            // artwork now, so the spelling alert appears straight away; the pre-check reuses this result
+            AgenticAiInspector.scanArtwork(null, img, null, null, { early: true });
           }
         };
         img.onerror = () => {
@@ -839,6 +865,7 @@ function updateBreadcrumbs() {
  */
 async function runPreCheck() {
   if (!appState.file || !appState.product) return;
+  clearTimeout(scheduleRecheckAfterSizeChange._timer);   // this run already uses the latest size
 
   const btn = document.getElementById('run-btn');
   const btnIcon = document.getElementById('run-icon');
@@ -938,6 +965,8 @@ async function runPreCheck() {
     if (typeof AgenticAiInspector !== 'undefined') {
       AgenticAiInspector.renderOverlay();
       AgenticAiInspector.updateControlsUI();
+      // the new report's live cards + pop-up alerts (orientation for this size, spelling)
+      AgenticAiInspector.syncPrecheckReport();
     }
   } catch (err) {
     console.error('Pre-check error:', err);
@@ -1248,6 +1277,10 @@ function setSubnav(el, viewName) {
   document.getElementById('lp-proof').classList.toggle('active', isProof);
   document.getElementById('actions-precheck').style.display = !isProof ? 'flex' : 'none';
   document.getElementById('actions-proof').style.display = isProof ? 'flex' : 'none';
+
+  // The pre-check pop-up alerts (orientation, spelling) belong to the pre-check page only
+  const alerts = document.getElementById('precheck-alerts');
+  if (alerts) alerts.style.display = viewName === 'precheck' ? '' : 'none';
 
   if (isProof) generateProofView();
   if (viewName === 'rules') renderRulesCatalog();

@@ -688,12 +688,12 @@ const AgenticAiInspector = {
       box.id = 'spell-alert';
       box.className = 'spell-alert';
       box.setAttribute('role', 'alert');
-      document.body.appendChild(box);
+      this._alertStack().appendChild(box);
     }
     box.innerHTML = `
       <div class="spell-alert-head">⚠️ <span>${open.length} spelling mistake${open.length > 1 ? 's' : ''} found on the artwork</span>
         <button class="spell-alert-close" title="Close" onclick="AgenticAiInspector.closeSpellingAlert()">×</button></div>
-      <div class="spell-alert-note">Correct spelling shown in green. Confirm with the customer before creating the design file.</div>
+      <div class="spell-alert-note">Correct spelling shown in green. Confirm with the customer before creating the design file.${document.getElementById('artwork-canvas') ? '' : ' Choose the product to see each word marked on the artwork.'}</div>
       ${open.map(d => `
         <div class="spell-alert-row">
           <div class="spell-alert-words"><span class="spell-alert-kind">${KIND[d.kind] || 'Spelling'}</span>
@@ -705,6 +705,99 @@ const AgenticAiInspector = {
   closeSpellingAlert() {
     const box = document.getElementById('spell-alert');
     if (box) box.remove();
+  },
+
+  /** Fixed top-right stack holding the pre-check pop-up alerts (orientation, spelling) */
+  _alertStack() {
+    let stack = document.getElementById('precheck-alerts');
+    if (!stack) {
+      stack = document.createElement('div');
+      stack.id = 'precheck-alerts';
+      stack.className = 'precheck-alerts';
+      const view = document.getElementById('view-precheck');
+      if (view && !view.classList.contains('active')) stack.style.display = 'none';   // shown again on the pre-check page
+      document.body.appendChild(stack);
+    }
+    return stack;
+  },
+
+  /**
+   * Pop-up alert when the artwork does not suit the ordered orientation — landscape artwork on a vertical
+   * order (or the other way round), or text that runs sideways / upside down. Built from the report's
+   * Orientation check, so it says exactly what the check says (SOP 1_Banners slide 26, 4_Custom Flags).
+   */
+  _renderOrientationAlert() {
+    const report = (typeof appState !== 'undefined') ? appState.report : null;
+    const check = report && Array.isArray(report.checks) ? report.checks.find(c => c.id === 'orientation') : null;
+    const a = report && report.analysis;
+    const d = (report && report.dimensions) || {};
+    const turn = (this.textResult && this.textResult.orientation && this.textResult.orientation.angle) || 0;
+    let box = document.getElementById('orient-alert');
+    const mismatch = !!(a && a.orientationArtwork && a.orientationArtwork !== 'Unknown' && !a.orientationMatch);
+    const problem = check && !check.isOverridden && check.status !== 'PASS' && (mismatch || turn);
+    if (!problem) { if (box) box.remove(); return; }
+    const key = `${(this._lastScannedSrc || '').length}|${a.orientationArtwork}|${d.widthIn}x${d.heightIn}|${turn}|${check.status}`;
+    if (this._orientAlertClosedKey === key) { if (box) box.remove(); return; }
+    this._orientAlertKey = key;
+
+    const ci = (typeof CanvasInspector !== 'undefined') ? CanvasInspector : null;
+    const rot = ci ? ci.currentRotation : 0;
+    const turned = ci ? !!ci.previewOrderTurned : false;
+    const fmt = v => +(+v).toFixed(2);
+    const W = fmt(d.widthIn), H = fmt(d.heightIn);
+    const artSize = a.detectedInchesW ? `${fmt(a.detectedInchesW)}" × ${fmt(a.detectedInchesH)}"` : a.pixelWidth ? `${a.pixelWidth} × ${a.pixelHeight} px` : '';
+    const howTo = turn === 90 ? '90° clockwise' : turn === 270 ? '90° anticlockwise' : turn === 180 ? '180°' : '';
+    const textKnown = !!(this.textResult && this.textResult.orientation && this.textResult.orientation.readable);
+    const btn = (label, call, primary) => `<button class="orient-alert-btn${primary ? ' primary' : ''}" onclick="${call}">${label}</button>`;
+    const buttons = [];
+    if (turn) {
+      // Text runs sideways / upside down: turning the artwork makes it read correctly on the ordered size
+      buttons.push(rot === turn ? btn('↺ Undo turn', 'CanvasInspector.setRotation(0)') : btn(`↻ Turn artwork ${howTo}`, `AgenticAiInspector.previewOrientation('turn', ${turn})`, true));
+    } else {
+      // Text reads upright: the artwork was made for the other orientation — show the order turned
+      // (the SOP mockup for the customer); turning the artwork only helps when the text direction is unknown
+      buttons.push(turned ? btn('↺ Back to ordered size', 'AgenticAiInspector.previewOrientation(\'order\', false)')
+        : btn(`Preview order as ${H}" × ${W}"`, 'AgenticAiInspector.previewOrientation(\'order\', true)', true));
+      if (!textKnown) buttons.push(rot ? btn('↺ Undo turn', 'CanvasInspector.setRotation(0)') : btn('↻ Turn artwork 90°', 'AgenticAiInspector.previewOrientation(\'turn\', 90)'));
+    }
+    buttons.push(btn('Show on canvas', 'AgenticAiInspector.previewOrientation(\'show\')'));
+
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'orient-alert';
+      box.setAttribute('role', 'alert');
+      const stack = this._alertStack();
+      stack.insertBefore(box, stack.firstChild);
+    }
+    box.className = `spell-alert orient-alert ${check.status === 'FAIL' ? 'is-fail' : 'is-warn'}`;
+    const preview = rot ? `Canvas shows the artwork turned ${rot}° on the ordered size — preview only.`
+      : turned ? `Canvas shows the order turned to ${H}" × ${W}" — preview only, the order is unchanged.` : '';
+    box.innerHTML = `
+      <div class="spell-alert-head">🔄 <span>Orientation ${turn ? 'issue: text is ' + (turn === 180 ? 'upside down' : 'sideways') : 'mismatch'}</span>
+        <button class="spell-alert-close" title="Close" onclick="AgenticAiInspector.closeOrientationAlert()">×</button></div>
+      <div class="orient-alert-facts">
+        <div><span>Customer artwork</span><strong>${a.orientationArtwork}${artSize ? ' · ' + artSize : ''}</strong></div>
+        <div><span>Ordered size</span><strong>${a.orientationOrder} · ${W}" W × ${H}" H</strong></div>
+      </div>
+      <div class="spell-alert-note">${check.action || check.detail}</div>
+      ${preview ? `<div class="orient-alert-preview">${preview}</div>` : ''}
+      <div class="orient-alert-actions">${buttons.join('')}</div>`;
+  },
+
+  closeOrientationAlert() {
+    this._orientAlertClosedKey = this._orientAlertKey;
+    const box = document.getElementById('orient-alert');
+    if (box) box.remove();
+  },
+
+  /** Buttons of the orientation alert: preview on the canvas only — the order size is never changed here */
+  previewOrientation(what, value) {
+    const ci = (typeof CanvasInspector !== 'undefined') ? CanvasInspector : null;
+    if (!ci) return;
+    if (what === 'turn') { ci.previewOrderTurned = false; ci.setRotation(value); }
+    else if (what === 'order') { ci.currentRotation = 0; ci.setOrderTurned(!!value); }
+    const wrap = document.querySelector('.canvas-viewport-wrap');
+    if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
   },
 
   /** Bring the artwork into view with this word's marker highlighted */
@@ -768,9 +861,13 @@ const AgenticAiInspector = {
    * by CanvasInspector every time it draws the artwork. The pixel scan runs once per artwork, only
    * on the customer's real pixels — never on a generated preview or demo image.
    */
-  scanArtwork(canvas, img, spec, dims) {
-    const analysis = (typeof appState !== 'undefined') ? appState.analysis : null;
-    const ext = ((analysis && analysis.fileExt) || '').toLowerCase();
+  scanArtwork(canvas, img, spec, dims, opts) {
+    // opts.early: called right after upload, before any pre-check run — the stored analysis (if any)
+    // belongs to the previous file, so the file type comes from the uploaded file's name
+    const early = !!(opts && opts.early);
+    const analysis = (typeof appState !== 'undefined' && !early) ? appState.analysis : null;
+    const fileName = (typeof appState !== 'undefined' && appState.file && appState.file.name) || '';
+    const ext = ((analysis && analysis.fileExt) || (early ? fileName.split('.').pop() : '') || '').toLowerCase();
     const realSrc = analysis ? analysis.previewDataUrl : null;
     const loaded = !!(img && img.naturalWidth > 0);
     const src = (img && img.src) || realSrc || '';
@@ -947,6 +1044,7 @@ const AgenticAiInspector = {
     });
     this._refreshSummaryCard(report);
     this._renderSpellingAlert(false);   // keep an open alert in step with closed / intentional findings
+    this._renderOrientationAlert();      // landscape artwork on a vertical order (or the reverse), turned text
   },
 
   /** Recount pass / warning / fail after the scan (same scoring as PrecheckEngine.evaluate). */
