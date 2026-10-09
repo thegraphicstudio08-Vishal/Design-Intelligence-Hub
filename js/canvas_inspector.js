@@ -927,7 +927,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (1.5")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim & Reinforced Webbing</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
-        <label class="vi-toggle active"><input type="checkbox" ${this.guides.grommets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ Brass Grommets @ 24"</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.grommets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ Grommets (SOP table)</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🌬️ 70/30 Mesh Airflow</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
@@ -992,7 +992,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.seams ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('seams', this.checked)"> 🧵 1.25" Hem Fold Lines</label>
         ${hasPolePockets ? `<label class="vi-toggle active"><input type="checkbox" ${this.guides.polePockets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('polePockets', this.checked)"> 🎗️ 3" Top Pole Pocket</label>` : ''}
-        ${hasGrommets ? `<label class="vi-toggle active"><input type="checkbox" ${this.guides.grommets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ Brass Grommets @ 24"</label>` : ''}
+        ${hasGrommets ? `<label class="vi-toggle active"><input type="checkbox" ${this.guides.grommets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ Grommets (SOP table)</label>` : ''}
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
         <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
       `;
@@ -1200,19 +1200,23 @@ const CanvasInspector = {
     if (typeof SopRules === 'undefined' || !dims?.widthIn || !dims?.heightIn) return null;
     if (this.inspectorMode !== 'artwork' && this.inspectorMode) return null;
     const st = (typeof appState !== 'undefined') ? appState : {};
-    const fd = st.userDims?.finishingDetails || st.finishingDetails || {};
-    const fin = [st.parsedFilename?.finishing, st.finishingDetailsSummary, fd.grommets, fd.pockets, fd.edges]
-      .filter(v => v && v !== 'None').join(' ');
     if (SopRules.family(spec, st.parsedFilename) !== 'banner') return null;
-    const c = SopRules.canvas(spec, dims, { finishing: fin });
+    // Finishing exactly as the production file name states it (the form's Finishing options only when the
+    // name says nothing): grommets per the SOP grommet table, pole pockets / hems on the stated sides
+    const fd = st.finishingDetails || {};
+    const formTxt = [fd.grommets, fd.pockets, fd.edges].filter(v => v && v !== 'None' && v !== 'Clean Cut').join(' ');
+    const parsed = Object.assign({}, st.parsedFilename || {}, {
+      finishing: [st.parsedFilename?.finishing, st.finishingDetailsSummary, formTxt].filter(Boolean).join(' ')
+    });
+    const c = SopRules.canvas(spec, dims, parsed);
     if (!c) return null;
     const W = dims.widthIn, H = dims.heightIn;
-    const pocket = /pole pocket/i.test(fin) && c.confirmed && c.hIn > H && c.wIn === W;
-    const grommets = /grommet/i.test(fin);
+    const lay = c.layout || null;
+    const a = lay ? lay.allow : { left: (c.wIn - W) / 2, right: (c.wIn - W) / 2, top: (c.hIn - H) / 2, bottom: (c.hIn - H) / 2 };
     return {
       orderW: W, orderH: H, canvasW: c.wIn, canvasH: c.hIn, confirmed: c.confirmed, note: c.note,
-      hemX: pocket ? 0 : (c.wIn - W) / 2, hemTop: pocket ? (c.hIn - H) : (c.hIn - H) / 2, hemBottom: pocket ? 0 : (c.hIn - H) / 2,
-      pocket, grommets, safeIn: 1.25
+      allow: a, hemX: a.left, hemTop: a.top, hemBottom: a.bottom,
+      finishing: c.finishing || null, layout: lay, safeIn: 1.25
     };
   },
 
@@ -1241,14 +1245,48 @@ const CanvasInspector = {
     }
     ctx.restore();
 
-    // Hem / pole-pocket band (production area outside the finished size)
-    ctx.save();
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
-    ctx.beginPath();
-    ctx.rect(0, 0, w, h);
-    ctx.rect(tx, ty, tw, th);
-    ctx.fill('evenodd');
-    ctx.restore();
+    // Production area outside the finished size, side by side: pole pocket (blue) or hem (dark), labelled
+    const a = b.allow || { left: b.hemX, right: b.hemX, top: b.hemTop, bottom: b.hemBottom };
+    const pocketSides = (b.layout && b.layout.pocketSides) || [];
+    const bands = {
+      top: [0, 0, w, ty], bottom: [0, ty + th, w, h - ty - th],
+      left: [0, ty, tx, th], right: [tx + tw, ty, w - tx - tw, th]
+    };
+    Object.entries(bands).forEach(([side, r]) => {
+      if (!(a[side] > 0) || r[2] <= 0 || r[3] <= 0) return;
+      const pocket = pocketSides.includes(side);
+      ctx.save();
+      ctx.fillStyle = pocket ? 'rgba(37, 99, 235, 0.72)' : 'rgba(15, 23, 42, 0.55)';
+      ctx.fillRect(r[0], r[1], r[2], r[3]);
+      const thick = side === 'top' || side === 'bottom' ? r[3] : r[2];
+      if (thick >= 9) {
+        const label = `${pocket ? 'POLE POCKET' : 'HEM'} ${a[side]}"`;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${Math.max(8, Math.min(12, thick * 0.6))}px Inter, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        if (side === 'left' || side === 'right') {
+          ctx.translate(r[0] + r[2] / 2, r[1] + r[3] / 2);
+          ctx.rotate(side === 'left' ? -Math.PI / 2 : Math.PI / 2);
+          ctx.fillText(label, 0, 0);
+        } else {
+          ctx.fillText(label, r[0] + r[2] / 2, r[1] + r[3] / 2);
+        }
+      }
+      if (pocket) {   // stitch line of the pocket, on the finished edge
+        ctx.restore(); ctx.save();
+        ctx.strokeStyle = '#ffffff';
+        ctx.setLineDash([5, 4]);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        if (side === 'top') { ctx.moveTo(tx, ty); ctx.lineTo(tx + tw, ty); }
+        if (side === 'bottom') { ctx.moveTo(tx, ty + th); ctx.lineTo(tx + tw, ty + th); }
+        if (side === 'left') { ctx.moveTo(tx, ty); ctx.lineTo(tx, ty + th); }
+        if (side === 'right') { ctx.moveTo(tx + tw, ty); ctx.lineTo(tx + tw, ty + th); }
+        ctx.stroke();
+      }
+      ctx.restore();
+    });
 
     // Finished size (trim / fold line)
     if (this.guides.cutLine !== false) {
@@ -1270,46 +1308,80 @@ const CanvasInspector = {
       ctx.restore();
     }
 
-    // Grommet marks: 1" inside the finished edge, corners + evenly spaced ≤ 48"
-    if (b.grommets && this.guides.grommets !== false) {
-      const inset = 1 * s;
-      const pts = [];
-      const along = (lenIn) => {
-        const run = lenIn - 2; // between corner grommet centres
-        const n = Math.max(1, Math.ceil(run / 48));
-        return Array.from({ length: n + 1 }, (_, i) => 1 + (run * i) / n);
-      };
-      along(b.orderW).forEach(x => { pts.push([tx + x * s, ty + inset]); pts.push([tx + x * s, ty + th - inset]); });
-      along(b.orderH).forEach(y => { pts.push([tx + inset, ty + y * s]); pts.push([tx + tw - inset, ty + y * s]); });
-      const seen = new Set();
+    // Grommets: SOP Standard Grommets Placement — count per side from that side's length (corners included),
+    // centres 1" inside the finished edge, evenly spaced; none through a pole pocket
+    const g = b.layout && b.layout.grommets;
+    if (g && this.guides.grommets !== false) {
       const rad = Math.max(3, 0.5 * s);
-      pts.forEach(([x, y]) => {
-        const k = Math.round(x) + ',' + Math.round(y);
-        if (seen.has(k)) return;
-        seen.add(k);
+      g.points.forEach(([x, y]) => {
+        const px = tx + x * s, py = ty + y * s;
         ctx.save();
         ctx.fillStyle = '#e5e7eb';
         ctx.strokeStyle = '#111827';
         ctx.lineWidth = Math.max(1.5, rad * 0.45);
-        ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(px, py, rad, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#111827';
+        ctx.beginPath(); ctx.arc(px, py, Math.max(1, rad * 0.35), 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       });
-      b.grommetCount = seen.size;
+      // Count beside each side, so it can be checked against the table at a glance
+      const tag = (txt, x, y) => {
+        ctx.save();
+        ctx.font = 'bold 9.5px Inter, sans-serif';
+        const tw2 = ctx.measureText(txt).width + 8;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+        ctx.fillRect(x - tw2 / 2, y - 7, tw2, 14);
+        ctx.fillStyle = '#b45309';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(txt, x, y);
+        ctx.restore();
+      };
+      const ps = g.perSide;
+      if (ps.top) tag(`${ps.top} grommets`, tx + tw / 2, ty + Math.max(12, 2.6 * s));
+      if (ps.bottom && g.where !== 'top') tag(`${ps.bottom} grommets`, tx + tw / 2, ty + th - Math.max(12, 2.6 * s));
+      if (ps.left) tag(`${ps.left}`, tx + Math.max(14, 3 * s), ty + th / 2);
+      if (ps.right && g.where !== 'left') tag(`${ps.right}`, tx + tw - Math.max(14, 3 * s), ty + th / 2);
     }
 
-    // Labels
-    ctx.save();
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
-    ctx.fillRect(4, 4, Math.min(w - 8, 420), 34);
-    ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 10px Inter, sans-serif';
-    ctx.fillText(`SOP BANNER · finished ${b.orderW}" × ${b.orderH}" · canvas ${b.canvasW}" × ${b.canvasH}"`, 10, 17);
-    ctx.fillStyle = '#e2e8f0';
-    ctx.font = '9.5px Inter, sans-serif';
-    const parts = [b.pocket ? 'Top pole pocket 5.25"' : (b.hemX ? 'Hem 1.25" each side' : 'No hem allowance confirmed'),
-      'Safe 1.25"', b.grommets ? `Grommets 1" in, ≤48" apart (${b.grommetCount || 0})` : 'No grommets'];
-    ctx.fillText(parts.join(' · '), 10, 31);
-    ctx.restore();
+    // Legend: what the file name says, and what that means here
+    const fin = b.finishing;
+    const lines = [`SOP BANNER · finished ${b.orderW}" × ${b.orderH}" · canvas ${b.canvasW}" × ${b.canvasH}"`];
+    if (fin && fin.found) {
+      lines.push(`${fin.source === 'filename' ? 'File name' : 'Finishing options'}: "${fin.words.join(' · ')}"`);
+      const bits = [];
+      if (g) {
+        const ps = g.perSide;
+        bits.push(g.where === 'corners' ? `${g.kind}: 4 corners` : `${g.kind}: ${g.total} (top ${ps.top} · bottom ${ps.bottom} · left ${ps.left} · right ${ps.right})`);
+      } else if (fin.grommets && !fin.grommets.on) bits.push('No grommets');
+      if (pocketSides.length) bits.push(`Pole pocket ${pocketSides.join(' & ')} ${a[pocketSides[0]]}"`);
+      else if (fin.pockets) bits.push('Pole pocket side NOT in file name');
+      const hemSides = ['top', 'bottom', 'left', 'right'].filter(sd => !pocketSides.includes(sd) && a[sd] > 0);
+      if (hemSides.length) bits.push(`Hem ${a[hemSides[0]]}" ${hemSides.length === 4 ? 'each side' : hemSides.join(' & ')}`);
+      bits.push('Safe 1.25"');
+      lines.push(bits.join(' · '));
+    } else {
+      lines.push('No grommets / pole pockets / hems in the file name — confirm the finishing from the order · Safe 1.25"');
+    }
+    // Shown under the canvas (not on it), so it never covers grommet marks or the artwork
+    this.bannerLegend = lines;
+  },
+
+  /** The banner SOP legend bar under the canvas (file-name finishing, grommet counts, canvas size) */
+  _renderLegend() {
+    const wrap = this.canvas && this.canvas.parentElement;
+    if (!wrap) return;
+    let el = document.getElementById('canvas-sop-legend');
+    const lines = this.inspectorMode && this.inspectorMode !== 'artwork' ? null : this.bannerLegend;
+    if (!lines) { if (el) el.style.display = 'none'; return; }
+    if (!el || el.previousElementSibling !== wrap) {
+      if (el) el.remove();
+      el = document.createElement('div');
+      el.id = 'canvas-sop-legend';
+      wrap.insertAdjacentElement('afterend', el);
+    }
+    const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    el.style.cssText = 'display:block; margin:8px 0 0; padding:8px 12px; background:#0f172a; border-radius:6px; font:12px/1.55 Inter, sans-serif; color:#e2e8f0;';
+    el.innerHTML = lines.map((l, i) => `<div style="${i === 0 ? 'color:#fbbf24; font-weight:800;' : i === 1 ? 'color:#93c5fd; font-weight:700;' : ''}">${esc(l)}</div>`).join('');
   },
 
   /**
@@ -1327,8 +1399,10 @@ const CanvasInspector = {
   redraw() {
     this.artRect = null;
     this._loupeCanvasUrl = null;   // the zoom loupe's picture of the canvas is out of date
+    this.bannerLegend = null;      // set again by the banner layout when it draws
     this._redrawCanvas();
     this._drawRotationNote();
+    this._renderLegend();
     // Stray line & dot scan + markers: always on the real artwork image, whichever layout drew it
     if (typeof AgenticAiInspector !== 'undefined' && this.canvas && this.currentImg) {
       AgenticAiInspector.onCanvasRedraw(this.canvas, this.currentImg, this.currentSpec, this.currentDims);

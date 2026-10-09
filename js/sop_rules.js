@@ -20,6 +20,9 @@ const SopRules = {
     small300: 'Production print files: hand flags 6x4 in and business cards printed at 300 ppi',
     hem: 'Production print files: vinyl/canvas/fabric banners with grommets or stitched edges = order size + 1.25" each side',
     polePocket: 'Production print file US2382836 (Top Pole Pocket): height + 5.25", width unchanged',
+    grommets: 'SOP Standard Grommets Placement table (banner height / width in ft → grommets per side, corners included)',
+    hangingOptions: 'SOP 1_Banners slides 3, 9–10 · hanging options: no grommet, adhesive tabs, metal grommets, top / top & bottom / left & right pole pockets',
+    pocketTable: 'SOP 1_Banners slide 7 · Custom pole pocket size (pole diameter or pole in inch → material to leave)',
     mockup: 'SOP 1_Banners · 5) Mockup guideline (orientation change after customer approval)',
     colour: 'SOP PS Settings · CMYK 8-bit, Working CMYK U.S. Web Coated (SWOP) v2, square pixels',
     format: 'SOP · final print file saved as .PDF (die-cut artwork as .AI)'
@@ -69,6 +72,191 @@ const SopRules = {
     return { inches: isNaN(catalog) ? null : catalog, confirmed: false, source: 'Catalog value (sop_data.js) — not stated in the SOP decks; use the product template' };
   },
 
+  // ── Banner finishing: grommets, pole pockets, hems ─────────────────────────
+  // SOP Standard Grommets Placement — grommets on ONE side of that length (corners included):
+  // up to 4.00 ft → 2 · 4.01–8.99 → 3 · 9.00–11.99 → 4 · … · 27.00–29.99 → 10
+  GROMMET_TABLE: [[4.00, 2], [8.99, 3], [11.99, 4], [14.99, 5], [17.99, 6], [20.99, 7], [23.99, 8], [26.99, 9], [29.99, 10]],
+  POCKET_IN: 5.25,          // pole pocket allowance per side (production print file US2382836)
+  HEM_IN: 1.25,             // hem allowance per side with grommets / stitched / hemmed edges (production print files)
+  GROMMET_INSET_IN: 1,      // grommet centre 1" inside the finished edge
+  // SOP 1_Banners slide 7: pole diameter / pole in inch → material to leave (inches)
+  POCKET_SIZE_TABLE: [[1, 2.25, 2.75], [1.5, 3.25, 3.75], [2, 4.25, 4.75], [2.5, 5.25, 5.75], [3, 6.25, 6.75],
+    [3.5, 7.25, 7.75], [4, 8.25, 8.75], [4.5, 9.25, 9.75], [5, 10.25, 10.75], [5.5, 11.25, 11.75]],
+
+  /** Grommets on one side of this length (inches) — SOP table; past 29.99 ft one more every 3 ft, as the table runs */
+  grommetsPerSide(lengthIn) {
+    const ft = Math.round((lengthIn / 12) * 100) / 100;            // the table works in feet with 2 decimals
+    for (const [upTo, n] of this.GROMMET_TABLE) if (ft <= upTo) return { count: n, ft, inTable: true };
+    return { count: Math.floor(ft / 3) + 1, ft, inTable: false };
+  },
+
+  /**
+   * Finishing exactly as the production FILE NAME states it — grommets (and where), pole pockets (which
+   * sides), hems — with the words it was read from, so the designer can check it against the name.
+   * Only when the name says nothing about finishing are the Finishing options of the form used.
+   */
+  bannerFinishing(parsed) {
+    const name = ((parsed && parsed.fname) || '').replace(/\.[a-z0-9]+$/i, '');
+    const norm = t => ' ' + String(t || '').replace(/[_\-()]+/g, ' ').replace(/\s+/g, ' ').toLowerCase() + ' ';
+    const fromName = name ? this._readFinishing(norm(name)) : null;
+    if (fromName && fromName.found) return Object.assign(fromName, { source: 'filename' });
+    const fromForm = this._readFinishing(norm(parsed && parsed.finishing));
+    return Object.assign(fromForm, { source: fromForm.found ? 'form' : 'none' });
+  },
+
+  _readFinishing(t) {
+    const words = [];
+    const hit = re => { const m = t.match(re); if (m) words.push(m[0].trim()); return !!m; };
+    const f = { found: false, grommets: null, pockets: null, hem: null, adhesiveTabs: false, windFlaps: false, words };
+    // Grommets / eyelets (AU orders say "eyelets") and where they go
+    if (hit(/ (no|without) (grommets?|eyelets?) /)) {
+      f.grommets = { on: false, kind: 'No grommets' };
+    } else if (hit(/ (?:(?:metal|brass|nickel|standard|perimeter|4|four) )*(?:corner )?(?:grommets?|eyelets?)(?: (?:at|on) (?:the )?(?:left side|top|corners?))?/)) {
+      const kind = / brass /.test(t) ? 'Brass grommets' : / eyelets? /.test(t) ? 'Metal eyelets' : 'Metal grommets';
+      let where = 'all';
+      if (/ (4|four|all) corners? | corners? only | corner (grommets?|eyelets?) /.test(t)) where = 'corners';
+      else if (/ top corners? /.test(t)) where = 'top-corners';
+      else if (/ (grommets?|eyelets?) (at|on) (the )?left side | left side (grommets?|eyelets?) /.test(t)) where = 'left';
+      else if (/ (grommets?|eyelets?) (at|on) (the )?top | top (grommets?|eyelets?) /.test(t)) where = 'top';
+      f.grommets = { on: true, kind, where };
+    }
+    // Pole pockets: which sides (SOP: top · top & bottom · left & right)
+    const sides = [];
+    if (hit(/ top (and|&|n) bottom pole pockets?| top bottom pole pockets?| pole pockets? (at|on) (the )?top (and|&) bottom/)) sides.push('top', 'bottom');
+    else if (hit(/ left (and|&|n) right pole pockets?| left right pole pockets?| pole pockets? (at|on) (the )?left (and|&) right/)) sides.push('left', 'right');
+    else if (hit(/ 3 pole pockets at left side| pole sleeve( at left side)?/)) { f.flagSleeve = true; sides.push('left'); }
+    else if (hit(/ top pole pockets?| pole pockets? (at|on) (the )?top/)) sides.push('top');
+    else if (hit(/ bottom pole pockets?| pole pockets? (at|on) (the )?bottom/)) sides.push('bottom');
+    else if (hit(/ pole pockets?/)) f.pocketSidesUnknown = true;
+    if (sides.length || f.pocketSidesUnknown) {
+      const m = t.match(/ (\d+(?:\.\d+)?) ?(?:in|inch|inches|") (?:top |bottom |left |right )?pole pockets?| pole pockets? (\d+(?:\.\d+)?) ?(?:in|inch|inches|") /);
+      f.pockets = { sides, sizeIn: m ? parseFloat(m[1] || m[2]) : null };
+    }
+    // Hems / edges
+    if (hit(/ stitched( edges?| hems?)?/)) f.hem = { kind: 'Stitched edges' };
+    else if (hit(/ welded( hems?| edges?)?/)) f.hem = { kind: 'Welded hem' };
+    else if (hit(/ hemmed( edges?)?| hems? /)) f.hem = { kind: 'Hemmed edges' };
+    f.adhesiveTabs = hit(/ adhesive tabs?/);
+    f.windFlaps = hit(/ wind ?flaps?/);
+    f.found = !!(f.grommets || f.pockets || f.hem || f.adhesiveTabs);
+    return f;
+  },
+
+  /**
+   * Where the finishing goes on a banner of the ordered size. Inches; origin = top-left corner of the
+   * FINISHED size. Pole pocket bands (+5.25" on each pocket side), hem bands (+1.25" on the other sides
+   * when there are grommets / stitched / hemmed edges), grommet centres 1" inside the finished edge —
+   * per-side counts from the SOP grommet table, evenly spaced, corners included — and the canvas.
+   */
+  bannerLayout(dims, fin) {
+    const W = dims.widthIn, H = dims.heightIn;
+    const pocketSides = (fin.pockets && fin.pockets.sides) || [];
+    const pocketMat = this.pocketMaterial(fin.pockets);             // custom size from the name → SOP slide 7 value
+    const hemOn = !!(fin.hem || (fin.grommets && fin.grommets.on));
+    const allow = {};
+    ['top', 'bottom', 'left', 'right'].forEach(s => { allow[s] = pocketSides.includes(s) ? pocketMat.inches : hemOn ? this.HEM_IN : 0; });
+
+    const g = fin.grommets && fin.grommets.on ? fin.grommets : null;
+    const perSide = { top: 0, bottom: 0, left: 0, right: 0 };
+    const points = [];
+    let wSide = null, hSide = null;
+    if (g) {
+      const i0 = this.GROMMET_INSET_IN;
+      wSide = this.grommetsPerSide(W);
+      hSide = this.grommetsPerSide(H);
+      const along = (len, n) => Array.from({ length: n }, (_, k) => i0 + (len - 2 * i0) * (n > 1 ? k / (n - 1) : 0.5));
+      const add = (x, y) => { if (!points.some(p => Math.abs(p[0] - x) < 0.01 && Math.abs(p[1] - y) < 0.01)) points.push([x, y]); };
+      const side = s => {
+        if (pocketSides.includes(s)) return;                      // no grommets through a pole pocket
+        const horizontal = s === 'top' || s === 'bottom';
+        const n = horizontal ? wSide.count : hSide.count;
+        perSide[s] = n;
+        along(horizontal ? W : H, n).forEach(v => horizontal ? add(v, s === 'top' ? i0 : H - i0) : add(s === 'left' ? i0 : W - i0, v));
+      };
+      if (g.where === 'corners') { [[i0, i0], [W - i0, i0], [i0, H - i0], [W - i0, H - i0]].forEach(p => add(p[0], p[1])); perSide.top = perSide.bottom = perSide.left = perSide.right = 2; }
+      else if (g.where === 'top-corners') { add(i0, i0); add(W - i0, i0); perSide.top = 2; }
+      else if (g.where === 'top') side('top');
+      else if (g.where === 'left') side('left');
+      else ['top', 'bottom', 'left', 'right'].forEach(side);
+    }
+    return {
+      allow,
+      pocketSides,
+      hemOn,
+      canvas: { wIn: +(W + allow.left + allow.right).toFixed(2), hIn: +(H + allow.top + allow.bottom).toFixed(2) },
+      grommets: g ? {
+        kind: g.kind, where: g.where, points, perSide, total: points.length,
+        widthSide: wSide, heightSide: hSide,
+        spacingWIn: perSide.top > 1 ? +((W - 2 * this.GROMMET_INSET_IN) / (perSide.top - 1)).toFixed(2) : null,
+        spacingHIn: perSide.left > 1 ? +((H - 2 * this.GROMMET_INSET_IN) / (perSide.left - 1)).toFixed(2) : null
+      } : null,
+      pocketMaterial: pocketMat
+    };
+  },
+
+  /** Material to leave for a custom pole pocket size given in the file name (SOP slide 7), else the standard 5.25" */
+  pocketMaterial(pockets) {
+    if (!pockets || pockets.sizeIn == null) return { inches: this.POCKET_IN, custom: false };
+    const row = this.POCKET_SIZE_TABLE.find(r => r[1] === pockets.sizeIn) || this.POCKET_SIZE_TABLE.find(r => r[0] === pockets.sizeIn);
+    return row ? { inches: row[2], custom: true, size: pockets.sizeIn } : { inches: this.POCKET_IN, custom: true, size: pockets.sizeIn, unmatched: true };
+  },
+
+  /** One-line description of the finishing for labels and the report */
+  describeFinishing(fin, lay) {
+    const parts = [];
+    if (fin.grommets) {
+      if (!fin.grommets.on) parts.push('No grommets');
+      else if (lay && lay.grommets) {
+        const g = lay.grommets;
+        const where = { corners: '4 corners', 'top-corners': 'top corners', top: 'top edge', left: 'left edge', all: 'all edges' }[g.where];
+        parts.push(`${fin.grommets.kind} on ${where}: ${g.total} total`);
+      }
+    }
+    if (fin.pockets) parts.push(fin.pockets.sides.length ? `Pole pocket ${fin.pockets.sides.join(' & ')}` : 'Pole pocket (side not stated)');
+    if (fin.hem) parts.push(fin.hem.kind);
+    if (fin.adhesiveTabs) parts.push('Adhesive tabs');
+    if (fin.windFlaps) parts.push('Wind flaps');
+    return parts.join(' · ') || 'No finishing stated';
+  },
+
+  /** SOP reference (HTML): grommet table + pole pocket sizes + hanging options — for the SOP pages */
+  renderFinishingReference() {
+    const rows = this.GROMMET_TABLE.map(([upTo, n], k) => {
+      const from = k === 0 ? 0.01 : +(this.GROMMET_TABLE[k - 1][0] + 0.01).toFixed(2);
+      return `<tr><td>${from.toFixed(2)} – ${upTo.toFixed(2)} ft</td><td style="text-align:center; font-weight:800;">${n}</td></tr>`;
+    }).join('');
+    const pocketRows = this.POCKET_SIZE_TABLE.map(r => `<tr><td>${r[0]}"</td><td>${r[1]}"</td><td style="font-weight:700;">${r[2]}"</td></tr>`).join('');
+    const th = 'style="text-align:left; padding:5px 8px; background:#1e3a8a; color:#fff; font-size:11px;"';
+    return `
+      <div class="sop-section" style="margin-top:14px;">
+        <div class="sop-section-title">Banner finishing — grommets, pole pockets, hems</div>
+        <div style="font-size:11.5px; color:#64748b; margin-bottom:10px;">Read from the production file name and drawn on the canvas. Sources: ${this.SOURCES.grommets}; ${this.SOURCES.hangingOptions}; ${this.SOURCES.polePocket}; ${this.SOURCES.hem}.</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px; font-size:12px;">
+          <div>
+            <div style="font-weight:800; margin-bottom:6px;">Standard grommets placement</div>
+            <table class="sop-mini-table" style="width:100%; border-collapse:collapse;">
+              <tr><th ${th}>Side length (height or width)</th><th ${th}>Grommets on that side</th></tr>${rows}
+              <tr><td>30.00 ft and over</td><td style="text-align:center; font-weight:800;">+1 every 3 ft</td></tr>
+            </table>
+            <div style="margin-top:6px; color:#475569;">Counts include the corner grommets. Centres 1" inside the finished edge, evenly spaced. Example 6 × 3 ft: 3 on top, 3 on bottom, 2 on each side = 8.</div>
+          </div>
+          <div>
+            <div style="font-weight:800; margin-bottom:6px;">Pole pockets &amp; hems (production canvas)</div>
+            <ul style="margin:0; padding-left:18px; line-height:1.6; color:#334155;">
+              <li>Pole pocket: <strong>+${this.POCKET_IN}"</strong> on each pocket side (top · top &amp; bottom · left &amp; right), no grommets on that side</li>
+              <li>Grommets / stitched / hemmed edges: <strong>+${this.HEM_IN}"</strong> hem on each other side</li>
+              <li>No grommet / adhesive tabs: print at the order size</li>
+              <li>Safe area 1.25" inside the finished edge</li>
+            </ul>
+            <div style="font-weight:800; margin:10px 0 6px;">Custom pole pocket size (slide 7)</div>
+            <table class="sop-mini-table" style="width:100%; border-collapse:collapse;">
+              <tr><th ${th}>Pole diameter</th><th ${th}>Pole in inch</th><th ${th}>Material to leave</th></tr>${pocketRows}
+            </table>
+          </div>
+        </div>
+      </div>`;
+  },
+
   /**
    * Production canvas = order size + finishing allowance.
    */
@@ -77,19 +265,29 @@ const SopRules = {
     if (!(w > 0 && h > 0)) return null;
     const fam = this.family(spec, parsed);
     const t = this._text(spec, parsed);
-    const fin = ((parsed?.finishing || '') + ' ' + (parsed?.fname || '')).toLowerCase();
 
     if (fam === 'banner') {
       if (/fence/.test(t) && /mesh/.test(t)) {
         return { wIn: w + 4, hIn: h + 4, confirmed: true, note: '+2" each side, full-colour bleed', source: this.SOURCES.meshFence };
       }
-      if (/top pole pocket|top_pole_pocket/.test(fin)) {
-        return { wIn: w, hIn: +(h + 5.25).toFixed(2), confirmed: true, note: 'Top pole pocket: +5.25" on height, width unchanged', source: this.SOURCES.polePocket };
+      // Exactly what the file name says: pockets on the stated sides, hems on the others
+      const fin = this.bannerFinishing(parsed);
+      if (fin.found) {
+        const lay = this.bannerLayout({ widthIn: w, heightIn: h }, fin);
+        const a = lay.allow, parts = [];
+        if (lay.pocketSides.length) parts.push(`pole pocket +${lay.pocketMaterial.inches}" ${lay.pocketSides.join(' & ')}`);
+        const hemSides = ['top', 'bottom', 'left', 'right'].filter(s => !lay.pocketSides.includes(s) && a[s] === this.HEM_IN);
+        if (hemSides.length) parts.push(`+${this.HEM_IN}" hem ${hemSides.length === 4 ? 'each side' : hemSides.join(' & ')}`);
+        if (!parts.length) parts.push('no allowance (order size)');
+        const unsure = fin.pockets && fin.pockets.sides.length === 0;
+        return {
+          wIn: lay.canvas.wIn, hIn: lay.canvas.hIn, confirmed: !unsure,
+          note: unsure ? 'Pole pocket side not stated in the file name — confirm top / top & bottom / left & right' : parts.join(', '),
+          source: [lay.pocketSides.length ? this.SOURCES.polePocket : '', hemSides.length ? this.SOURCES.hem : '', this.SOURCES.hangingOptions].filter(Boolean).join(' · '),
+          finishing: fin, layout: lay
+        };
       }
-      if (/grommet|stitched/.test(fin)) {
-        return { wIn: w + 2.5, hIn: h + 2.5, confirmed: true, note: '+1.25" hem each side', source: this.SOURCES.hem };
-      }
-      return { wIn: w, hIn: h, confirmed: false, note: 'Allowance for this finishing is not in the SOP decks or sample print files (see Banners finishing.xls)', source: 'Not confirmed' };
+      return { wIn: w, hIn: h, confirmed: false, note: 'No finishing in the file name — confirm grommets / pole pockets / hems from the order', source: 'Not confirmed' };
     }
     return { wIn: w, hIn: h, confirmed: false, note: 'Use the product template for bleed / finishing allowance', source: 'Template-based product' };
   },

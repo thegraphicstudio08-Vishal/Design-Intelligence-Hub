@@ -941,29 +941,47 @@ const FileAnalyzer = {
       finishingTokens.push('Metal Grommets with Stitched Edges');
       grommetType = 'Perimeter Metal Grommets';
       edgeType = 'Stitched Edges';
+    } else if (/(^|_)(no|without)_(grommets?|eyelets?)(_|$)/i.test(clean)) {
+      finishingTokens.push('No Grommet');
+      grommetType = 'None';
+    } else if (/(4|four)_corners?_(grommets?|eyelets?)|corner_(grommets?|eyelets?)/i.test(clean)) {
+      finishingTokens.push('4 Corner Grommets');
+      grommetType = '4 Corner Grommets';
     } else if (/brass_grommets/i.test(clean)) {
       finishingTokens.push('Brass Grommets');
       grommetType = 'Brass Grommets';
     } else if (/metal_grommets/i.test(clean)) {
       finishingTokens.push('Standard Metal Grommets');
       grommetType = 'Standard Metal Grommets';
+    } else if (/eyelets?/i.test(clean)) {
+      finishingTokens.push('Metal Eyelets');           // AU orders: eyelets = grommets
+      grommetType = 'Standard Metal Grommets';
     } else if (/grommets/i.test(clean)) {
       finishingTokens.push('Grommets');
-      grommetType = 'Grommets';
+      grommetType = 'Standard Metal Grommets';
     }
 
-    // Pockets / Sleeves
+    // Pockets / Sleeves (values match the Finishing & Hardware Details options)
     if (/3_pole_pockets_at_left_side/i.test(clean)) {
       finishingTokens.push('3 Pole Pockets at Left Side');
-      pocketType = '3 Pole Pockets (Left)';
+      pocketType = '3 Pole Pockets at Left Side';
     } else if (/pole_sleeve_at_left_side|pole_sleeve/i.test(clean)) {
       finishingTokens.push('Pole Sleeve at Left Side');
-      pocketType = 'Pole Sleeve (Left)';
+      pocketType = 'Pole Sleeve at Left Side';
+    } else if (/top_(and|&|n)_bottom_pole_pockets?|pole_pockets?_(at|on)_(the_)?top_(and|&)_bottom/i.test(clean)) {
+      finishingTokens.push('Top & Bottom Pole Pockets');
+      pocketType = 'Top & Bottom Pole Pockets';
+    } else if (/left_(and|&|n)_right_pole_pockets?|pole_pockets?_(at|on)_(the_)?left_(and|&)_right/i.test(clean)) {
+      finishingTokens.push('Left & Right Pole Pockets');
+      pocketType = 'Left & Right Pole Pockets';
     } else if (/top_pole_pocket/i.test(clean)) {
       finishingTokens.push('Top Pole Pocket');
-      pocketType = 'Top Pole Pocket (3 in)';
+      pocketType = 'Top Pole Pocket';
+    } else if (/bottom_pole_pocket/i.test(clean)) {
+      finishingTokens.push('Bottom Pole Pocket');
+      pocketType = 'Bottom Pole Pocket';
     } else if (/pole_pocket/i.test(clean)) {
-      finishingTokens.push('Pole Pockets');
+      finishingTokens.push('Pole Pockets (side not stated)');
       pocketType = 'Pole Pockets';
     }
 
@@ -990,6 +1008,9 @@ const FileAnalyzer = {
     if (/stitched_edges/i.test(clean) && edgeType !== 'Stitched Edges') {
       finishingTokens.push('Stitched Edges');
       edgeType = 'Stitched Edges';
+    } else if (/hemmed(_edges?)?|(^|_)hems?(_|$)|welded_hems?/i.test(clean) && edgeType === 'Clean Cut') {
+      finishingTokens.push('Hemmed Edges');
+      edgeType = 'Hemmed Edges';
     }
     if (/lamination/i.test(clean)) {
       finishingTokens.push('Protective Lamination');
@@ -1049,7 +1070,7 @@ const FileAnalyzer = {
       isDoubleSided,
       isFrontSide,
       isBackSide,
-      hasGrommets: grommetType !== 'None' || /grommet/i.test(clean),
+      hasGrommets: grommetType !== 'None',   // "No_Grommet" contains the word but means none
       hasPolePockets: pocketType !== 'None' || /pole_pocket|pole_sleeve/i.test(clean),
       isProof: /script_overall|crop|mockup|render/i.test(clean),
       isShapedTemplate,

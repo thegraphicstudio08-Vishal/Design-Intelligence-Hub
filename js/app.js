@@ -1370,6 +1370,7 @@ function renderSopGuideTab(spec) {
         `).join('')}
       ` : ''}
     </div>
+    ${(typeof SopRules !== 'undefined' && SopRules.family(spec, appState.parsedFilename) === 'banner') ? SopRules.renderFinishingReference() : ''}
   `;
 }
 
@@ -1773,6 +1774,11 @@ function renderRulesCatalog() {
       filterSel.appendChild(opt);
     });
     _rulesCatInitialized = true;
+  }
+  // Banner finishing SOP (grommet table, pole pockets, hems) above the product list
+  const finRef = document.getElementById('rules-finishing-sop');
+  if (finRef && typeof SopRules !== 'undefined' && !finRef.innerHTML) {
+    finRef.innerHTML = `<div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin-bottom:14px;">${SopRules.renderFinishingReference()}</div>`;
   }
   filterRulesTable();
 }

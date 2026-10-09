@@ -803,6 +803,17 @@ const ProofStudio = {
       finishingDetail = 'Rounded Corners (Prevents Wind Lift on Vehicles)';
     }
 
+    // Banners: finishing exactly as the production file name states it, with the SOP grommet count per side
+    if (typeof SopRules !== 'undefined' && SopRules.family(spec, analysis) === 'banner') {
+      const bf = SopRules.bannerFinishing(analysis);
+      if (bf.found) {
+        const lay = SopRules.bannerLayout({ widthIn: printW, heightIn: printH }, bf);
+        const g = lay.grommets;
+        finishingDetail = SopRules.describeFinishing(bf, lay)
+          + (g && g.where === 'all' ? ` (top ${g.perSide.top} · bottom ${g.perSide.bottom} · left ${g.perSide.left} · right ${g.perSide.right})` : '');
+      }
+    }
+
     const graphicColor = (analysis?.isDoubleSided || spec.isDoubleSided)
       ? 'Four/Four (Full-Color, Double-Sided)'
       : 'Four/0 (Full-Color, Single-Sided)';

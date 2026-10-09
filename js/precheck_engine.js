@@ -76,6 +76,55 @@ const PrecheckEngine = {
       action: 'Confirm with the customer whether the order size is the wrong way round, or ask for artwork in the ordered orientation.' };
   },
 
+  /**
+   * Finishing card for banners: what the file name says (grommets, pole pockets, hems), where it goes on this
+   * size and the production canvas it needs. Grommet counts per side come from the SOP grommet table.
+   */
+  finishingCheck(sop, printW, printH) {
+    if (!sop || sop.family !== 'banner' || typeof SopRules === 'undefined') return null;
+    const c = sop.canvas || {};
+    const fin = c.finishing, lay = c.layout;
+    const base = { id: 'finishing', name: 'Finishing (grommets · pole pockets · hems)', icon: '🪢',
+      required: 'As the file name states — SOP grommet table (count per side by length), pole pocket +5.25" on the stated side(s), hem +1.25" on the others' };
+    if (!fin || !fin.found) {
+      return Object.assign(base, { status: 'WARNING',
+        found: 'No grommets / pole pockets / hems in the file name',
+        detail: 'The production file name does not say how this banner is finished, so grommet marks, pole pockets and hems cannot be placed automatically.',
+        action: 'Confirm the finishing from the order (admin) and set it in Finishing & Hardware Details.' });
+    }
+    const fmt = v => +(+v).toFixed(2);
+    const rows = [];
+    if (lay && lay.grommets) {
+      const g = lay.grommets, ps = g.perSide;
+      if (g.where === 'corners') rows.push(`${g.kind}: 4 corners only.`);
+      else {
+        const wFt = g.widthSide ? g.widthSide.ft : fmt(printW / 12), hFt = g.heightSide ? g.heightSide.ft : fmt(printH / 12);
+        rows.push(`${g.kind}: ${g.total} in total — top ${ps.top}, bottom ${ps.bottom} (width ${wFt} ft), left ${ps.left}, right ${ps.right} (height ${hFt} ft), per the SOP grommet table; centres 1" inside the finished edge`
+          + `${g.spacingWIn ? `, ${g.spacingWIn}" apart across` : ''}${g.spacingHIn ? `, ${g.spacingHIn}" apart down` : ''}.`
+          + `${(g.widthSide && !g.widthSide.inTable) || (g.heightSide && !g.heightSide.inTable) ? ' (Over 29.99 ft: one more every 3 ft, continuing the table.)' : ''}`);
+      }
+    } else if (fin.grommets && !fin.grommets.on) rows.push('No grommets.');
+    if (fin.pockets) {
+      rows.push(fin.pockets.sides.length
+        ? `Pole pocket on the ${fin.pockets.sides.join(' & ')}: +${lay.pocketMaterial.inches}" each${lay.pocketMaterial.custom ? ` (custom ${lay.pocketMaterial.size}" in the file name${lay.pocketMaterial.unmatched ? ' — not in the SOP pocket table, check the order' : ', SOP slide 7 table'})` : ''}; no grommets on that side.`
+        : 'Pole pocket — the file name does not say which side (top / top & bottom / left & right).');
+    }
+    const hemSides = lay ? ['top', 'bottom', 'left', 'right'].filter(s => !lay.pocketSides.includes(s) && lay.allow[s] > 0) : [];
+    if (hemSides.length) rows.push(`${fin.hem ? fin.hem.kind : 'Hem'}: +${lay.allow[hemSides[0]]}" on ${hemSides.length === 4 ? 'each side' : hemSides.join(' & ')}.`);
+    if (fin.adhesiveTabs) rows.push('Adhesive tabs: print at the order size.');
+    rows.push(`Production canvas ${c.wIn}" × ${c.hIn}" (finished ${printW}" × ${printH}").`);
+    const unsure = fin.pockets && fin.pockets.sides.length === 0;
+    const fromName = fin.source === 'filename';
+    return Object.assign(base, {
+      status: unsure || !fromName ? 'WARNING' : 'PASS',
+      found: `${fromName ? 'File name' : 'Finishing options (not in file name)'}: "${fin.words.join(' · ')}" → ${SopRules.describeFinishing(fin, lay)}`,
+      detail: rows.join(' '),
+      action: unsure ? 'Check the order for the pole pocket side before creating the file.'
+        : !fromName ? 'The file name does not state the finishing — confirm it with the order before creating the file.'
+        : 'Check the grommet marks, pocket and hem on the canvas match the file name before creating the design file.'
+    });
+  },
+
   evaluate(analysis, spec, userDims, overrides = {}) {
     const checks = [];
     const printW = userDims?.widthIn || spec.defaultW || 36;
@@ -289,6 +338,13 @@ const PrecheckEngine = {
       detail: `Background colors, textures, and photos must extend ${spec.bleed} past the cut line on all sides to prevent white border gaps after cutting/hemming.`,
       action: `Verify artwork extends ${spec.bleed} past trim line. For mesh fence banners, verify 2" full color bleed.`
     });
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // CHECKPOINT 7.5: Banner finishing exactly as the production file name states it
+    // (grommets per the SOP Standard Grommets Placement table, pole pockets / hems on the stated sides)
+    // ──────────────────────────────────────────────────────────────────────────
+    const fc = this.finishingCheck(sop, printW, printH);
+    if (fc) checks.push(fc);
 
     // ──────────────────────────────────────────────────────────────────────────
     // CHECKPOINT 8: Color Mode & Profile (SWOP v2)
