@@ -379,9 +379,10 @@ function setupEventListeners() {
     });
   }
 
-  // Proof Studio slots: drag & drop (the boxes say "Click or drop")
+  // Proof Studio slots: drag & drop onto the whole slot, also when it already shows a proof (replace it)
   ['overall', 'template', 'mockup', 'crop'].forEach(key => {
-    const zone = document.getElementById(`drop-${key}`);
+    const box = document.getElementById(`drop-${key}`);
+    const zone = (box && box.closest('.proof-slot')) || box;
     if (!zone) return;
     zone.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -1628,6 +1629,7 @@ function generateProofView() {
     proofOut.style.display = 'block';
     ProofStudio.renderProof(orderData, 'proof-output');
   }
+  syncProofSlotCards();
 
   updateBreadcrumbs();
 
@@ -1637,87 +1639,130 @@ function generateProofView() {
   if (shareBtn) shareBtn.disabled = false;
 }
 
+/** Open the file picker of a proof slot (sidebar buttons and the Replace buttons on the proof itself) */
+function proofSlotUpload(key) {
+  const input = document.getElementById(`in-${key}`);
+  if (input) { input.value = ''; input.click(); }
+}
+
+/**
+ * Sidebar slot cards follow the slot state: picture, file name, where it came from (auto / uploaded by the
+ * designer) and a revert button only for uploads. Called after every proof render.
+ */
+function syncProofSlotCards() {
+  if (typeof ProofStudio === 'undefined') return;
+  ['overall', 'template', 'mockup', 'crop'].forEach(key => {
+    const s = ProofStudio.slots[key];
+    const has = !!(s && s.dataUrl);
+    const card = document.getElementById(`prev-${key}`);
+    const drop = document.getElementById(`drop-${key}`);
+    if (card) card.style.display = has ? 'flex' : 'none';
+    if (drop) drop.style.display = has ? 'none' : 'block';
+    if (!has) return;
+    const img = document.getElementById(`prev-img-${key}`);
+    const name = document.getElementById(`prev-name-${key}`);
+    const src = document.getElementById(`prev-src-${key}`);
+    const rm = document.getElementById(`rm-${key}`);
+    if (img && img.getAttribute('src') !== s.dataUrl) img.src = s.dataUrl;
+    if (name) { name.textContent = s.name || key; name.title = s.name || ''; }
+    if (src) {
+      src.textContent = s.isCustom ? '✔ Uploaded' : key === 'overall' ? 'Auto · pre-check artwork' : 'Auto · QNAP library';
+      src.title = s.isCustom ? 'Uploaded by the designer — ↺ goes back to the automatic one' : 'Filled automatically — Replace it if it is wrong';
+      src.className = 'preview-src' + (s.isCustom ? ' custom' : '');
+    }
+    if (rm) rm.style.display = s.isCustom ? 'flex' : 'none';
+  });
+}
+
+/**
+ * Designer upload into a proof slot — the auto-filled proof / template / mockup / screenshot is wrong.
+ * JPG / PNG / WEBP / GIF as they are; PDF (and PDF-compatible AI) page 1 rendered to JPG with pdf.js.
+ */
 function handleProofSlotFile(key, event) {
-  const f = event.target.files[0];
+  const f = event.target.files && event.target.files[0];
   if (!f) return;
-
+  const isPdf = f.type === 'application/pdf' || /\.(pdf|ai)$/i.test(f.name);
+  const isImage = /^image\/(jpeg|png|webp|gif)$/i.test(f.type) || /\.(jpe?g|png|webp|gif)$/i.test(f.name);
+  if (!isPdf && !isImage) {
+    alert(`"${f.name}" cannot be shown on the proof. Please upload the proof as JPG, PNG or PDF.`);
+    return;
+  }
+  if (isPdf) {
+    FileAnalyzer._renderPdfPage(f, 3000).then(out => {
+      if (out && out.dataUrl) applyProofSlotFile(key, f, out.dataUrl);
+      else alert(`"${f.name}" could not be read. Please save the proof as JPG or PNG and upload it again.`);
+    });
+    return;
+  }
   const r = new FileReader();
-  r.onload = (e) => {
-    ProofStudio.setSlot(key, e.target.result, f.name);
-    if (ProofStudio.slots[key]) {
-      ProofStudio.slots[key].isCustom = true;
-    }
-    const imgEl = document.getElementById(`prev-img-${key}`);
-    const nameEl = document.getElementById(`prev-name-${key}`);
-    const cardEl = document.getElementById(`prev-${key}`);
-    const dropEl = document.getElementById(`drop-${key}`);
-
-    if (imgEl) imgEl.src = e.target.result;
-    if (nameEl) nameEl.textContent = f.name;
-    if (cardEl) cardEl.style.display = 'flex';
-    if (dropEl) dropEl.style.display = 'none';
-
-    if (key === 'crop') {
-      const badge = document.getElementById('crop-status-badge');
-      if (badge) {
-        badge.textContent = 'CUSTOM CROP';
-        badge.style.background = '#dcfce7';
-        badge.style.color = '#16a34a';
-      }
-    }
-
-    // Parse filename to auto-detect order, product, dimensions, and finishing (for overall proof)
-    if (key === 'overall') {
-      const parsed = FileAnalyzer.parseFilename(f.name);
-      if (parsed) {
-        if (parsed.orderNum) {
-          appState.orderNum = parsed.orderNum;
-          const ordInput = document.getElementById('order-num');
-          if (ordInput) ordInput.value = parsed.orderNum;
-          const proofOrdInput = document.getElementById('proof-order-num');
-          if (proofOrdInput) proofOrdInput.value = parsed.orderNum;
-        }
-        const spec = parsed.spec || (parsed.productSlug && SPECS[parsed.productSlug]);
-        if (spec) {
-          appState.product = spec;
-          if (spec._catKey) {
-            const catSel = document.getElementById('cat-select');
-            if (catSel) catSel.value = spec._catKey;
-            onCategoryChange();
-          }
-          const prodSel = document.getElementById('product-select');
-          if (prodSel) prodSel.value = spec.slug || parsed.productSlug;
-          const proofProdSel = document.getElementById('proof-product-select');
-          if (proofProdSel) proofProdSel.value = spec.slug || parsed.productSlug;
-        }
-        if (parsed.widthIn && parsed.heightIn) {
-          appState.userDims = {
-            widthIn: parsed.widthIn,
-            heightIn: parsed.heightIn,
-            unit: 'in',
-            hasGrommets: parsed.hasGrommets,
-            hasPolePockets: parsed.hasPolePockets,
-            finishingDetails: parsed.finishingDetails,
-            pocketType: parsed.finishingDetails?.pockets,
-            grommetType: parsed.finishingDetails?.grommets
-          };
-          const wInput = document.getElementById('print-w');
-          const hInput = document.getElementById('print-h');
-          if (wInput) wInput.value = parsed.widthIn;
-          if (hInput) hInput.value = parsed.heightIn;
-          const proofW = document.getElementById('proof-w');
-          const proofH = document.getElementById('proof-h');
-          if (proofW) proofW.value = parsed.widthIn;
-          if (proofH) proofH.value = parsed.heightIn;
-        }
-        appState.parsedFilename = parsed;
-        updateBreadcrumbs();
-      }
-    }
-
-    generateProofView();
-  };
+  r.onload = (e) => applyProofSlotFile(key, f, e.target.result);
   r.readAsDataURL(f);
+}
+
+function applyProofSlotFile(key, f, dataUrl) {
+  ProofStudio.setSlot(key, dataUrl, f.name);
+  if (ProofStudio.slots[key]) {
+    ProofStudio.slots[key].isCustom = true;
+  }
+
+  if (key === 'crop') {
+    const badge = document.getElementById('crop-status-badge');
+    if (badge) {
+      badge.textContent = 'CUSTOM CROP';
+      badge.style.background = '#dcfce7';
+      badge.style.color = '#16a34a';
+    }
+  }
+
+  // Parse filename to auto-detect order, product, dimensions, and finishing (for overall proof) — only for a
+  // production file name; a plain "proof.jpg" must not wipe the order already loaded by the pre-check
+  if (key === 'overall') {
+    const parsed = FileAnalyzer.parseFilename(f.name);
+    if (parsed && parsed.orderNum) {
+      appState.orderNum = parsed.orderNum;
+      const ordInput = document.getElementById('order-num');
+      if (ordInput) ordInput.value = parsed.orderNum;
+      const proofOrdInput = document.getElementById('proof-order-num');
+      if (proofOrdInput) proofOrdInput.value = parsed.orderNum;
+      const spec = parsed.spec || (parsed.productSlug && SPECS[parsed.productSlug]);
+      if (spec) {
+        appState.product = spec;
+        if (spec._catKey) {
+          const catSel = document.getElementById('cat-select');
+          if (catSel) catSel.value = spec._catKey;
+          onCategoryChange();
+        }
+        const prodSel = document.getElementById('product-select');
+        if (prodSel) prodSel.value = spec.slug || parsed.productSlug;
+        const proofProdSel = document.getElementById('proof-product-select');
+        if (proofProdSel) proofProdSel.value = spec.slug || parsed.productSlug;
+      }
+      if (parsed.widthIn && parsed.heightIn) {
+        appState.userDims = {
+          widthIn: parsed.widthIn,
+          heightIn: parsed.heightIn,
+          unit: 'in',
+          hasGrommets: parsed.hasGrommets,
+          hasPolePockets: parsed.hasPolePockets,
+          finishingDetails: parsed.finishingDetails,
+          pocketType: parsed.finishingDetails?.pockets,
+          grommetType: parsed.finishingDetails?.grommets
+        };
+        const wInput = document.getElementById('print-w');
+        const hInput = document.getElementById('print-h');
+        if (wInput) wInput.value = parsed.widthIn;
+        if (hInput) hInput.value = parsed.heightIn;
+        const proofW = document.getElementById('proof-w');
+        const proofH = document.getElementById('proof-h');
+        if (proofW) proofW.value = parsed.widthIn;
+        if (proofH) proofH.value = parsed.heightIn;
+      }
+      appState.parsedFilename = parsed;
+      updateBreadcrumbs();
+    }
+  }
+
+  generateProofView();
 }
 
 function clearProofSlot(key) {

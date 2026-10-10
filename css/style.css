@@ -1376,21 +1376,19 @@ body {
     break-after: avoid !important;
   }
 
+  /* The sheet prints exactly as designed on screen — ProofStudio.fitForPrint() scales it to one page */
   .proof-card {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    margin-bottom: 8px !important;
-    padding: 8px 12px !important;
-  }
-
-  .proof-slot-img {
-    max-height: 160px !important;
-  }
-
-  .proof-zoom-img {
-    max-height: 80px !important;
   }
 }
+
+/* While fitted for print, designer-only buttons are left out of the measurement and the PDF, and the picture
+   boxes are a little shorter, so the one-page proof prints at a larger, easier-to-read scale */
+#printable-proof-sheet.print-fit .no-print { display: none !important; }
+#printable-proof-sheet.print-fit .proof01-box { height: 180px !important; }
+#printable-proof-sheet.print-fit .proof01-box .proof-slot-img { max-height: 160px !important; }
+#printable-proof-sheet.print-fit #proof-crop-viewport { height: 190px !important; }
 
 /* ──────────────────────────────────────────────────────────────────────────
    AGENTIC AI ARTWORK QUALITY INSPECTOR & BLINKING HIGHLIGHT MARKERS
@@ -1747,6 +1745,35 @@ body {
   border-color: #ff5f1f !important;
   box-shadow: 0 0 0 2px rgba(255, 95, 31, 0.25);
 }
+
+/* ── Proof Studio slots: upload / replace the automatic proof, template, mockup ── */
+.proof-slot { margin-bottom: 12px; border-radius: 8px; transition: box-shadow 0.15s ease, background 0.15s ease; }
+.proof-slot.drag-over { background: #fff7ed; box-shadow: 0 0 0 2px #fb923c; }
+.proof-slot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.proof-slot-head em { font-style: normal; font-weight: 600; color: var(--text-muted); }
+.preview-src { font-size: 9.5px; font-weight: 700; color: var(--text-muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preview-src.custom { color: #16a34a; }
+.preview-replace {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  color: #334155;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.preview-replace:hover { border-color: var(--bb-orange-mid); color: var(--bb-orange-dark); }
 
 /* ── DPO logo (Design Pre-Press Operations) ── */
 .dpo-logo-icon { width: 34px; height: 34px; border-radius: 8px; }

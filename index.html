@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261010b">
+  <link rel="stylesheet" href="css/style.css?v=20261010c">
 </head>
 <body>
 
@@ -288,45 +288,53 @@
 
           <hr style="border:none; border-top:1px solid var(--border); margin:12px 0;" />
 
-          <!-- Slot 1: Product Overall Proof -->
-          <div class="slot" style="margin-bottom:12px;">
-            <div style="font-size:11.5px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">1. Product Overall Proof (Required)</div>
-            <div class="upload-zone" style="padding:14px;" id="drop-overall" onclick="document.getElementById('in-overall').click()">
-              <div style="font-size:11.5px; font-weight:600;">Click or drop artwork proof to upload / replace</div>
+          <!-- Slots 1–3: filled automatically (customer artwork · QNAP template · QNAP mockup); the designer can
+               upload the correct file at any time (JPG / PNG / PDF, click or drop on the slot) and revert to auto -->
+          <div class="slot proof-slot" data-slot="overall">
+            <div class="proof-slot-head">
+              <span>1. Product Overall Proof <em>(Required)</em></span>
             </div>
-            <input type="file" id="in-overall" class="hidden-input" accept="image/*,.pdf" onchange="handleProofSlotFile('overall', event)" />
+            <div class="upload-zone" style="padding:14px;" id="drop-overall" onclick="proofSlotUpload('overall')">
+              <div style="font-size:11.5px; font-weight:600;">Click or drop the artwork proof (JPG / PNG / PDF)</div>
+            </div>
+            <input type="file" id="in-overall" class="hidden-input" accept="image/jpeg,image/png,image/webp,image/gif,.pdf" onchange="handleProofSlotFile('overall', event)" />
             <div class="preview-card" id="prev-overall" style="margin-top:6px;">
               <div class="preview-thumb-wrap"><img id="prev-img-overall" class="preview-img" src="" alt="" /></div>
-              <div class="preview-meta"><div class="preview-name" id="prev-name-overall"></div></div>
-              <div class="preview-remove" onclick="clearProofSlot('overall')">✕</div>
+              <div class="preview-meta"><div class="preview-name" id="prev-name-overall"></div><div class="preview-src" id="prev-src-overall"></div></div>
+              <button type="button" class="preview-replace" onclick="proofSlotUpload('overall')" title="Wrong proof? Upload the correct one">⬆ Replace</button>
+              <div class="preview-remove" id="rm-overall" onclick="clearProofSlot('overall')" title="Remove the upload — use the customer artwork again">↺</div>
             </div>
           </div>
 
-          <!-- Slot 2: Product Template -->
-          <div class="slot" style="margin-bottom:12px;">
-            <div style="font-size:11.5px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">2. Product Template / Die-Line (Optional)</div>
-            <div class="upload-zone" style="padding:14px;" id="drop-template" onclick="document.getElementById('in-template').click()">
-              <div style="font-size:11.5px; font-weight:600;">Click or drop your template / die-line to replace</div>
+          <div class="slot proof-slot" data-slot="template">
+            <div class="proof-slot-head">
+              <span>2. Product Template / Die-Line <em>(Optional)</em></span>
             </div>
-            <input type="file" id="in-template" class="hidden-input" accept="image/*,.pdf" onchange="handleProofSlotFile('template', event)" />
+            <div class="upload-zone" style="padding:14px;" id="drop-template" onclick="proofSlotUpload('template')">
+              <div style="font-size:11.5px; font-weight:600;">Click or drop the template / die-line (JPG / PNG / PDF)</div>
+            </div>
+            <input type="file" id="in-template" class="hidden-input" accept="image/jpeg,image/png,image/webp,image/gif,.pdf" onchange="handleProofSlotFile('template', event)" />
             <div class="preview-card" id="prev-template" style="margin-top:6px;">
               <div class="preview-thumb-wrap"><img id="prev-img-template" class="preview-img" src="" alt="" /></div>
-              <div class="preview-meta"><div class="preview-name" id="prev-name-template"></div></div>
-              <div class="preview-remove" onclick="clearProofSlot('template')" title="Remove upload (reverts to official template)">✕</div>
+              <div class="preview-meta"><div class="preview-name" id="prev-name-template"></div><div class="preview-src" id="prev-src-template"></div></div>
+              <button type="button" class="preview-replace" onclick="proofSlotUpload('template')" title="Wrong template? Upload the correct one">⬆ Replace</button>
+              <div class="preview-remove" id="rm-template" onclick="clearProofSlot('template')" title="Remove the upload — use the official template again">↺</div>
             </div>
           </div>
 
-          <!-- Slot 3: 3D Mockup -->
-          <div class="slot" style="margin-bottom:12px;">
-            <div style="font-size:11.5px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">3. 3D Physical Finished Mockup (Optional)</div>
-            <div class="upload-zone" style="padding:14px;" id="drop-mockup" onclick="document.getElementById('in-mockup').click()">
-              <div style="font-size:11.5px; font-weight:600;">Click or drop your 3D mockup to replace</div>
+          <div class="slot proof-slot" data-slot="mockup">
+            <div class="proof-slot-head">
+              <span>3. 3D Physical Finished Mockup <em>(Optional)</em></span>
             </div>
-            <input type="file" id="in-mockup" class="hidden-input" accept="image/*,.pdf" onchange="handleProofSlotFile('mockup', event)" />
+            <div class="upload-zone" style="padding:14px;" id="drop-mockup" onclick="proofSlotUpload('mockup')">
+              <div style="font-size:11.5px; font-weight:600;">Click or drop the 3D mockup (JPG / PNG / PDF)</div>
+            </div>
+            <input type="file" id="in-mockup" class="hidden-input" accept="image/jpeg,image/png,image/webp,image/gif,.pdf" onchange="handleProofSlotFile('mockup', event)" />
             <div class="preview-card" id="prev-mockup" style="margin-top:6px;">
               <div class="preview-thumb-wrap"><img id="prev-img-mockup" class="preview-img" src="" alt="" /></div>
-              <div class="preview-meta"><div class="preview-name" id="prev-name-mockup"></div></div>
-              <div class="preview-remove" onclick="clearProofSlot('mockup')" title="Remove upload (reverts to official mockup)">✕</div>
+              <div class="preview-meta"><div class="preview-name" id="prev-name-mockup"></div><div class="preview-src" id="prev-src-mockup"></div></div>
+              <button type="button" class="preview-replace" onclick="proofSlotUpload('mockup')" title="Wrong mockup? Upload the correct one">⬆ Replace</button>
+              <div class="preview-remove" id="rm-mockup" onclick="clearProofSlot('mockup')" title="Remove the upload — use the official mockup again">↺</div>
             </div>
           </div>
 
@@ -348,19 +356,20 @@
                 Screenshot zoom: 100% for files over 120&quot; (72 ppi), Photoshop &quot;Print size&quot; for the rest. Click the artwork in the proof to choose the area, or upload your own screenshot:
               </div>
 
-              <div class="upload-zone" style="padding:10px; font-size:11px;" id="drop-crop" onclick="document.getElementById('in-crop').click()">
+              <div class="upload-zone" style="padding:10px; font-size:11px;" id="drop-crop" onclick="proofSlotUpload('crop')">
                 <div style="font-weight:600; color:#475569;">📁 Upload Your Own Screenshot (Optional)</div>
-                <div style="font-size:9.5px; color:#94a3b8; margin-top:2px;">Click or drop image instead of the automatic one</div>
+                <div style="font-size:9.5px; color:#94a3b8; margin-top:2px;">Click or drop JPG / PNG / PDF instead of the automatic one</div>
               </div>
-              <input type="file" id="in-crop" class="hidden-input" accept="image/*,.pdf" onchange="handleProofSlotFile('crop', event)" />
-              
+              <input type="file" id="in-crop" class="hidden-input" accept="image/jpeg,image/png,image/webp,image/gif,.pdf" onchange="handleProofSlotFile('crop', event)" />
+
               <div class="preview-card" id="prev-crop" style="margin-top:6px; display:none;">
                 <div class="preview-thumb-wrap"><img id="prev-img-crop" class="preview-img" src="" alt="" /></div>
                 <div class="preview-meta">
                   <div class="preview-name" id="prev-name-crop">Custom Crop Shot</div>
-                  <div style="font-size:9.5px; color:#16a34a; font-weight:700;">Custom Upload Active</div>
+                  <div class="preview-src custom">✔ Uploaded</div>
                 </div>
-                <div class="preview-remove" onclick="clearProofSlot('crop')" title="Revert to Automatic Crop">✕ Auto</div>
+                <button type="button" class="preview-replace" onclick="proofSlotUpload('crop')" title="Upload a different screenshot">⬆ Replace</button>
+                <div class="preview-remove" onclick="clearProofSlot('crop')" title="Remove the upload — use the automatic screenshot again">↺</div>
               </div>
             </div>
           </div>
@@ -591,7 +600,7 @@
   <script src="js/precheck_engine.js?v=20261010b"></script>
   <script src="js/previous_orders.js"></script>
   <script src="js/canvas_inspector.js?v=20261010b"></script>
-  <script src="js/proof_studio.js?v=20261010b"></script>
-  <script src="js/app.js?v=20261010b"></script>
+  <script src="js/proof_studio.js?v=20261010c"></script>
+  <script src="js/app.js?v=20261010c"></script>
 </body>
 </html>

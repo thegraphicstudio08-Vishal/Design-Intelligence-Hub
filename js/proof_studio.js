@@ -215,7 +215,9 @@ const ProofStudio = {
       showPrintPreview: pv === 'auto' || pv === undefined ? !!resConcern : !!pv,
       previewOverride: !(pv === 'auto' || pv === undefined),
       templateBased,
-      showTemplate: tv === 'auto' || tv === undefined ? templateBased : !!tv
+      // auto: template products, or whenever the designer uploaded a template / mockup of their own
+      showTemplate: tv === 'auto' || tv === undefined
+        ? templateBased || !!(this.slots.template?.isCustom || this.slots.mockup?.isCustom) : !!tv
     };
     this._lastPlan = plan;
     return plan;
@@ -925,7 +927,9 @@ const ProofStudio = {
 
     // Material & Finishing Resolution
     let graphicMaterial = spec.material || '13 oz. Premium Vinyl';
-    let graphicWeight = spec.weight || `${spec.material ? spec.material : '13 oz. Premium'} Print Grade`;
+    // Weight / thickness from the material name ("13oz Premium Vinyl" → 13 oz), not the material repeated
+    const weightInName = (spec.material || '').match(/(\d+(?:\.\d+)?)\s?(oz|gsm|mil|micron|mm|pt)\b/i);
+    let graphicWeight = spec.weight || (weightInName ? `${weightInName[1]} ${weightInName[2].toLowerCase()}` : 'Standard print grade');
     // (spec.finishing is the catalog's finishing — e.g. "Hemmed + Metal Grommets" — not a print technology)
     let printTech = 'High-Definition Full-Color Digital Print';
     let finishingDetail = analysis?.finishing || spec.finishing || 'Standard Trim & Edge Finishing';
@@ -984,14 +988,18 @@ const ProofStudio = {
     //  Proof 02 · Template based proof — template-based products (PR-DPO-04 file requirement sheet)
     //  Proof 03 · Print preview screenshot — ONLY for low-resolution artwork or a print-quality concern
     //             (customers misread it otherwise — SOP purpose note)
-    const plan = this._proofPlan(spec, analysis, artworkSrc);
+    // A proof the designer uploaded in slot 1 (the auto one was wrong) is shown exactly as uploaded — no finishing
+    // marks drawn on it — while the print preview screenshot (Proof 03) still uses the customer's real artwork pixels
+    const overallCustom = !!this.slots.overall?.isCustom;
+    const realArtSrc = overallCustom ? (analysis?.previewDataUrl || artworkSrc) : artworkSrc;
+    const plan = this._proofPlan(spec, analysis, realArtSrc);
     const hasCustomCrop = Boolean(this.slots.crop?.dataUrl);
     const rerender = () => { if (document.getElementById(targetElementId)) this.renderProof(orderData, targetElementId); };
 
     // Print size of the screenshot: 100% zoom for 72 ppi files (over 120"), Photoshop "Print size" otherwise.
     // The artwork keeps its own proportions inside that print size (never stretched)
     const cropScaleInfo = this.calculateCropScale(printW, printH, spec);
-    const artSize = this._artworkSize(artworkSrc, rerender);
+    const artSize = this._artworkSize(realArtSrc, rerender);
     const cropImg = this._cropImageSize(cropScaleInfo, artSize);
     let cropX = (this.options.cropX !== null && this.options.cropX !== undefined) ? this.options.cropX : 50;
     let cropY = (this.options.cropY !== null && this.options.cropY !== undefined) ? this.options.cropY : 50;
@@ -1004,10 +1012,10 @@ const ProofStudio = {
     const isMockupView = !plan.showPrintPreview;
 
     // Proof 01 artwork with custom finishing marked (pole pockets, custom grommet positions)
-    const hl = this._finishingHighlight(artworkSrc, spec, analysis, printW, printH, rerender);
+    const hl = overallCustom ? null : this._finishingHighlight(artworkSrc, spec, analysis, printW, printH, rerender);
     const artworkProofSrc = hl ? hl.url : artworkSrc;
-    const pickArea = plan.showPrintPreview && !hasCustomCrop && !hl;
-    this._lastRender = { artworkSrc, artworkProofSrc, cropImg, cropX, cropY, showPrintPreview: plan.showPrintPreview,
+    const pickArea = plan.showPrintPreview && !hasCustomCrop && !hl && !overallCustom;
+    this._lastRender = { artworkSrc: realArtSrc, artworkProofSrc, cropImg, cropX, cropY, showPrintPreview: plan.showPrintPreview,
       baseName: this._proofBaseName(analysis), orderNum: finalOrderNum || 'Proof03' };
 
     // ── Proof sheet building blocks ──
@@ -1031,6 +1039,10 @@ const ProofStudio = {
             ${note ? `<div style="font-size:10px; color:${MUTED};">${note}</div>` : ''}
           </div>`;
     const smallBtn = (label, call) => `<button type="button" class="no-print" onclick="${call}" style="background:#ffffff; color:#334155; border:1px solid #cbd5e1; border-radius:4px; padding:3px 9px; font-size:10px; font-weight:700; cursor:pointer; white-space:nowrap;">${label}</button>`;
+    // Designer only (never printed): upload the correct file when the automatic one is wrong, or go back to auto
+    const slotBtns = (key, label) => `<span class="no-print" style="display:inline-flex; gap:6px; flex-shrink:0;">${smallBtn('⬆ ' + label, `proofSlotUpload('${key}')`)}${this.slots[key]?.isCustom ? smallBtn('↺ Auto', `clearProofSlot('${key}')`) : ''}</span>`;
+    const uploadedTag = key => this.slots[key]?.isCustom ? `<span class="no-print" style="font-size:9px; font-weight:800; letter-spacing:0.04em; color:#15803d; background:#dcfce7; border:1px solid #bbf7d0; padding:2px 6px; border-radius:3px; white-space:nowrap;">UPLOADED</span>` : '';
+    const rightGroup = (...parts) => `<div style="display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:6px; flex-shrink:0; max-width:55%;">${parts.filter(Boolean).join('')}</div>`;
     const icon = (path, color) => `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${color || 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">${path}</svg>`;
     const IC = {
       phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
@@ -1052,8 +1064,10 @@ const ProofStudio = {
       sub('This is the complete artwork that will be printed on your product.')
         + (orientNote ? sub('↻ ' + orientNote, '#b45309', true) : '')
         + (hl ? sub('Please check: ' + hl.note + '.', '#1d4ed8', true) : ''),
-      pickArea ? `<div class="no-print" style="font-size:10px; font-weight:600; color:#4739d2; background:#f5f3ff; border:1px solid #ddd6fe; padding:3px 8px; border-radius:4px;">💡 Click the artwork to choose the print preview area</div>` : '',
-      `<div style="border:1px solid #e2e8f0; border-radius:4px; padding:10px; background:repeating-conic-gradient(#f8fafc 0% 25%, #ffffff 0% 50%) 50% / 16px 16px; text-align:center; height:${hl ? 225 : 200}px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;">
+      rightGroup(
+        pickArea ? `<div class="no-print" style="font-size:10px; font-weight:600; color:#4739d2; background:#f5f3ff; border:1px solid #ddd6fe; padding:3px 8px; border-radius:4px;">💡 Click the artwork to choose the print preview area</div>` : '',
+        uploadedTag('overall'), slotBtns('overall', 'Replace proof')),
+      `<div class="proof01-box" style="border:1px solid #e2e8f0; border-radius:4px; padding:10px; background:repeating-conic-gradient(#f8fafc 0% 25%, #ffffff 0% 50%) 50% / 16px 16px; text-align:center; height:${hl ? 225 : 200}px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;">
             <div style="position:relative; max-width:100%; max-height:100%; display:inline-flex; align-items:center; justify-content:center; ${pickArea ? 'cursor:crosshair;' : ''}" ${pickArea ? 'onclick="ProofStudio.handleArtworkClick(event)" title="Click to move the print preview area"' : ''}>
               <img src="${artworkProofSrc}" alt="Entire Artwork Proof" class="proof-slot-img" style="max-width:100%; max-height:${hl ? 205 : 180}px; object-fit:contain; display:block; box-shadow:0 1px 4px rgba(15,23,42,0.18);" />
               ${pickArea ? `<div class="crop-reticle no-print" style="position:absolute; left:${cropX}%; top:${cropY}%; width:${reticleW}%; height:${reticleH}%; transform:translate(-50%, -50%); border:2px dashed #dc2626; background:rgba(220,38,38,0.12); box-shadow:0 0 0 1px rgba(0,0,0,0.25); pointer-events:none; box-sizing:border-box; transition:left 0.12s ease, top 0.12s ease;"></div>` : ''}
@@ -1065,21 +1079,27 @@ const ProofStudio = {
     if (plan.showTemplate) {
       sections.push(card('02', 'Template Based Proof',
         sub("Your product's official template and finished look, for reference."),
-        smallBtn('Hide', 'ProofStudio.setTemplateSection(false)'),
+        rightGroup(smallBtn('Hide', 'ProofStudio.setTemplateSection(false)')),
         `<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
             <div style="border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; background:#f8fafc; text-align:center;">
-              <div style="font-size:11px; font-weight:800; color:${INK}; margin-bottom:6px; text-align:left;">Product Template / Die-Line</div>
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; min-height:20px;">
+                <div style="font-size:11px; font-weight:800; color:${INK}; text-align:left;">Product Template / Die-Line</div>
+                <span style="display:inline-flex; gap:6px; align-items:center;">${uploadedTag('template')}${slotBtns('template', 'Replace')}</span>
+              </div>
               <div style="height:125px; display:flex; align-items:center; justify-content:center; background:#ffffff; border:1px solid #cbd5e1; border-radius:4px; padding:4px; overflow:hidden; cursor:pointer;" onclick="if(typeof openAssetLightbox==='function') openAssetLightbox('${templateSrc}', 'Official BannerBuzz Template', '${officialTemplate ? officialTemplate.name : spec.name}')" title="Click to enlarge">
                 <img src="${templateSrc}" alt="Official Product Template" style="max-width:100%; max-height:100%; object-fit:contain;" />
               </div>
-              <div style="margin-top:5px; font-size:9.5px; color:#475569; font-weight:600; text-align:left;">${officialTemplate ? officialTemplate.dims : dimsDisplay}</div>
+              <div style="margin-top:5px; font-size:9.5px; color:#475569; font-weight:600; text-align:left;">${esc(!this.slots.template?.isCustom && officialTemplate ? officialTemplate.dims : dimsDisplay)}</div>
             </div>
             <div style="border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; background:#f8fafc; text-align:center;">
-              <div style="font-size:11px; font-weight:800; color:${INK}; margin-bottom:6px; text-align:left;">Finished Product Mockup</div>
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; min-height:20px;">
+                <div style="font-size:11px; font-weight:800; color:${INK}; text-align:left;">Finished Product Mockup</div>
+                <span style="display:inline-flex; gap:6px; align-items:center;">${uploadedTag('mockup')}${slotBtns('mockup', 'Replace')}</span>
+              </div>
               <div style="height:125px; display:flex; align-items:center; justify-content:center; background:#ffffff; border:1px solid #cbd5e1; border-radius:4px; padding:4px; overflow:hidden; cursor:pointer;" onclick="if(typeof openAssetLightbox==='function') openAssetLightbox('${mockupSrc}', 'Official BannerBuzz 3D Mockup', '${officialMockup ? officialMockup.name : spec.name}')" title="Click to enlarge">
                 <img src="${mockupSrc}" alt="Official 3D Mockup" style="max-width:100%; max-height:100%; object-fit:contain;" />
               </div>
-              <div style="margin-top:5px; font-size:9.5px; color:#475569; font-weight:600; text-align:left;">${officialMockup ? officialMockup.dims : 'Finished product'}</div>
+              <div style="margin-top:5px; font-size:9.5px; color:#475569; font-weight:600; text-align:left;">${esc(!this.slots.mockup?.isCustom && officialMockup ? officialMockup.dims : 'Finished product')}</div>
             </div>
           </div>`));
     }
@@ -1091,11 +1111,12 @@ const ProofStudio = {
         : 'This shows part of your artwork at actual print size — please check the print quality before you approve.';
       sections.push(card('03', 'Print Preview Screenshot',
         sub(why, plan.resConcern ? '#b45309' : MUTED, !!plan.resConcern),
-        `<span class="no-print" style="font-size:9.5px; font-weight:800; color:#4739d2; background:#ede9fe; padding:3px 8px; border-radius:4px; border:1px solid #ddd6fe; white-space:nowrap;">${hasCustomCrop ? 'DESIGNER SCREENSHOT' : cropScaleInfo.badgeText}</span>`,
+        rightGroup(`<span class="no-print" style="font-size:9.5px; font-weight:800; color:#4739d2; background:#ede9fe; padding:3px 8px; border-radius:4px; border:1px solid #ddd6fe; white-space:nowrap;">${hasCustomCrop ? 'DESIGNER SCREENSHOT' : cropScaleInfo.badgeText}</span>`,
+          slotBtns('crop', hasCustomCrop ? 'Replace' : 'Upload screenshot')),
         `<div id="proof-crop-viewport" style="border:2px dashed ${plan.resConcern ? '#dc2626' : '#cbd5e1'}; border-radius:4px; height:240px; overflow:hidden; position:relative; background:#f8fafc; display:flex; align-items:center; justify-content:center; cursor:${!hasCustomCrop ? 'grab' : 'default'}; user-select:none;">
             ${hasCustomCrop ? `<img src="${this.slots.crop.dataUrl}" alt="Print preview screenshot" class="proof-zoom-img" style="max-width:100%; max-height:100%; object-fit:contain;" />` : `
               <div style="position:relative; width:100%; height:100%; overflow:hidden; pointer-events:none;">
-                <img id="proof-crop-img" src="${artworkSrc}" alt="Print preview screenshot" class="proof-zoom-img" style="position:absolute; width:${cropImg.w}px; height:${cropImg.h}px; max-width:none !important; max-height:none !important; left:calc(50% - ${Math.round(cropImg.w * (cropX / 100))}px); top:calc(50% - ${Math.round(cropImg.h * (cropY / 100))}px); transition:left 0.12s ease, top 0.12s ease; display:block;" />
+                <img id="proof-crop-img" src="${realArtSrc}" alt="Print preview screenshot" class="proof-zoom-img" style="position:absolute; width:${cropImg.w}px; height:${cropImg.h}px; max-width:none !important; max-height:none !important; left:calc(50% - ${Math.round(cropImg.w * (cropX / 100))}px); top:calc(50% - ${Math.round(cropImg.h * (cropY / 100))}px); transition:left 0.12s ease, top 0.12s ease; display:block;" />
               </div>
               <div style="position:absolute; top:8px; left:10px; background:rgba(229,231,235,0.95); color:#dc2626; font-size:11px; font-weight:800; padding:3px 10px; border-radius:3px; pointer-events:none;">Print preview screenshot</div>
               <div class="no-print" style="position:absolute; bottom:8px; right:10px; background:rgba(15,23,42,0.88); color:#ffffff; font-size:10px; font-weight:700; padding:4px 12px; border-radius:4px; pointer-events:none;">🔍 ${cropScaleInfo.modeText} · ✋ drag to pan</div>`}
@@ -1104,7 +1125,7 @@ const ProofStudio = {
 
     // Designer shortcuts (never printed)
     const tools = [
-      !plan.showTemplate && (officialTemplate || officialMockup) ? smallBtn('+ Template &amp; mockup section', 'ProofStudio.setTemplateSection(true)') : '',
+      !plan.showTemplate ? smallBtn('+ Template &amp; mockup section', 'ProofStudio.setTemplateSection(true)') : '',
       !plan.showPrintPreview ? smallBtn('+ Print preview screenshot (print-quality concern)', 'ProofStudio.setPrintPreview(true)') : ''
     ].filter(Boolean).join('');
     const visualSectionsHtml = sections.join('') + (tools ? `<div class="no-print" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; margin:-4px 0 10px;">${tools}</div>` : '');
@@ -1264,23 +1285,24 @@ const ProofStudio = {
    * Trigger print dialog for the proof sheet
    */
   /**
-   * Fit the whole proof sheet — header to footer — on one Letter page for Print / Export PDF: the sheet is
-   * laid out wider and zoomed down by the same factor, so nothing is cut off and nothing reflows badly.
+   * Fit the whole proof sheet — header to footer — on one Letter page for Print / Export PDF. The sheet is laid
+   * out at (at least) its on-screen design width, so the PDF looks exactly like the proof on screen (no squeezed
+   * footer or wrapped phone numbers), then zoomed down to the page. Designer-only buttons are left out.
    */
   fitForPrint(on) {
     const sheet = document.getElementById('printable-proof-sheet');
     if (!sheet) return;
     ['width', 'max-width', 'zoom'].forEach(p => sheet.style.removeProperty(p));
+    sheet.classList.toggle('print-fit', !!on);
     if (!on) return;
-    const PAGE_W = 748, PAGE_H = 985;                   // Letter portrait minus the @page margins (CSS px)
-    sheet.style.setProperty('width', PAGE_W + 'px', 'important');
+    const PAGE_W = 748, PAGE_H = 985, DESIGN_W = 860;   // Letter portrait minus the @page margins; sheet width on screen (CSS px)
+    sheet.style.setProperty('width', DESIGN_W + 'px', 'important');
     sheet.style.setProperty('max-width', 'none', 'important');
     const h = sheet.scrollHeight;
-    const k = h > 0 ? Math.min(1, PAGE_H / h) : 1;
-    if (k < 1) {
-      sheet.style.setProperty('width', Math.floor(PAGE_W / k) + 'px', 'important');
-      sheet.style.setProperty('zoom', k.toFixed(3), 'important');
-    }
+    if (!(h > 0)) { ['width', 'max-width'].forEach(p => sheet.style.removeProperty(p)); return; }
+    const k = Math.min(PAGE_W / DESIGN_W, PAGE_H / h);
+    sheet.style.setProperty('width', Math.floor(PAGE_W / k) + 'px', 'important');
+    sheet.style.setProperty('zoom', k.toFixed(4), 'important');
   },
 
   print() {
