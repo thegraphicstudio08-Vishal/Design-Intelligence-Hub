@@ -748,23 +748,27 @@ const AgenticAiInspector = {
     const artSize = a.detectedInchesW ? `${fmt(a.detectedInchesW)}" × ${fmt(a.detectedInchesH)}"` : a.pixelWidth ? `${a.pixelWidth} × ${a.pixelHeight} px` : '';
     const howTo = turn === 90 ? '90° clockwise' : turn === 270 ? '90° anticlockwise' : turn === 180 ? '180°' : '';
     const textKnown = !!(this.textResult && this.textResult.orientation && this.textResult.orientation.readable);
-    const btn = (label, call, primary) => `<button class="orient-alert-btn${primary ? ' primary' : ''}" onclick="${call}">${label}</button>`;
-    const buttons = [];
-    if (turn) {
-      // Text runs sideways / upside down: turning the artwork makes it read correctly on the ordered size
-      buttons.push(rot === turn ? btn('↺ Undo turn', 'CanvasInspector.setRotation(0)') : btn(`↻ Turn artwork ${howTo}`, `AgenticAiInspector.previewOrientation('turn', ${turn})`, true));
-    } else if (check.scenario === 'otherSize') {
-      // PR-DPO-03 cases 11–14: not the ordered size turned → the proof stays in the ordered orientation,
-      // the artwork is adjusted / stretched to the ordered size (customer approval)
-      if (!textKnown) buttons.push(rot ? btn('↺ Undo turn', 'CanvasInspector.setRotation(0)') : btn('↻ Turn artwork 90°', 'AgenticAiInspector.previewOrientation(\'turn\', 90)'));
-    } else {
-      // PR-DPO-03 cases 5–10: the ordered size turned → update the admin to the artwork size and send the proof
-      // in the artwork's orientation; preview the order turned (also used by the proof)
-      buttons.push(turned ? btn('↺ Back to ordered size', 'AgenticAiInspector.previewOrientation(\'order\', false)')
-        : btn(`Proof in artwork orientation (${H}" × ${W}")`, 'AgenticAiInspector.previewOrientation(\'order\', true)', true));
-      if (!textKnown) buttons.push(rot ? btn('↺ Undo turn', 'CanvasInspector.setRotation(0)') : btn('↻ Turn artwork 90°', 'AgenticAiInspector.previewOrientation(\'turn\', 90)'));
-    }
+    const btn = (label, call, primary, title) => `<button class="orient-alert-btn${primary ? ' primary' : ''}" onclick="${call}"${title ? ` title="${title}"` : ''}>${label}</button>`;
+    // Two separate options, the one the SOP recommends for this case highlighted:
+    //  · text sideways / upside down → Rotate artwork (it then reads correctly on the ordered board)
+    //  · PR-DPO-03 cases 5–10, ordered size turned → Rotate artboard: proof in the artwork's orientation,
+    //    update the admin to the artwork size
+    //  · cases 11–14, other size → neither: the artwork is adjusted / stretched to the ordered size (approval)
+    const recArt = !!turn;
+    const recBoard = !turn && check.scenario !== 'otherSize';
+    const buttons = [
+      btn(rot ? `↻ Rotate artwork (now ${rot}°)` : `↻ Rotate artwork ${turn ? howTo : '90°'}`,
+        rot ? 'CanvasInspector.rotate90()' : `AgenticAiInspector.previewOrientation('turn', ${turn || 90})`,
+        recArt && !rot, "Turn the customer's artwork on the template board as it is"),
+      btn(turned ? `⤾ Artboard back to ${W}" × ${H}"` : `⤾ Rotate artboard to ${H}" × ${W}"`,
+        `AgenticAiInspector.previewOrientation('order', ${!turned})`,
+        recBoard && !turned, 'Turn the template board (artboard); the artwork stays as supplied')
+    ];
+    if (rot || turned) buttons.push(btn('↺ Reset', 'AgenticAiInspector.previewOrientation(\'reset\')'));
     buttons.push(btn('Show on canvas', 'AgenticAiInspector.previewOrientation(\'show\')'));
+    const hint = recBoard ? 'Recommended: rotate the artboard (proof in the artwork\'s orientation).'
+      : recArt ? 'Recommended: rotate the artwork so the text reads correctly.'
+      : textKnown ? '' : 'Rotate the artwork or the artboard to compare — the order size is not changed here.';
 
     if (!box) {
       box = document.createElement('div');
@@ -774,8 +778,10 @@ const AgenticAiInspector = {
       stack.insertBefore(box, stack.firstChild);
     }
     box.className = `spell-alert orient-alert ${check.status === 'FAIL' ? 'is-fail' : 'is-warn'}`;
-    const preview = rot ? `Canvas shows the artwork turned ${rot}° on the ordered size — preview only.`
-      : turned ? `Canvas and proof show the order turned to ${H}" × ${W}" (artwork orientation). Update the admin size before printing.`
+    const states = [];
+    if (turned) states.push(`artboard turned to ${H}" × ${W}" (update the admin size before printing)`);
+    if (rot) states.push(`artwork turned ${rot}°`);
+    const preview = states.length ? `Canvas and proof show: ${states.join(' · ')} — preview only.`
       : check.scenario === 'otherSize' ? `Proof stays in the ordered orientation (${W}" × ${H}") with the artwork fitted — customer approval required.` : '';
     box.innerHTML = `
       <div class="spell-alert-head">🔄 <span>Orientation${turn ? ' issue: text is ' + (turn === 180 ? 'upside down' : 'sideways') : check.scenario === 'turned' ? ': artwork is the ordered size turned' : ' mismatch'}</span>
@@ -786,7 +792,8 @@ const AgenticAiInspector = {
       </div>
       <div class="spell-alert-note">${check.action || check.detail}</div>
       ${preview ? `<div class="orient-alert-preview">${preview}</div>` : ''}
-      <div class="orient-alert-actions">${buttons.join('')}</div>`;
+      <div class="orient-alert-actions">${buttons.join('')}</div>
+      ${hint ? `<div class="orient-alert-hint">${hint}</div>` : ''}`;
   },
 
   closeOrientationAlert() {
@@ -799,8 +806,9 @@ const AgenticAiInspector = {
   previewOrientation(what, value) {
     const ci = (typeof CanvasInspector !== 'undefined') ? CanvasInspector : null;
     if (!ci) return;
-    if (what === 'turn') { ci.previewOrderTurned = false; ci.setRotation(value); }
-    else if (what === 'order') { ci.currentRotation = 0; ci.setOrderTurned(!!value); }
+    if (what === 'turn') ci.setRotation(value);                  // artwork on the board as it is
+    else if (what === 'order') ci.setOrderTurned(!!value);       // the template board (artboard)
+    else if (what === 'reset') ci.resetOrientation();
     const wrap = document.querySelector('.canvas-viewport-wrap');
     if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
   },

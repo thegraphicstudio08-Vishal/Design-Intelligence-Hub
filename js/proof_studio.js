@@ -898,9 +898,11 @@ const ProofStudio = {
     // Artwork turned on the canvas (Rotate 90° / orientation alert): the customer proof shows it the same way
     const turned = this._turnedArtwork(baseArtworkSrc);
     const artworkSrc = turned.src;
-    const orientNote = turned.angle
-      ? `Shown turned ${turned.angle}° to fit the ordered ${printW}" × ${printH}" size — please confirm this orientation.`
-      : orderTurned ? `Shown at ${printW}" W × ${printH}" H to match your artwork's orientation — please confirm the size and orientation.` : '';
+    // Canvas "Rotate Artboard" (order shown turned) and "Rotate Artwork" can be combined
+    const orientParts = [];
+    if (orderTurned) orientParts.push(`Shown at ${printW}" W × ${printH}" H to match your artwork's orientation`);
+    if (turned.angle) orientParts.push(`${orderTurned ? 'artwork' : 'Shown'} turned ${turned.angle}° to fit the ${orderTurned ? '' : 'ordered '}${printW}" × ${printH}" size`);
+    const orientNote = orientParts.length ? orientParts.join(', ') + ' — please confirm the size and orientation.' : '';
     
     // Resolve official BannerBuzz template & mockup from QNAP registry
     const officialTemplate = (typeof getOfficialProductTemplate === 'function')
@@ -924,7 +926,8 @@ const ProofStudio = {
     // Material & Finishing Resolution
     let graphicMaterial = spec.material || '13 oz. Premium Vinyl';
     let graphicWeight = spec.weight || `${spec.material ? spec.material : '13 oz. Premium'} Print Grade`;
-    let printTech = spec.finishing || 'High-Definition Digital Print';
+    // (spec.finishing is the catalog's finishing — e.g. "Hemmed + Metal Grommets" — not a print technology)
+    let printTech = 'High-Definition Full-Color Digital Print';
     let finishingDetail = analysis?.finishing || spec.finishing || 'Standard Trim & Edge Finishing';
 
     // Tailor specifications dynamically to product family
@@ -964,8 +967,10 @@ const ProofStudio = {
       if (bf.found) {
         const lay = SopRules.bannerLayout({ widthIn: printW, heightIn: printH }, bf);
         const g = lay.grommets;
-        finishingDetail = SopRules.describeFinishing(bf, lay)
-          + (g && g.where === 'all' ? ` (top ${g.perSide.top} · bottom ${g.perSide.bottom} · left ${g.perSide.left} · right ${g.perSide.right})` : '');
+        // per-side counts right after the grommets (describeFinishing lists the grommets first)
+        const parts = SopRules.describeFinishing(bf, lay).split(' · ');
+        if (g && g.where === 'all') parts[0] += ` (top ${g.perSide.top} · bottom ${g.perSide.bottom} · left ${g.perSide.left} · right ${g.perSide.right})`;
+        finishingDetail = parts.join(' · ');
       }
     }
 
@@ -1005,43 +1010,87 @@ const ProofStudio = {
     this._lastRender = { artworkSrc, artworkProofSrc, cropImg, cropX, cropY, showPrintPreview: plan.showPrintPreview,
       baseName: this._proofBaseName(analysis), orderNum: finalOrderNum || 'Proof03' };
 
-    const circle = n => `<div style="width:24px; height:24px; border-radius:50%; background:#4739d2; color:#ffffff; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">${n}</div>`;
-    const sub = (t, color, bold) => t ? `<div style="font-size:10.5px; color:${color || '#64748b'};${bold ? ' font-weight:700;' : ''} margin-top:1px;">${t}</div>` : '';
-    const card = (n, title, subtitle, right, body) => `
-        <div class="proof-card" style="border:1px solid #cbd5e1; border-radius:6px; padding:12px 16px; margin-bottom:12px; background:#ffffff; page-break-inside:avoid; break-inside:avoid;">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px;">
-            <div style="display:flex; align-items:center; gap:8px;">${circle(n)}<div>
-              <h2 style="font-size:13.5px; font-weight:800; color:#111c38; margin:0;">${title}</h2>${subtitle}
+    // ── Proof sheet building blocks ──
+    const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const NAVY = '#0e2246', ORANGE = '#ff5f1f', INK = '#111c38', MUTED = '#64748b', LINE = '#dbe2ea';
+    const proofTag = id => `<span style="display:inline-block; background:${NAVY}; color:#ffffff; font-size:9.5px; font-weight:800; letter-spacing:0.08em; padding:4px 8px; border-radius:3px; white-space:nowrap; flex-shrink:0;">PROOF ${id}</span>`;
+    const sub = (t, color, bold) => t ? `<div style="font-size:10.5px; color:${color || MUTED};${bold ? ' font-weight:700;' : ''} margin-top:1px; line-height:1.35;">${t}</div>` : '';
+    const card = (id, title, subtitle, right, body) => `
+        <div class="proof-card" style="border:1px solid ${LINE}; border-radius:6px; margin-bottom:12px; background:#ffffff; page-break-inside:avoid; break-inside:avoid; overflow:hidden;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 14px; background:#f7f9fc; border-bottom:1px solid #e5eaf1;">
+            <div style="display:flex; align-items:center; gap:10px; min-width:0;">${proofTag(id)}<div style="min-width:0;">
+              <h2 style="font-size:13px; font-weight:800; color:${INK}; margin:0;">${title}</h2>${subtitle}
             </div></div>
             ${right || ''}
           </div>
-          ${body}
+          <div style="padding:10px 14px 12px;">${body}</div>
         </div>`;
+    const sectionHead = (title, note) => `
+          <div style="display:flex; align-items:baseline; gap:10px; margin:0 0 8px;">
+            <div style="font-size:11px; font-weight:900; color:${NAVY}; letter-spacing:0.08em; text-transform:uppercase; border-left:3px solid ${ORANGE}; padding-left:8px;">${title}</div>
+            ${note ? `<div style="font-size:10px; color:${MUTED};">${note}</div>` : ''}
+          </div>`;
     const smallBtn = (label, call) => `<button type="button" class="no-print" onclick="${call}" style="background:#ffffff; color:#334155; border:1px solid #cbd5e1; border-radius:4px; padding:3px 9px; font-size:10px; font-weight:700; cursor:pointer; white-space:nowrap;">${label}</button>`;
+    const icon = (path, color) => `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${color || 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">${path}</svg>`;
+    const IC = {
+      phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
+      mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/>',
+      web: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+      check: '<polyline points="20 6 9 17 4 12"/>',
+      gift: '<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/>',
+      shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+      truck: '<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+      users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
+    };
+    const logo = (size, dark) => `<span style="display:inline-flex; align-items:center; font-family:'Inter', sans-serif; line-height:1;">
+        <span style="font-size:${size}px; font-weight:900; color:${dark ? '#ffffff' : NAVY}; letter-spacing:-0.5px;">Banner</span><span style="background:${ORANGE}; color:#ffffff; font-size:${size - 2}px; font-weight:900; padding:2px ${Math.round(size / 4)}px; border-radius:4px; margin-left:2px; letter-spacing:-0.3px;">Buzz</span></span>`;
 
-    let n = 0;
     const sections = [];
 
-    // ── Proof 01 · Entire artwork ──
-    sections.push(card(++n, 'Entire Artwork Proof',
+    // ── Proof 01 · Small size proof (entire artwork) ──
+    sections.push(card('01', 'Entire Artwork Proof',
       sub('This is the complete artwork that will be printed on your product.')
         + (orientNote ? sub('↻ ' + orientNote, '#b45309', true) : '')
         + (hl ? sub('Please check: ' + hl.note + '.', '#1d4ed8', true) : ''),
       pickArea ? `<div class="no-print" style="font-size:10px; font-weight:600; color:#4739d2; background:#f5f3ff; border:1px solid #ddd6fe; padding:3px 8px; border-radius:4px;">💡 Click the artwork to choose the print preview area</div>` : '',
-      `<div style="border:1px solid #e2e8f0; border-radius:4px; padding:8px; background:#ffffff; text-align:center; height:${hl ? 215 : 180}px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;">
+      `<div style="border:1px solid #e2e8f0; border-radius:4px; padding:10px; background:repeating-conic-gradient(#f8fafc 0% 25%, #ffffff 0% 50%) 50% / 16px 16px; text-align:center; height:${hl ? 225 : 200}px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;">
             <div style="position:relative; max-width:100%; max-height:100%; display:inline-flex; align-items:center; justify-content:center; ${pickArea ? 'cursor:crosshair;' : ''}" ${pickArea ? 'onclick="ProofStudio.handleArtworkClick(event)" title="Click to move the print preview area"' : ''}>
-              <img src="${artworkProofSrc}" alt="Entire Artwork Proof" class="proof-slot-img" style="max-width:100%; max-height:${hl ? 200 : 165}px; object-fit:contain; display:block;" />
+              <img src="${artworkProofSrc}" alt="Entire Artwork Proof" class="proof-slot-img" style="max-width:100%; max-height:${hl ? 205 : 180}px; object-fit:contain; display:block; box-shadow:0 1px 4px rgba(15,23,42,0.18);" />
               ${pickArea ? `<div class="crop-reticle no-print" style="position:absolute; left:${cropX}%; top:${cropY}%; width:${reticleW}%; height:${reticleH}%; transform:translate(-50%, -50%); border:2px dashed #dc2626; background:rgba(220,38,38,0.12); box-shadow:0 0 0 1px rgba(0,0,0,0.25); pointer-events:none; box-sizing:border-box; transition:left 0.12s ease, top 0.12s ease;"></div>` : ''}
             </div>
+            <div style="position:absolute; right:8px; bottom:6px; font-size:9.5px; font-weight:700; color:${MUTED}; background:rgba(255,255,255,0.9); padding:2px 6px; border-radius:3px;">${esc(dimsDisplay)}</div>
           </div>`));
+
+    // ── Proof 02 · Template based proof (template products) ──
+    if (plan.showTemplate) {
+      sections.push(card('02', 'Template Based Proof',
+        sub("Your product's official template and finished look, for reference."),
+        smallBtn('Hide', 'ProofStudio.setTemplateSection(false)'),
+        `<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div style="border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; background:#f8fafc; text-align:center;">
+              <div style="font-size:11px; font-weight:800; color:${INK}; margin-bottom:6px; text-align:left;">Product Template / Die-Line</div>
+              <div style="height:125px; display:flex; align-items:center; justify-content:center; background:#ffffff; border:1px solid #cbd5e1; border-radius:4px; padding:4px; overflow:hidden; cursor:pointer;" onclick="if(typeof openAssetLightbox==='function') openAssetLightbox('${templateSrc}', 'Official BannerBuzz Template', '${officialTemplate ? officialTemplate.name : spec.name}')" title="Click to enlarge">
+                <img src="${templateSrc}" alt="Official Product Template" style="max-width:100%; max-height:100%; object-fit:contain;" />
+              </div>
+              <div style="margin-top:5px; font-size:9.5px; color:#475569; font-weight:600; text-align:left;">${officialTemplate ? officialTemplate.dims : dimsDisplay}</div>
+            </div>
+            <div style="border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; background:#f8fafc; text-align:center;">
+              <div style="font-size:11px; font-weight:800; color:${INK}; margin-bottom:6px; text-align:left;">Finished Product Mockup</div>
+              <div style="height:125px; display:flex; align-items:center; justify-content:center; background:#ffffff; border:1px solid #cbd5e1; border-radius:4px; padding:4px; overflow:hidden; cursor:pointer;" onclick="if(typeof openAssetLightbox==='function') openAssetLightbox('${mockupSrc}', 'Official BannerBuzz 3D Mockup', '${officialMockup ? officialMockup.name : spec.name}')" title="Click to enlarge">
+                <img src="${mockupSrc}" alt="Official 3D Mockup" style="max-width:100%; max-height:100%; object-fit:contain;" />
+              </div>
+              <div style="margin-top:5px; font-size:9.5px; color:#475569; font-weight:600; text-align:left;">${officialMockup ? officialMockup.dims : 'Finished product'}</div>
+            </div>
+          </div>`));
+    }
 
     // ── Proof 03 · Print preview screenshot (only for low resolution / print-quality concern) ──
     if (plan.showPrintPreview) {
       const why = plan.resConcern
         ? `Your artwork is ${plan.resConcern.ppi} PPI at the ordered size (${plan.resConcern.target} PPI recommended), so some areas may look soft or pixelated when printed. The marked area is shown below at actual print size.`
         : 'This shows part of your artwork at actual print size — please check the print quality before you approve.';
-      sections.push(card(++n, 'Print Preview Screenshot',
-        sub(why, plan.resConcern ? '#b45309' : '#64748b', !!plan.resConcern),
+      sections.push(card('03', 'Print Preview Screenshot',
+        sub(why, plan.resConcern ? '#b45309' : MUTED, !!plan.resConcern),
         `<span class="no-print" style="font-size:9.5px; font-weight:800; color:#4739d2; background:#ede9fe; padding:3px 8px; border-radius:4px; border:1px solid #ddd6fe; white-space:nowrap;">${hasCustomCrop ? 'DESIGNER SCREENSHOT' : cropScaleInfo.badgeText}</span>`,
         `<div id="proof-crop-viewport" style="border:2px dashed ${plan.resConcern ? '#dc2626' : '#cbd5e1'}; border-radius:4px; height:240px; overflow:hidden; position:relative; background:#f8fafc; display:flex; align-items:center; justify-content:center; cursor:${!hasCustomCrop ? 'grab' : 'default'}; user-select:none;">
             ${hasCustomCrop ? `<img src="${this.slots.crop.dataUrl}" alt="Print preview screenshot" class="proof-zoom-img" style="max-width:100%; max-height:100%; object-fit:contain;" />` : `
@@ -1053,190 +1102,143 @@ const ProofStudio = {
           </div>`));
     }
 
-    // ── Proof 02 · Template based proof (template products) ──
-    if (plan.showTemplate) {
-      sections.push(card(++n, 'Template Based Proof',
-        sub("Your product's official template and finished look, for reference."),
-        smallBtn('Hide', 'ProofStudio.setTemplateSection(false)'),
-        `<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-            <div style="border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; background:#f8fafc; text-align:center;">
-              <div style="font-size:11px; font-weight:800; color:#111c38; margin-bottom:6px; text-align:left;">Product Template / Die-Line</div>
-              <div style="height:125px; display:flex; align-items:center; justify-content:center; background:#ffffff; border:1px solid #cbd5e1; border-radius:4px; padding:4px; overflow:hidden; cursor:pointer;" onclick="if(typeof openAssetLightbox==='function') openAssetLightbox('${templateSrc}', 'Official BannerBuzz Template', '${officialTemplate ? officialTemplate.name : spec.name}')" title="Click to enlarge">
-                <img src="${templateSrc}" alt="Official Product Template" style="max-width:100%; max-height:100%; object-fit:contain;" />
-              </div>
-              <div style="margin-top:5px; font-size:9.5px; color:#475569; font-weight:600; text-align:left;">${officialTemplate ? officialTemplate.dims : dimsDisplay}</div>
-            </div>
-            <div style="border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; background:#f8fafc; text-align:center;">
-              <div style="font-size:11px; font-weight:800; color:#111c38; margin-bottom:6px; text-align:left;">Finished Product Mockup</div>
-              <div style="height:125px; display:flex; align-items:center; justify-content:center; background:#ffffff; border:1px solid #cbd5e1; border-radius:4px; padding:4px; overflow:hidden; cursor:pointer;" onclick="if(typeof openAssetLightbox==='function') openAssetLightbox('${mockupSrc}', 'Official BannerBuzz 3D Mockup', '${officialMockup ? officialMockup.name : spec.name}')" title="Click to enlarge">
-                <img src="${mockupSrc}" alt="Official 3D Mockup" style="max-width:100%; max-height:100%; object-fit:contain;" />
-              </div>
-              <div style="margin-top:5px; font-size:9.5px; color:#475569; font-weight:600; text-align:left;">${officialMockup ? officialMockup.dims : 'Finished product'}</div>
-            </div>
-          </div>`));
-    }
-
     // Designer shortcuts (never printed)
     const tools = [
       !plan.showTemplate && (officialTemplate || officialMockup) ? smallBtn('+ Template &amp; mockup section', 'ProofStudio.setTemplateSection(true)') : '',
       !plan.showPrintPreview ? smallBtn('+ Print preview screenshot (print-quality concern)', 'ProofStudio.setPrintPreview(true)') : ''
     ].filter(Boolean).join('');
-    let visualSectionsHtml = sections.join('') + (tools ? `<div class="no-print" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; margin:-4px 0 10px;">${tools}</div>` : '');
-    let specSectionNum = n + 1;
+    const visualSectionsHtml = sections.join('') + (tools ? `<div class="no-print" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; margin:-4px 0 10px;">${tools}</div>` : '');
+
+    // ── Order details (header band) ──
+    const qty = analysis?.qty || 1;
+    const sidesTxt = (analysis?.isDoubleSided || spec.isDoubleSided) ? 'Double-sided (4/4)' : 'Single-sided (4/0)';
+    const customerTxt = customer && customer !== 'Customer' ? customer : '';
+    const cell = (label, value, opts = {}) => `
+            <div style="padding:9px 14px; ${opts.span ? `grid-column:span ${opts.span};` : ''} ${opts.border === false ? '' : `border-right:1px solid ${opts.dark ? 'rgba(255,255,255,0.12)' : LINE};`} min-width:0;">
+              <div style="font-size:8.5px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:${opts.dark ? '#9fb3d1' : MUTED};">${label}</div>
+              <div style="font-size:${opts.big ? 15 : 11.5}px; font-weight:800; color:${opts.dark ? '#ffffff' : INK}; margin-top:2px; line-height:1.3; ${opts.mono ? "font-family:'JetBrains Mono', 'Roboto Mono', monospace;" : ''} overflow-wrap:anywhere;">${value}</div>
+            </div>`;
+
+    // ── Specifications table ──
+    const specRows = [
+      ['Graphic Material', graphicMaterial], ['Finished Dimensions', dimsDisplay],
+      ['Graphic Weight', graphicWeight], ['Size Tolerance', sizeTolerance],
+      ['Print Technology', printTech], ['Graphic Color', graphicColor],
+      ['Finishing Details', finishingDetail, true]
+    ];
+    const specHtml = specRows.map(([k, v, wide], i) => `
+            <div style="display:flex; gap:10px; padding:6px 12px; ${wide ? 'grid-column:span 2;' : ''} background:${Math.floor(i / 2) % 2 ? '#ffffff' : '#f7f9fc'}; border-bottom:1px solid #edf1f6; font-size:11px; line-height:1.4;">
+              <span style="font-weight:700; color:${MUTED}; min-width:128px; flex-shrink:0;">${k}:</span>
+              <span style="color:${INK}; font-weight:600;">${esc(v)}</span>
+            </div>`).join('');
+
+    const checks = ['Spelling &amp; grammar', 'Phone numbers, emails &amp; web addresses', 'Names, dates &amp; prices',
+      'Logos &amp; images', 'Colors (screen colors can differ from print)', 'Size, orientation &amp; finishing'];
 
     el.innerHTML = `
-      <div class="bb-official-proof-wrap" id="printable-proof-sheet" style="font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background:#ffffff; color:#111c38; max-width:860px; margin:0 auto; padding:20px 24px; border:1px solid #dbe2ea; border-radius:8px; box-shadow:0 8px 24px rgba(17,28,56,0.06); box-sizing:border-box;">
-        <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid #edf2f7; page-break-inside:avoid; break-inside:avoid;">
+      <div class="bb-official-proof-wrap" id="printable-proof-sheet" style="font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background:#ffffff; color:${INK}; max-width:860px; margin:0 auto; padding:0; border:1px solid ${LINE}; border-radius:8px; box-shadow:0 8px 24px rgba(17,28,56,0.06); box-sizing:border-box; overflow:hidden;">
+
+        <!-- ── 1. HEADER ── -->
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; padding:18px 26px 14px; page-break-inside:avoid; break-inside:avoid;">
           <div>
-            <div style="display:inline-flex; align-items:center; gap:0;">
-              <span style="font-size:24px; font-weight:900; color:#0e2246; letter-spacing:-0.5px; font-family:'Inter', sans-serif;">Banner</span>
-              <span style="background:#ff5f1f; color:#ffffff; font-size:22px; font-weight:900; padding:2px 7px; border-radius:4px; margin-left:2px; letter-spacing:-0.3px; font-family:'Inter', sans-serif;">Buzz</span>
-            </div>
-            <div style="font-size:10.5px; font-weight:700; color:#15284f; margin-top:2px; letter-spacing:0.01em;">
-              More Than Products. A Brighter Way to Brand.
-            </div>
+            ${logo(24)}
+            <div style="font-size:10.5px; font-weight:700; color:#15284f; margin-top:5px;">More Than Products. A Brighter Way to Brand.</div>
           </div>
-
-          <!-- 4 Trust Badges -->
-          <div style="display:flex; gap:18px; align-items:center; text-align:center;">
-            <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 12 20 22 4 22 4 12"/>
-                <rect x="2" y="7" width="20" height="5"/>
-                <line x1="12" y1="22" x2="12" y2="7"/>
-                <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
-                <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
-              </svg>
-              <span style="font-size:8.5px; font-weight:700; color:#475569; letter-spacing:0.02em; line-height:1.2;">CUSTOM<br/>PRINTED PRODUCTS</span>
-            </div>
-
-            <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg>
-              <span style="font-size:8.5px; font-weight:700; color:#475569; letter-spacing:0.02em; line-height:1.2;">PREMIUM<br/>QUALITY</span>
-            </div>
-
-            <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="1" y="3" width="15" height="13"/>
-                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
-                <circle cx="5.5" cy="18.5" r="2.5"/>
-                <circle cx="18.5" cy="18.5" r="2.5"/>
-              </svg>
-              <span style="font-size:8.5px; font-weight:700; color:#475569; letter-spacing:0.02em; line-height:1.2;">FAST<br/>SHIPPING</span>
-            </div>
-
-            <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-              <span style="font-size:8.5px; font-weight:700; color:#475569; letter-spacing:0.02em; line-height:1.2;">DEDICATED<br/>SUPPORT</span>
-            </div>
+          <div style="text-align:right;">
+            <div style="font-size:21px; font-weight:900; color:${NAVY}; letter-spacing:0.06em; line-height:1.1;">ARTWORK PROOF</div>
+            <div style="font-size:10.5px; color:${MUTED}; font-weight:600; margin-top:3px;">Proof date <strong style="color:${INK};">${today}</strong>${customerTxt ? ` · Prepared for <strong style="color:${INK};">${esc(customerTxt)}</strong>` : ''}</div>
           </div>
         </div>
+        <div style="height:4px; background:linear-gradient(90deg, ${ORANGE} 0 28%, ${NAVY} 28% 100%);"></div>
 
-        <!-- ── 2. CUSTOMER ARTWORK PROOF BAR ── -->
-        <div style="background:#f4f7fb; border:1px solid #e2e8f0; border-radius:6px; padding:12px 18px; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; page-break-inside:avoid; break-inside:avoid;">
-          <div>
-            <h1 style="font-size:20px; font-weight:900; color:#111c38; margin:0; letter-spacing:-0.5px;">CUSTOMER ARTWORK PROOF</h1>
-            <p style="font-size:11.5px; color:#52617b; margin:2px 0 0 0; font-weight:500;">Review your artwork and product details before we go to print.</p>
-          </div>
-
-          <div style="display:flex; align-items:center; gap:16px;">
-            <div>
-              <div style="font-size:9.5px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.04em;">Order No.</div>
-              <div style="font-size:18px; font-weight:900; color:#111c38; line-height:1.2; font-family:'Roboto Mono', monospace;">${finalOrderNum}</div>
-            </div>
-
-            <div style="width:1px; height:32px; background:#cbd5e1;"></div>
-
-            <div>
-              <div style="font-size:9.5px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.04em;">Product Name</div>
-              <div style="font-size:15px; font-weight:800; color:#111c38; line-height:1.2;">${finalProdName}</div>
-            </div>
-
-            <!-- Confirmation Badge -->
-            <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:5px; padding:6px 10px; display:flex; align-items:center; gap:8px; max-width:160px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
-                <polyline points="10 9 9 9 8 9"/>
-              </svg>
-              <span style="font-size:9.5px; color:#334155; line-height:1.3; font-weight:600;">
-                This proof confirms how your artwork will appear on your selected product.
-              </span>
-            </div>
-          </div>
+        <!-- ── 2. ORDER DETAILS ── -->
+        <div style="display:grid; grid-template-columns:1.15fr 1.7fr 1.35fr 0.6fr; background:${NAVY}; page-break-inside:avoid; break-inside:avoid;">
+          ${cell('Order No.', esc(finalOrderNum) + (analysis?.lineItem ? `<span style="font-size:10px; color:#9fb3d1; font-weight:700;"> · Item ${esc(analysis.lineItem)}</span>` : ''), { dark: true, big: true, mono: true })}
+          ${cell('Product', esc(finalProdName), { dark: true })}
+          ${cell('Finished Size', esc(dimsDisplay), { dark: true })}
+          ${cell('Quantity', esc(qty), { dark: true, border: false, big: true })}
+        </div>
+        <div style="display:grid; grid-template-columns:1.15fr 1.7fr 1.95fr; background:#f4f7fb; border-bottom:1px solid ${LINE}; page-break-inside:avoid; break-inside:avoid;">
+          ${cell('Material', esc(graphicMaterial))}
+          ${cell('Printed Sides', esc(sidesTxt))}
+          ${cell('Finishing', esc(finishingDetail), { border: false })}
         </div>
 
-        <!-- ── VISUAL PROOF CARDS (Entire Artwork + Multi-Slot / Zoom) ── -->
-        ${visualSectionsHtml}
+        <div style="padding:16px 26px 6px;">
+          ${messageToCustomer ? `
+          <div style="display:flex; gap:10px; align-items:flex-start; background:#eff6ff; border:1px solid #bfdbfe; border-left:4px solid #2563eb; border-radius:6px; padding:9px 12px; margin-bottom:12px; page-break-inside:avoid; break-inside:avoid;">
+            <div style="font-size:10px; font-weight:900; color:#1d4ed8; letter-spacing:0.06em; text-transform:uppercase; white-space:nowrap; padding-top:1px;">Designer note</div>
+            <div style="font-size:11.5px; color:#1e3a8a; font-weight:600; line-height:1.4;">${esc(messageToCustomer)}</div>
+          </div>` : ''}
 
-        <!-- ── 3. PRODUCT SPECIFICATIONS MATRIX ── -->
-        <div class="proof-card" style="border:1px solid #cbd5e1; border-radius:6px; padding:12px 16px; margin-bottom:12px; background:#ffffff; page-break-inside:avoid; break-inside:avoid;">
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-            <div style="width:24px; height:24px; border-radius:50%; background:#4739d2; color:#ffffff; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">${specSectionNum}</div>
-            <div>
-              <h2 style="font-size:13.5px; font-weight:800; color:#111c38; margin:0;">Product Specifications</h2>
-              <div style="font-size:10.5px; color:#64748b;">Your selected product details are listed below for reference.</div>
+          <!-- ── 3. PROOFS (PR-DPO-03: Proof 01 · 02 · 03) ── -->
+          ${visualSectionsHtml}
+
+          <!-- ── 4. PRODUCT SPECIFICATIONS ── -->
+          <div style="margin-bottom:12px; page-break-inside:avoid; break-inside:avoid;">
+            ${sectionHead('Product Specifications', 'Your selected product details, for reference.')}
+            <div style="display:grid; grid-template-columns:1fr 1fr; border:1px solid ${LINE}; border-radius:6px; overflow:hidden;">${specHtml}</div>
+          </div>
+
+          <!-- ── 5. BEFORE YOU APPROVE ── -->
+          <div style="margin-bottom:12px; page-break-inside:avoid; break-inside:avoid;">
+            ${sectionHead('Before you approve, please check')}
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px 14px;">
+              ${checks.map(c => `<div style="display:flex; align-items:center; gap:7px; font-size:10.5px; color:#334155; font-weight:600;">
+                <span style="width:16px; height:16px; border-radius:50%; background:#dcfce7; color:#15803d; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">${icon(IC.check, '#15803d')}</span>${c}</div>`).join('')}
             </div>
           </div>
 
-          <div style="background:#f4f7fb; border-radius:5px; padding:10px 16px; font-size:11px; line-height:1.6; display:grid; grid-template-columns:1fr 1fr; gap:3px 18px;">
-            <div><span style="font-weight:700; color:#111c38; min-width:130px; display:inline-block;">Graphic Material:</span> <span style="color:#2d3748; font-weight:600;">${graphicMaterial}</span></div>
-            <div><span style="font-weight:700; color:#111c38; min-width:130px; display:inline-block;">Finished Dimensions:</span> <span style="color:#2d3748; font-weight:600;">${dimsDisplay}</span></div>
-            <div><span style="font-weight:700; color:#111c38; min-width:130px; display:inline-block;">Graphic Weight:</span> <span style="color:#2d3748; font-weight:600;">${graphicWeight}</span></div>
-            <div><span style="font-weight:700; color:#111c38; min-width:130px; display:inline-block;">Graphic Size Tolerance:</span> <span style="color:#2d3748; font-weight:600;">${sizeTolerance}</span></div>
-            <div><span style="font-weight:700; color:#111c38; min-width:130px; display:inline-block;">Print Technology:</span> <span style="color:#2d3748; font-weight:600;">${printTech}</span></div>
-            <div><span style="font-weight:700; color:#111c38; min-width:130px; display:inline-block;">Finishing Details:</span> <span style="color:#2d3748; font-weight:600;">${finishingDetail}</span></div>
-            <div style="grid-column: span 2;"><span style="font-weight:700; color:#111c38; min-width:130px; display:inline-block;">Graphic Color:</span> <span style="color:#2d3748; font-weight:600;">${graphicColor}</span></div>
-          </div>
-        </div>
-
-        <!-- ── 4. REVIEW & APPROVAL CALLOUT ── -->
-        <div style="background:#f4f0ff; border:1px solid #d8b4fe; border-radius:6px; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:14px; page-break-inside:avoid; break-inside:avoid;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div style="width:24px; height:24px; border-radius:50%; background:#4739d2; color:#ffffff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:13px; flex-shrink:0;">!</div>
-            <div>
-              <div style="font-size:12.5px; font-weight:800; color:#3b28b6;">Please review your artwork carefully before approval.</div>
-              <div style="font-size:10.5px; color:#5b4db8; line-height:1.3;">
-                Check for correct text, logos, colors, spelling, size and overall design. Once approved, your order will go to production as shown in this proof.
+          <!-- ── 6. CUSTOMER APPROVAL ── -->
+          <div style="display:grid; grid-template-columns:1.35fr 1fr; border:1.5px solid ${NAVY}; border-radius:8px; overflow:hidden; margin-bottom:10px; page-break-inside:avoid; break-inside:avoid;">
+            <div style="padding:12px 16px; background:#f7f9fc;">
+              <div style="font-size:13px; font-weight:900; color:${NAVY};">Customer Approval</div>
+              <div style="font-size:10.5px; color:#475569; line-height:1.4; margin-top:3px;">Once approved, your order goes to production exactly as shown in this proof. Changes after approval may delay your order.</div>
+              <div class="no-print" style="display:flex; align-items:center; gap:10px; margin-top:9px; flex-wrap:wrap;">
+                <button onclick="ProofStudio.approveProof()" style="background:${ORANGE}; color:#ffffff; border:none; padding:8px 18px; border-radius:5px; font-size:12.5px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(255,95,31,0.3);">
+                  ${icon(IC.check, '#ffffff')}<span>Approve Artwork</span>
+                </button>
+                <span style="font-size:10px; color:${MUTED};">or reply to this proof to request changes.</span>
+              </div>
+            </div>
+            <div style="padding:12px 16px; border-left:1px solid ${LINE}; font-size:10.5px; color:#334155; line-height:1.9;">
+              <div>☐ Approved as shown</div>
+              <div>☐ Approved with the changes noted</div>
+              <div>☐ Please revise and send a new proof</div>
+              <div style="display:flex; gap:12px; margin-top:6px; font-size:9.5px; color:${MUTED};">
+                <span style="flex:1.4; border-top:1px solid #94a3b8; padding-top:2px;">Signature</span>
+                <span style="flex:1; border-top:1px solid #94a3b8; padding-top:2px;">Date</span>
               </div>
             </div>
           </div>
 
-          <div style="text-align:right; flex-shrink:0;">
-            <button onclick="ProofStudio.approveProof()" style="background:#4739d2; color:#ffffff; border:none; padding:8px 18px; border-radius:5px; font-size:12.5px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(71,57,210,0.25);">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              <span>Approve Artwork</span>
-            </button>
-            <div style="font-size:9.5px; color:#64748b; margin-top:2px;">or contact us if you need any changes.</div>
+          <div style="font-size:9px; color:#94a3b8; line-height:1.45; margin-bottom:12px;">
+            Colors shown on screen (RGB) may vary slightly from the printed product (CMYK). Finishing marks on this proof (pole pockets, grommet positions) show placement only and are not printed. Size tolerance up to ±0.5". BannerBuzz is not responsible for spelling, content or layout errors approved on this proof.
           </div>
         </div>
 
-        <!-- ── 5. OFFICIAL FOOTER ── -->
-        <div style="border-top:1px solid #edf2f7; padding-top:8px; display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#64748b; page-break-inside:avoid; break-inside:avoid;">
-          <div>
-            <span style="font-weight:900; color:#0e2246;">Banner</span><span style="background:#ff5f1f; color:#fff; font-weight:900; padding:1px 4px; border-radius:3px; font-size:9.5px; margin-left:1px;">Buzz</span>
-            <span style="margin-left:6px; color:#475569; font-weight:600;">More Than Products. A Brighter Way to Brand.</span>
+        <!-- ── 7. FOOTER ── -->
+        <div style="page-break-inside:avoid; break-inside:avoid;">
+          <div style="display:flex; justify-content:space-around; gap:10px; padding:8px 26px; border-top:1px solid ${LINE}; background:#f7f9fc; font-size:9px; font-weight:800; letter-spacing:0.05em; color:#475569;">
+            <span style="display:inline-flex; align-items:center; gap:5px;">${icon(IC.gift, '#1e293b')}CUSTOM PRINTED PRODUCTS</span>
+            <span style="display:inline-flex; align-items:center; gap:5px;">${icon(IC.shield, '#1e293b')}PREMIUM QUALITY</span>
+            <span style="display:inline-flex; align-items:center; gap:5px;">${icon(IC.truck, '#1e293b')}FAST SHIPPING</span>
+            <span style="display:inline-flex; align-items:center; gap:5px;">${icon(IC.users, '#1e293b')}DEDICATED SUPPORT</span>
           </div>
-
-          <div style="display:flex; gap:14px; align-items:center;">
-            <span>📞 1-800-580-4489</span>
-            <span>✉ support@bannerbuzz.com</span>
-            <span>🌐 www.bannerbuzz.com</span>
-          </div>
-
-          <div style="font-weight:600; color:#475569;">
-            Page 1 of 1 · Order No. <strong style="color:#111c38;">${finalOrderNum}</strong> · Generated on ${today}
+          <div style="display:grid; grid-template-columns:auto 1fr auto; gap:18px; align-items:center; background:${NAVY}; color:#cbd5e1; padding:12px 26px; font-size:10px;">
+            <div>
+              ${logo(15, true)}
+              <div style="font-size:8.5px; color:#9fb3d1; margin-top:4px; font-weight:600;">More Than Products. A Brighter Way to Brand.</div>
+            </div>
+            <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap; font-weight:600;">
+              <span style="display:inline-flex; align-items:center; gap:5px;">${icon(IC.phone, ORANGE)}1-800-580-4489</span>
+              <span style="display:inline-flex; align-items:center; gap:5px;">${icon(IC.mail, ORANGE)}support@bannerbuzz.com</span>
+              <span style="display:inline-flex; align-items:center; gap:5px;">${icon(IC.web, ORANGE)}www.bannerbuzz.com</span>
+            </div>
+            <div style="text-align:right; line-height:1.45; font-weight:600;">
+              Order No. <strong style="color:#ffffff;">${esc(finalOrderNum)}</strong><br/>
+              Page 1 of 1 · ${today}
+            </div>
           </div>
         </div>
 
@@ -1261,10 +1263,38 @@ const ProofStudio = {
   /**
    * Trigger print dialog for the proof sheet
    */
+  /**
+   * Fit the whole proof sheet — header to footer — on one Letter page for Print / Export PDF: the sheet is
+   * laid out wider and zoomed down by the same factor, so nothing is cut off and nothing reflows badly.
+   */
+  fitForPrint(on) {
+    const sheet = document.getElementById('printable-proof-sheet');
+    if (!sheet) return;
+    ['width', 'max-width', 'zoom'].forEach(p => sheet.style.removeProperty(p));
+    if (!on) return;
+    const PAGE_W = 748, PAGE_H = 985;                   // Letter portrait minus the @page margins (CSS px)
+    sheet.style.setProperty('width', PAGE_W + 'px', 'important');
+    sheet.style.setProperty('max-width', 'none', 'important');
+    const h = sheet.scrollHeight;
+    const k = h > 0 ? Math.min(1, PAGE_H / h) : 1;
+    if (k < 1) {
+      sheet.style.setProperty('width', Math.floor(PAGE_W / k) + 'px', 'important');
+      sheet.style.setProperty('zoom', k.toFixed(3), 'important');
+    }
+  },
+
   print() {
+    this.fitForPrint(true);
     window.print();
+    this.fitForPrint(false);
   }
 };
+
+// Browser print (Ctrl+P) gets the same one-page fit as the Print / Export PDF button
+if (typeof window !== 'undefined' && window.addEventListener) {
+  window.addEventListener('beforeprint', () => ProofStudio.fitForPrint(true));
+  window.addEventListener('afterprint', () => ProofStudio.fitForPrint(false));
+}
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = ProofStudio;

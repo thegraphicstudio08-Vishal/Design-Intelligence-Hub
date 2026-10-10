@@ -38,6 +38,7 @@ const CanvasInspector = {
     polePockets: true,
     stakes: true,
     flutes: true,
+    dims: true,
     loupe: true
   },
 
@@ -750,7 +751,7 @@ const CanvasInspector = {
             <span>🏛️</span>
             <span>${tName} · Reference template (not from QNAP)</span>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()" style="font-size:11px;">🔄 Rotate 90°</button>
+          <span style="display:inline-flex; gap:6px;">${this._rotateButtons()}</span>
         </div>
       `;
       return;
@@ -787,7 +788,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.stakes ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('stakes', this.checked)"> 🔩 Metal Step Stakes</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.flutes ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('flutes', this.checked)"> || Flute Direction</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'yard-sign') {
       controlsHtml = `
@@ -797,7 +798,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.stakes ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('stakes', this.checked)"> 🔩 Metal Step Stakes</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.flutes ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('flutes', this.checked)"> || Corflute Flutes</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'flag-rectangle') {
       controlsHtml = `
@@ -807,7 +808,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Hem Stitch Lines</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.5")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'magnet-rounded') {
       controlsHtml = `
@@ -816,7 +817,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🧲 30-Mil Magnetic Backing</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'x-banner') {
       controlsHtml = `
@@ -825,7 +826,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.grommets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ 4 Corner Eyelets</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> ✖️ X-Frame Tension Arms</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'l-banner') {
       controlsHtml = `
@@ -833,7 +834,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🔩 Top & Bottom Clamp Bars</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'canvas-wrap') {
       controlsHtml = `
@@ -841,7 +842,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Canvas Fold Lines</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 1.5" Gallery Wrap Border</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'perforated-window') {
       controlsHtml = `
@@ -849,7 +850,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim Line</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (0.5")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'desk-flags-blade' || tType === 'desk-flags-teardrop') {
       const isBlade = tType === 'desk-flags-blade';
@@ -859,7 +860,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.25")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.sleeve ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('sleeve', this.checked)"> 🚩 Desk Pole Sleeve</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'teardrop-flag') {
       controlsHtml = `
@@ -868,7 +869,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.5")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.sleeve ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('sleeve', this.checked)"> 🚩 Pole Sleeve (Left)</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'feather-flag' || tType === 'blade-flag') {
       controlsHtml = `
@@ -877,7 +878,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.5")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.sleeve ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('sleeve', this.checked)"> 🚩 Pole Sleeve (Left)</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'roll-up') {
       controlsHtml = `
@@ -886,7 +887,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 📦 Cassette Margin (>6" Base)</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'table-cover') {
       controlsHtml = `
@@ -894,7 +895,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Hem Line</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.seams ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('seams', this.checked)"> 🧵 Panel Seams</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'circle') {
       controlsHtml = `
@@ -902,7 +903,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Circle Cutline</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'aluminum-sign') {
       controlsHtml = `
@@ -911,7 +912,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🔩 4 Pre-Drilled Holes (3/8")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'acrylic-sign') {
       controlsHtml = `
@@ -920,7 +921,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🔩 Standoff Hardware Mounts</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'mesh-banner') {
       controlsHtml = `
@@ -930,7 +931,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.grommets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ Grommets (SOP table)</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🌬️ 70/30 Mesh Airflow</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'safety-parking-sign') {
       controlsHtml = `
@@ -939,7 +940,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🔩 Top & Bottom Post Holes</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'a-frame') {
       controlsHtml = `
@@ -948,7 +949,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.hardware ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('hardware', this.checked)"> 🪝 Handle & Hinge Clearance</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'decal-sticker') {
       controlsHtml = `
@@ -956,7 +957,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.125")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'apparel') {
       controlsHtml = `
@@ -964,7 +965,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Margin</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.seams ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('seams', this.checked)"> 🧵 Collar Reference Arc</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'marketing-flyer') {
       controlsHtml = `
@@ -972,7 +973,7 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Zone (0.25")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     } else if (tType === 'pole-banner') {
       controlsHtml = `
@@ -980,7 +981,22 @@ const CanvasInspector = {
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim Line</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.polePockets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('polePockets', this.checked)"> 🎗️ Top & Bottom Pockets (3")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
+      `;
+    } else if (this._bannerSop(this.currentSpec || {}, this.currentDims || {})) {
+      // SOP banner template: only the guides this order really has (finishing read from the file name)
+      const b = this._bannerSop(this.currentSpec || {}, this.currentDims || {});
+      const lay = b.layout;
+      const chip = (txt, title) => `<span class="vi-chip" title="${title}">${txt}</span>`;
+      controlsHtml = `
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim (finished size)</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (${b.safeIn}")</label>
+        ${lay && lay.grommets ? `<label class="vi-toggle active"><input type="checkbox" ${this.guides.grommets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ Grommets (${lay.grommets.total})</label>` : ''}
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.dims ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('dims', this.checked)"> 📏 Dimensions</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        ${lay && lay.hemOn ? chip(`🧵 Hem ${SopRules.HEM_IN}"`, 'Hem stated in the file name') : ''}
+        ${lay && lay.pocketSides.length ? chip(`🎗️ Pole pocket ${lay.pocketSides.join(' & ')}`, 'Pole pocket stated in the file name') : ''}
+        ${this._rotateButtons()}
       `;
     } else {
       // Standard Vinyl / Fabric Banner
@@ -994,14 +1010,14 @@ const CanvasInspector = {
         ${hasPolePockets ? `<label class="vi-toggle active"><input type="checkbox" ${this.guides.polePockets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('polePockets', this.checked)"> 🎗️ 3" Top Pole Pocket</label>` : ''}
         ${hasGrommets ? `<label class="vi-toggle active"><input type="checkbox" ${this.guides.grommets ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('grommets', this.checked)"> ⭕ Grommets (SOP table)</label>` : ''}
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
-        <button class="btn btn-outline btn-sm" onclick="CanvasInspector.rotate90()">🔄 Rotate 90°</button>
+        ${this._rotateButtons()}
       `;
     }
 
     const activeDefects = (typeof AgenticAiInspector !== 'undefined') ? AgenticAiInspector.getDefects() : [];
     const aiBtnHtml = `
       <button type="button" class="btn-vi-mode" onclick="AgenticAiInspector.toggleBlinking()" style="background:#fff7ed; border:1px solid #fed7aa; color:#c2410c; font-weight:800; font-size:11px;" title="Agentic AI: Click to toggle blinking animated boxes and circles">
-        🤖 Agentic AI QA (<span id="ai-defect-count-badge" style="background:#ea580c; color:#fff; border-radius:10px; padding:1px 6px; font-size:9.5px;">${activeDefects.length}</span>)
+        🤖 Agentic AI QA <span id="ai-defect-count-badge" style="background:#ea580c; color:#fff; border-radius:10px; padding:1px 6px; font-size:9.5px;${activeDefects.length ? '' : ' display:none;'}">${activeDefects.length}</span>
       </button>
     `;
 
@@ -1143,29 +1159,58 @@ const CanvasInspector = {
   },
 
   /**
-   * Rotate the artwork by 90° on the ordered size (preview only — the order size never changes)
+   * Two separate orientation tools (preview only — the order size in the admin never changes here):
+   *  · Rotate Artwork  — turns the customer's artwork 90° on the template board (artboard) as it is
+   *  · Rotate Artboard — turns the template board itself (W × H → H × W) and keeps the artwork as supplied;
+   *                      PR-DPO-03 cases 5–10: ordered size turned → proof in the artwork's orientation
+   * Both can be combined; "Reset" puts both back.
    */
   rotate90() {
-    this.currentRotation = (this.currentRotation + 90) % 360;
-    this.previewOrderTurned = false;   // one preview at a time: artwork turned on the ordered size
-    this.redraw();
-    if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderOrientationAlert) AgenticAiInspector._renderOrientationAlert();
+    this.setRotation(this.currentRotation + 90);
   },
 
-  /** Turn the artwork to a given angle (0 / 90 / 180 / 270) — used by the orientation alert */
+  /** Turn the artwork to a given angle (0 / 90 / 180 / 270) on the current artboard */
   setRotation(angle) {
     this.currentRotation = ((angle % 360) + 360) % 360;
-    if (this.currentRotation) this.previewOrderTurned = false;
+    this._afterOrientationChange();
+  },
+
+  /** Turn the template board (artboard) — the ordered W × H shown as H × W — or back to the ordered size */
+  setOrderTurned(on) {
+    this.previewOrderTurned = !!on;
+    this._afterOrientationChange();
+  },
+
+  rotateArtboard() {
+    this.setOrderTurned(!this.previewOrderTurned);
+  },
+
+  /** Artwork and artboard back as ordered / supplied */
+  resetOrientation() {
+    this.currentRotation = 0;
+    this.previewOrderTurned = false;
+    this._afterOrientationChange();
+  },
+
+  _afterOrientationChange() {
     this.redraw();
+    this.renderContextualToolbar();
     if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderOrientationAlert) AgenticAiInspector._renderOrientationAlert();
   },
 
-  /** Show the ordered size turned (preview for the customer mockup), or back to the ordered size */
-  setOrderTurned(on) {
-    this.previewOrderTurned = !!on;
-    if (on) this.currentRotation = 0;   // one preview at a time: the order turned, artwork as supplied
-    this.redraw();
-    if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderOrientationAlert) AgenticAiInspector._renderOrientationAlert();
+  /** Toolbar buttons: Rotate Artwork · Rotate Artboard (template board) · Reset, with the current state */
+  _rotateButtons() {
+    const d = this.currentDims || {};
+    const fmt = v => +(+v).toFixed(2);
+    const board = d.widthIn && d.heightIn
+      ? (this.previewOrderTurned ? `${fmt(d.heightIn)}" × ${fmt(d.widthIn)}"` : `${fmt(d.widthIn)}" × ${fmt(d.heightIn)}"`) : '';
+    const on = 'background:#fff7ed; border-color:#fb923c; color:#c2410c;';
+    return `
+        <span class="vi-rotate-group">
+          <button type="button" class="btn btn-outline btn-sm" style="${this.currentRotation ? on : ''}" onclick="CanvasInspector.rotate90()" title="Turn the customer's artwork 90° clockwise on the template board">↻ Rotate Artwork${this.currentRotation ? ` (${this.currentRotation}°)` : ''}</button>
+          <button type="button" class="btn btn-outline btn-sm" style="${this.previewOrderTurned ? on : ''}" onclick="CanvasInspector.rotateArtboard()" title="Turn the template board (artboard) W × H → H × W; the artwork stays as supplied">⤾ Rotate Artboard${board ? ` (${board})` : ''}</button>
+          ${this.currentRotation || this.previewOrderTurned ? `<button type="button" class="btn btn-outline btn-sm" onclick="CanvasInspector.resetOrientation()" title="Artwork and artboard back as supplied / ordered">↺ Reset</button>` : ''}
+        </span>`;
   },
 
   /** A turned artwork / order is a preview: say so on the canvas, so nobody takes it for the customer's file */
@@ -1174,9 +1219,10 @@ const CanvasInspector = {
     if (this.inspectorMode && this.inspectorMode !== 'artwork') return;
     const ctx = this.ctx, w = this.canvas.width, h = this.canvas.height;
     const d = this.currentDims || {};
-    const txt = this.previewOrderTurned
-      ? `⤾ Order shown turned to ${+(+d.heightIn).toFixed(2)}" × ${+(+d.widthIn).toFixed(2)}" — mockup preview, order unchanged`
-      : `↻ Artwork turned ${this.currentRotation}° — preview only, confirm with the customer`;
+    const parts = [];
+    if (this.previewOrderTurned) parts.push(`⤾ Artboard turned to ${+(+d.heightIn).toFixed(2)}" × ${+(+d.widthIn).toFixed(2)}"`);
+    if (this.currentRotation) parts.push(`↻ Artwork turned ${this.currentRotation}°`);
+    const txt = parts.join(' · ') + ' — preview only, order unchanged';
     ctx.save();
     ctx.font = 'bold 10.5px Inter, sans-serif';
     const tw = Math.min(w - 8, ctx.measureText(txt).width + 16);
@@ -1189,11 +1235,10 @@ const CanvasInspector = {
 
   /**
    * Banner production layout per SOP + real print files (Desktop/Print):
-   *  - canvas = order + 1.25" hem each side when grommets / stitched edges (US2382447 4x3 ft, US2395381 8x3 ft)
+   *  - canvas = order + 1.25" hem each side ONLY when the file name states hemmed / stitched / welded edges
    *  - top pole pocket: +5.25" band on top, no side hem (US2382836 36x136 in)
-   *  - grommet centres 1" inside the finished edge, at every corner, evenly spaced ≤ 48" apart
-   *    (4 ft edge = corners only, 8 ft edge = corners + middle; exact rule lives in "Banners finishing.xls")
-   *  - safe area 1.25" inside the finished edge (SOP 1_Banners · Important design checks)
+   *  - grommet centres 1" inside the finished edge, count per side from the SOP grommet table
+   *  - safe area 1" inside the finished edge (SOP Banner ISO 2026)
    * Returns null for non-banners or when finishing is unknown to the SOP data.
    */
   _bannerSop(spec, dims) {
@@ -1221,17 +1266,77 @@ const CanvasInspector = {
     };
   },
 
-  _drawBannerSop(img, w, h, b) {
+  /** Pasteboard around the banner artboard (canvas px): dimension lines top / left, notes underneath */
+  BANNER_PAD: { l: 56, r: 22, t: 46, b: 30 },
+
+  /**
+   * SOP banner template, drawn like a production template sheet:
+   *  pasteboard · artboard (= production canvas) · hatched pole pocket / hem allowance (only what the file
+   *  name states) · artwork fitted into the finished size · trim line · safe area · metal grommets per the
+   *  SOP grommet table · dimension lines with the grommet count of each side · crop marks.
+   */
+  _drawBannerSop(img, w, h, b, pad) {
     const ctx = this.ctx;
+    pad = pad || { l: 0, r: 0, t: 0, b: 0 };
+    const CW = w + pad.l + pad.r, CH = h + pad.t + pad.b;
+    const ox = pad.l, oy = pad.t;                         // artboard origin on the canvas
     const isRotated = (this.currentRotation === 90 || this.currentRotation === 270);
-    const s = w / b.canvasW; // px per inch
-    const tx = b.hemX * s, ty = b.hemTop * s, tw = b.orderW * s, th = b.orderH * s;
+    const s = w / b.canvasW;                              // px per inch
+    const a = b.allow || { left: b.hemX, right: b.hemX, top: b.hemTop, bottom: b.hemBottom };
+    const tx = ox + a.left * s, ty = oy + a.top * s, tw = b.orderW * s, th = b.orderH * s;
+    const pocketSides = (b.layout && b.layout.pocketSides) || [];
+    const fmt = v => +(+v).toFixed(2);
 
-    // Artwork fitted into the finished (order) size — never stretched
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, w, h);
-
+    // 1. Pasteboard and the artboard sheet on it
+    ctx.fillStyle = '#e8ecf2';
+    ctx.fillRect(0, 0, CW, CH);
     ctx.save();
+    ctx.shadowColor = 'rgba(15, 23, 42, 0.22)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 3;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(ox, oy, w, h);
+    ctx.restore();
+
+    // 2. Production allowance outside the finished size: pole pocket (blue) / hem (grey), hatched + labelled
+    const bands = {
+      top: [ox, oy, w, ty - oy], bottom: [ox, ty + th, w, oy + h - ty - th],
+      left: [ox, ty, tx - ox, th], right: [tx + tw, ty, ox + w - tx - tw, th]
+    };
+    Object.entries(bands).forEach(([side, r]) => {
+      if (!(a[side] > 0) || r[2] <= 0.5 || r[3] <= 0.5) return;
+      const pocket = pocketSides.includes(side);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(r[0], r[1], r[2], r[3]); ctx.clip();
+      ctx.fillStyle = pocket ? '#dbeafe' : '#eef2f6';
+      ctx.fillRect(r[0], r[1], r[2], r[3]);
+      ctx.strokeStyle = pocket ? 'rgba(37, 99, 235, 0.32)' : 'rgba(100, 116, 139, 0.30)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let k = -r[3]; k < r[2] + r[3]; k += 7) { ctx.moveTo(r[0] + k, r[1] + r[3]); ctx.lineTo(r[0] + k + r[3], r[1]); }
+      ctx.stroke();
+      const thick = side === 'top' || side === 'bottom' ? r[3] : r[2];
+      if (thick >= 9) {
+        const label = `${pocket ? 'POLE POCKET' : 'HEM'} ${fmt(a[side])}"`;
+        ctx.font = `700 ${Math.max(8, Math.min(11, thick * 0.55))}px Inter, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const lw = ctx.measureText(label).width + 12, lh = Math.max(9, Math.min(16, thick - 2));
+        ctx.translate(r[0] + r[2] / 2, r[1] + r[3] / 2);
+        if (side === 'left' || side === 'right') ctx.rotate(side === 'left' ? -Math.PI / 2 : Math.PI / 2);
+        ctx.fillStyle = pocket ? 'rgba(239, 246, 255, 0.96)' : 'rgba(248, 250, 252, 0.96)';
+        ctx.fillRect(-lw / 2, -lh / 2, lw, lh);
+        ctx.fillStyle = pocket ? '#1e40af' : '#475569';
+        ctx.fillText(label, 0, 0.5);
+      }
+      ctx.restore();
+    });
+
+    // 3. Artwork fitted into the finished (order) size — never stretched; the part it does not cover stays grey
+    ctx.save();
+    ctx.beginPath(); ctx.rect(tx, ty, tw, th); ctx.clip();
+    ctx.fillStyle = '#f4f6f9';
+    ctx.fillRect(tx, ty, tw, th);
     if (this.currentRotation !== 0) {
       ctx.translate(tx + tw / 2, ty + th / 2);
       ctx.rotate((this.currentRotation * Math.PI) / 180);
@@ -1246,134 +1351,171 @@ const CanvasInspector = {
     }
     ctx.restore();
 
-    // Production area outside the finished size, side by side: pole pocket (blue) or hem (dark), labelled
-    const a = b.allow || { left: b.hemX, right: b.hemX, top: b.hemTop, bottom: b.hemBottom };
-    const pocketSides = (b.layout && b.layout.pocketSides) || [];
-    const bands = {
-      top: [0, 0, w, ty], bottom: [0, ty + th, w, h - ty - th],
-      left: [0, ty, tx, th], right: [tx + tw, ty, w - tx - tw, th]
-    };
-    Object.entries(bands).forEach(([side, r]) => {
-      if (!(a[side] > 0) || r[2] <= 0 || r[3] <= 0) return;
-      const pocket = pocketSides.includes(side);
-      ctx.save();
-      ctx.fillStyle = pocket ? 'rgba(37, 99, 235, 0.72)' : 'rgba(15, 23, 42, 0.55)';
-      ctx.fillRect(r[0], r[1], r[2], r[3]);
-      const thick = side === 'top' || side === 'bottom' ? r[3] : r[2];
-      if (thick >= 9) {
-        const label = `${pocket ? 'POLE POCKET' : 'HEM'} ${a[side]}"`;
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `bold ${Math.max(8, Math.min(12, thick * 0.6))}px Inter, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        if (side === 'left' || side === 'right') {
-          ctx.translate(r[0] + r[2] / 2, r[1] + r[3] / 2);
-          ctx.rotate(side === 'left' ? -Math.PI / 2 : Math.PI / 2);
-          ctx.fillText(label, 0, 0);
-        } else {
-          ctx.fillText(label, r[0] + r[2] / 2, r[1] + r[3] / 2);
-        }
-      }
-      if (pocket) {   // stitch line of the pocket, on the finished edge
-        ctx.restore(); ctx.save();
-        ctx.strokeStyle = '#ffffff';
-        ctx.setLineDash([5, 4]);
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        if (side === 'top') { ctx.moveTo(tx, ty); ctx.lineTo(tx + tw, ty); }
-        if (side === 'bottom') { ctx.moveTo(tx, ty + th); ctx.lineTo(tx + tw, ty + th); }
-        if (side === 'left') { ctx.moveTo(tx, ty); ctx.lineTo(tx, ty + th); }
-        if (side === 'right') { ctx.moveTo(tx + tw, ty); ctx.lineTo(tx + tw, ty + th); }
-        ctx.stroke();
-      }
-      ctx.restore();
-    });
-
-    // Finished size (trim / fold line)
+    // 4. Artboard edge, trim (finished size / fold line), safe area
+    ctx.save();
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(ox + 0.5, oy + 0.5, w - 1, h - 1);
+    ctx.restore();
     if (this.guides.cutLine !== false) {
       ctx.save();
-      ctx.strokeStyle = '#fb7b48';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#f97316';
+      ctx.lineWidth = 1.6;
       ctx.strokeRect(tx, ty, tw, th);
       ctx.restore();
     }
-
-    // Safe area inside the finished edge (SOP Banner ISO 2026: 1")
     if (this.guides.safeArea !== false) {
       const si = b.safeIn * s;
       ctx.save();
       ctx.strokeStyle = '#16a34a';
-      ctx.lineWidth = 1.6;
-      ctx.setLineDash([7, 5]);
+      ctx.lineWidth = 1.3;
+      ctx.setLineDash([6, 4]);
       ctx.strokeRect(tx + si, ty + si, tw - 2 * si, th - 2 * si);
       ctx.restore();
     }
 
-    // Grommets: SOP Standard Grommets Placement — count per side from that side's length (corners included),
-    // centres 1" inside the finished edge, evenly spaced; none through a pole pocket
+    // 5. Grommets: SOP Standard Grommets Placement — count per side from that side's length (corners
+    //    included), centres 1" inside the finished edge, evenly spaced; none through a pole pocket
     const g = b.layout && b.layout.grommets;
     if (g && this.guides.grommets !== false) {
-      const rad = Math.max(3, 0.5 * s);
+      const R = Math.max(3.2, Math.min(9, 0.375 * s));     // ~3/4" metal grommet
       g.points.forEach(([x, y]) => {
         const px = tx + x * s, py = ty + y * s;
         ctx.save();
-        ctx.fillStyle = '#e5e7eb';
-        ctx.strokeStyle = '#111827';
-        ctx.lineWidth = Math.max(1.5, rad * 0.45);
-        ctx.beginPath(); ctx.arc(px, py, rad, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#111827';
-        ctx.beginPath(); ctx.arc(px, py, Math.max(1, rad * 0.35), 0, Math.PI * 2); ctx.fill();
+        ctx.shadowColor = 'rgba(15, 23, 42, 0.35)';
+        ctx.shadowBlur = 2;
+        ctx.shadowOffsetY = 1;
+        const grad = ctx.createRadialGradient(px - R * 0.35, py - R * 0.35, R * 0.1, px, py, R);
+        grad.addColorStop(0, '#f8fafc');
+        grad.addColorStop(0.55, '#cbd5e1');
+        grad.addColorStop(1, '#64748b');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(px, py, R, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.lineWidth = 0.8;
+        ctx.strokeStyle = '#334155';
+        ctx.stroke();
+        ctx.fillStyle = '#e8ecf2';                          // the hole
+        ctx.beginPath(); ctx.arc(px, py, R * 0.45, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#475569';
+        ctx.stroke();
         ctx.restore();
       });
-      // Count beside each side, so it can be checked against the table at a glance
-      const tag = (txt, x, y) => {
+    }
+
+    // 6. Crop marks at the artboard corners
+    ctx.save();
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    [[ox, oy, -1, -1], [ox + w, oy, 1, -1], [ox, oy + h, -1, 1], [ox + w, oy + h, 1, 1]].forEach(([x, y, dx, dy]) => {
+      ctx.moveTo(x + dx * 3, y); ctx.lineTo(x + dx * 11, y);
+      ctx.moveTo(x, y + dy * 3); ctx.lineTo(x, y + dy * 11);
+    });
+    ctx.stroke();
+    ctx.restore();
+
+    // 7. Dimension lines on the pasteboard: finished size, canvas size, and the grommets on those sides
+    const ps = g ? g.perSide : null;
+    const countTxt = (n1, n2, s1, s2) => {
+      if (!g) return '';
+      if (n1 && n1 === n2) return `${n1} grommets ${s1} & ${s2}`;
+      return [n1 ? `${n1} ${s1}` : '', n2 ? `${n2} ${s2}` : ''].filter(Boolean).join(' · ') + (n1 || n2 ? ' grommets' : '');
+    };
+    const gW = g ? (g.where === 'corners' ? '4 corner grommets' : countTxt(ps.top, ps.bottom, 'top', 'bottom')) : '';
+    const gH = g && g.where !== 'corners' ? countTxt(ps.left, ps.right, 'left', 'right') : '';
+    const ft = v => +(v / 12).toFixed(2);
+    const labelW = [`${fmt(b.orderW)}" W (${ft(b.orderW)} ft)`, b.canvasW !== b.orderW ? `canvas ${fmt(b.canvasW)}"` : '', gW];
+    const labelH = [`${fmt(b.orderH)}" H (${ft(b.orderH)} ft)`, b.canvasH !== b.orderH ? `canvas ${fmt(b.canvasH)}"` : '', gH];
+    if (this.guides.dims !== false && pad.t >= 30 && pad.l >= 30) {
+      const fit = (parts, room) => {        // drop the less important parts when the side is short
+        ctx.font = '600 10.5px Inter, sans-serif';
+        for (let n = parts.length; n >= 1; n--) {
+          const t = parts.slice(0, n).filter(Boolean).join('  ·  ');
+          if (ctx.measureText(t).width + 16 <= room) return t;
+        }
+        return '';
+      };
+      const dim = (len, label, vertical) => {
         ctx.save();
-        ctx.font = 'bold 9.5px Inter, sans-serif';
-        const tw2 = ctx.measureText(txt).width + 8;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
-        ctx.fillRect(x - tw2 / 2, y - 7, tw2, 14);
-        ctx.fillStyle = '#b45309';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(txt, x, y);
+        if (vertical) { ctx.translate(pad.l / 2, ty + len); ctx.rotate(-Math.PI / 2); }
+        else ctx.translate(tx, pad.t / 2);
+        ctx.strokeStyle = '#475569';
+        ctx.fillStyle = '#475569';
+        ctx.lineWidth = 1;
+        // extension lines down to the artboard edge
+        const ext = vertical ? (ox - pad.l / 2) : (oy - pad.t / 2);
+        ctx.setLineDash([2, 2]);
+        ctx.beginPath();
+        ctx.moveTo(0, -5); ctx.lineTo(0, ext);
+        ctx.moveTo(len, -5); ctx.lineTo(len, ext);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
+        [[0, 1], [len, -1]].forEach(([x, d]) => {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + d * 6, -3); ctx.lineTo(x + d * 6, 3); ctx.closePath(); ctx.fill();
+        });
+        const t = fit(label, len);
+        if (t) {
+          ctx.font = '600 10.5px Inter, sans-serif';
+          const lw = ctx.measureText(t).width + 12;
+          ctx.fillStyle = '#e8ecf2';
+          ctx.fillRect(len / 2 - lw / 2, -8, lw, 16);
+          ctx.fillStyle = '#0f172a';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(t, len / 2, 0.5);
+        }
         ctx.restore();
       };
-      const ps = g.perSide;
-      if (ps.top) tag(`${ps.top} grommets`, tx + tw / 2, ty + Math.max(12, 2.6 * s));
-      if (ps.bottom && g.where !== 'top') tag(`${ps.bottom} grommets`, tx + tw / 2, ty + th - Math.max(12, 2.6 * s));
-      if (ps.left) tag(`${ps.left}`, tx + Math.max(14, 3 * s), ty + th / 2);
-      if (ps.right && g.where !== 'left') tag(`${ps.right}`, tx + tw - Math.max(14, 3 * s), ty + th / 2);
+      dim(tw, labelW, false);
+      dim(th, labelH, true);
     }
 
-    // Legend: what the file name says, and what that means here
-    const fin = b.finishing;
-    const lines = [`SOP BANNER · finished ${b.orderW}" × ${b.orderH}" · canvas ${b.canvasW}" × ${b.canvasH}"`];
-    if (fin && fin.found) {
-      lines.push(`${fin.source === 'filename' ? 'File name' : 'Finishing options'}: "${fin.words.join(' · ')}"`);
-      const bits = [];
-      if (g) {
-        const ps = g.perSide;
-        bits.push(g.where === 'corners' ? `${g.kind}: 4 corners` : `${g.kind}: ${g.total} (top ${ps.top} · bottom ${ps.bottom} · left ${ps.left} · right ${ps.right})`);
-      } else if (fin.grommets && !fin.grommets.on) bits.push('No grommets');
-      if (pocketSides.length) bits.push(`Pole pocket ${pocketSides.join(' & ')} ${a[pocketSides[0]]}"`);
-      else if (fin.pockets) bits.push('Pole pocket side NOT in file name');
-      const hemSides = ['top', 'bottom', 'left', 'right'].filter(sd => !pocketSides.includes(sd) && a[sd] > 0);
-      if (hemSides.length) bits.push(`Hem ${a[hemSides[0]]}" ${hemSides.length === 4 ? 'each side' : hemSides.join(' & ')}`);
-      bits.push(`Safe ${b.safeIn}"`);
-      lines.push(bits.join(' · '));
-    } else {
-      lines.push(`No grommets / pole pockets / hems in the file name — confirm the finishing from the order · Safe ${b.safeIn}"`);
+    // 8. Caption on the pasteboard (the rotation note takes this place when the artwork / artboard is turned)
+    if (pad.b >= 20 && !(this.currentRotation || this.previewOrderTurned) && CW > 420) {
+      ctx.save();
+      ctx.font = '600 10px Inter, sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`SOP BANNER TEMPLATE · production canvas ${fmt(b.canvasW)}" × ${fmt(b.canvasH)}"`, CW - pad.r, CH - pad.b / 2);
+      ctx.restore();
     }
-    // Shown under the canvas (not on it), so it never covers grommet marks or the artwork
-    this.bannerLegend = lines;
+
+    // Legend card under the canvas (not on it), so it never covers grommet marks or the artwork
+    const fin = b.finishing;
+    const lay = b.layout;
+    const hemSides = ['top', 'bottom', 'left', 'right'].filter(sd => !pocketSides.includes(sd) && a[sd] > 0);
+    const sideList = list => list.length === 4 ? 'each side' : list.join(' & ');
+    const cells = [
+      ['Finished size', `${fmt(b.orderW)}" × ${fmt(b.orderH)}" (${ft(b.orderW)} × ${ft(b.orderH)} ft)`],
+      ['Production canvas', `${fmt(b.canvasW)}" × ${fmt(b.canvasH)}"`],
+      ['Grommets', g ? (g.where === 'corners' ? `${g.kind} · 4 corners` : `${g.kind} · ${g.total} total (top ${ps.top} · bottom ${ps.bottom} · left ${ps.left} · right ${ps.right})`)
+        : fin && fin.grommets && !fin.grommets.on ? 'No grommets' : 'Not in file name'],
+      ['Hem', lay && lay.hemOn && hemSides.length ? `${fin.hem.kind} +${fmt(a[hemSides[0]])}" ${sideList(hemSides)}` : 'No hem (not in file name)'],
+      ['Pole pocket', pocketSides.length ? `${pocketSides.join(' & ')} +${fmt(a[pocketSides[0]])}"` : fin && fin.pockets ? 'Side NOT in file name' : 'None', !pocketSides.length && fin && fin.pockets],
+      ['Safe area', `${b.safeIn}" inside the trim`]
+    ];
+    const key = [['trim', 'Trim / finished edge'], ['safe', `Safe area ${b.safeIn}"`]];
+    if (hemSides.length) key.push(['hem', 'Hem allowance']);
+    if (pocketSides.length) key.push(['pocket', 'Pole pocket']);
+    if (g) key.push(['grommet', 'Grommet (SOP table)']);
+    if (this.currentRotation || this.previewOrderTurned) key.push(['note', 'Preview turned — order unchanged']);
+    this.bannerLegend = {
+      source: fin && fin.found ? (fin.source === 'filename' ? 'File name' : 'Finishing options') : null,
+      words: fin && fin.found ? fin.words.join(' · ') : '',
+      cells, key
+    };
   },
 
-  /** The banner SOP legend bar under the canvas (file-name finishing, grommet counts, canvas size) */
+  /** The banner SOP legend card under the canvas (file-name finishing, grommet counts, canvas size, key) */
   _renderLegend() {
     const wrap = this.canvas && this.canvas.parentElement;
     if (!wrap) return;
     let el = document.getElementById('canvas-sop-legend');
-    const lines = this.inspectorMode && this.inspectorMode !== 'artwork' ? null : this.bannerLegend;
-    if (!lines) { if (el) el.style.display = 'none'; return; }
+    const L = this.inspectorMode && this.inspectorMode !== 'artwork' ? null : this.bannerLegend;
+    if (!L) { if (el) el.style.display = 'none'; return; }
     if (!el || el.previousElementSibling !== wrap) {
       if (el) el.remove();
       el = document.createElement('div');
@@ -1381,8 +1523,16 @@ const CanvasInspector = {
       wrap.insertAdjacentElement('afterend', el);
     }
     const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
-    el.style.cssText = 'display:block; margin:8px 0 0; padding:8px 12px; background:#0f172a; border-radius:6px; font:12px/1.55 Inter, sans-serif; color:#e2e8f0;';
-    el.innerHTML = lines.map((l, i) => `<div style="${i === 0 ? 'color:#fbbf24; font-weight:800;' : i === 1 ? 'color:#93c5fd; font-weight:700;' : ''}">${esc(l)}</div>`).join('');
+    el.className = 'canvas-sop-legend';
+    el.style.cssText = '';
+    el.innerHTML = `
+      <div class="csl-head">
+        <span class="csl-title">SOP Banner Template</span>
+        ${L.source ? `<span class="csl-src">${L.source}: <q>${esc(L.words)}</q></span>`
+          : '<span class="csl-src csl-warn">No grommets / pole pockets / hems in the file name — confirm the finishing from the order</span>'}
+      </div>
+      <div class="csl-grid">${L.cells.map(([k, v, warn]) => `<div class="csl-cell${warn ? ' warn' : ''}"><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`).join('')}</div>
+      <div class="csl-key">${L.key.map(([k, t]) => `<span><i class="csl-sw csl-${k}"></i>${esc(t)}</span>`).join('')}</div>`;
   },
 
   /**
@@ -1459,9 +1609,12 @@ const CanvasInspector = {
     const viewW = printW;
     const viewH = printH;
 
+    // Banner template: a pasteboard around the artboard carries the dimension lines and notes
+    const pad = bannerSop ? this.BANNER_PAD : { l: 0, r: 0, t: 0, b: 0 };
+
     // Viewport scaling strictly preserving physical product aspect ratio (never squeeze or stretch!)
-    const maxViewportW = 860;
-    const maxViewportH = 480;
+    const maxViewportW = 860 - pad.l - pad.r;
+    const maxViewportH = 480 - pad.t - pad.b;
     // Real banner proportions go well past 8:1 (e.g. 20' x 2' = 10:1), so only guard against absurd values
     const targetAspect = Math.max(0.02, Math.min(50.0, viewW / viewH));
 
@@ -1484,8 +1637,8 @@ const CanvasInspector = {
       w = Math.round(h * targetAspect);
     }
 
-    this.canvas.width = w;
-    this.canvas.height = h;
+    this.canvas.width = w + pad.l + pad.r;
+    this.canvas.height = h + pad.t + pad.b;
 
     if (this.inspectorMode === 'template') {
       this._drawTemplateMode(w, h, spec, dims);
@@ -1497,7 +1650,7 @@ const CanvasInspector = {
     }
 
     if (bannerSop) {
-      this._drawBannerSop(img, w, h, bannerSop);
+      this._drawBannerSop(img, w, h, bannerSop, pad);
       return;
     }
 

@@ -3,22 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Design Intelligence Hub | BannerBuzz Design Operations</title>
+  <title>Design Intelligence Hub | DPO – Design Pre-Press Operations</title>
   <meta name="description" content="AI-Powered Design File Pre-Check & Consolidated Customer Proof Studio adhering to BannerBuzz Standard Operating Procedures (SOP).">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261009b">
+  <link rel="stylesheet" href="css/style.css?v=20261010b">
 </head>
 <body>
 
-  <!-- ── BANNERBUZZ HEADER ── -->
+  <!-- ── DPO HEADER ── -->
   <header class="bb-header">
-    <div class="bb-logo" onclick="setSubnav(document.querySelector('.subnav-item'), 'precheck')">
-      <div class="bb-logo-icon">BB</div>
+    <div class="bb-logo dpo-logo" onclick="setSubnav(document.querySelector('.subnav-item'), 'precheck')" title="DPO – Design Pre-Press Operations">
+      <div class="bb-logo-icon dpo-logo-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round">
+          <circle cx="12" cy="12" r="6.2"/><circle cx="12" cy="12" r="2.4" fill="#ffffff" stroke="none"/>
+          <line x1="12" y1="1.5" x2="12" y2="22.5"/><line x1="1.5" y1="12" x2="22.5" y2="12"/>
+        </svg>
+      </div>
       <div class="bb-logo-text">
-        <span class="bb-logo-name">BANNERBUZZ</span>
-        <span class="bb-logo-sub">Design Operations</span>
+        <span class="bb-logo-name">DPO <span class="dpo-cmyk" aria-hidden="true"><i style="background:#00aeef"></i><i style="background:#ec008c"></i><i style="background:#fff200"></i><i style="background:#1f2937; box-shadow:0 0 0 1px rgba(255,255,255,0.5)"></i></span></span>
+        <span class="bb-logo-sub">Design Pre-Press Operations</span>
       </div>
     </div>
     <div class="bb-header-divider"></div>
@@ -380,8 +385,8 @@
       <!-- Page Header & Action Bar -->
       <div class="page-header">
         <div class="breadcrumb">
-          <span>BannerBuzz</span> <span class="sep">›</span>
-          <span>Design Ops</span> <span class="sep">›</span>
+          <span>DPO</span> <span class="sep">›</span>
+          <span>Design Pre-Press</span> <span class="sep">›</span>
           <span id="crumb-order">New Order</span> <span class="sep">›</span>
           <span id="crumb-product" style="color:var(--bb-orange); font-weight:700;">Select Product</span>
         </div>
@@ -494,7 +499,7 @@
       <div class="view" id="view-dashboard">
         <div style="max-width:1180px; margin:0 auto; display:flex; flex-direction:column; gap:20px;">
           <div>
-            <h2 style="font-size:20px; font-weight:800; color:var(--bb-navy);">Design Operations Efficiency Metrics</h2>
+            <h2 style="font-size:20px; font-weight:800; color:var(--bb-navy);">Design Pre-Press Operations Efficiency Metrics</h2>
             <p style="font-size:12.5px; color:var(--text-muted); margin-top:4px;">Measuring the business impact of AI Pre-Check, Consolidated Proofing, and Previous Order Verification.</p>
           </div>
 
@@ -578,15 +583,15 @@
   <!-- ── SCRIPTS ── -->
   <script src="js/sop_data.js?v=20261010a"></script>
   <script src="js/sop_file_requirements.js?v=20261010a"></script>
-  <script src="js/sop_rules.js?v=20261010a"></script>
+  <script src="js/sop_rules.js?v=20261010b"></script>
   <script src="js/template_registry.js"></script>
   <script src="js/file_analyzer.js?v=20261009c"></script>
   <script src="js/artwork_text_check.js?v=20261009b"></script>
-  <script src="js/agentic_ai_inspector.js?v=20261010a"></script>
-  <script src="js/precheck_engine.js?v=20261010a"></script>
+  <script src="js/agentic_ai_inspector.js?v=20261010b"></script>
+  <script src="js/precheck_engine.js?v=20261010b"></script>
   <script src="js/previous_orders.js"></script>
-  <script src="js/canvas_inspector.js?v=20261010a"></script>
-  <script src="js/proof_studio.js?v=20261010a"></script>
-  <script src="js/app.js?v=20261010a"></script>
+  <script src="js/canvas_inspector.js?v=20261010b"></script>
+  <script src="js/proof_studio.js?v=20261010b"></script>
+  <script src="js/app.js?v=20261010b"></script>
 </body>
 </html>

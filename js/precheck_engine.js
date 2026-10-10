@@ -96,7 +96,7 @@ const PrecheckEngine = {
     const c = sop.canvas || {};
     const fin = c.finishing, lay = c.layout;
     const base = { id: 'finishing', name: 'Finishing (grommets · pole pockets · hems)', icon: '🪢',
-      required: 'As the file name states — SOP grommet table (count per side by length), pole pocket +5.25" on the stated side(s), hem +1.25" on the others' };
+      required: 'As the file name states — SOP grommet table (count per side by length), pole pocket +5.25" on the stated side(s), hem +1.25" only when the name says hemmed / stitched / welded edges' };
     if (!fin || !fin.found) {
       return Object.assign(base, { status: 'WARNING',
         found: 'No grommets / pole pockets / hems in the file name',
@@ -122,6 +122,7 @@ const PrecheckEngine = {
     }
     const hemSides = lay ? ['top', 'bottom', 'left', 'right'].filter(s => !lay.pocketSides.includes(s) && lay.allow[s] > 0) : [];
     if (hemSides.length) rows.push(`${fin.hem ? fin.hem.kind : 'Hem'}: +${lay.allow[hemSides[0]]}" on ${hemSides.length === 4 ? 'each side' : hemSides.join(' & ')}.`);
+    else if (!fin.hem) rows.push('No hem in the file name — no hem allowance added.');
     if (fin.adhesiveTabs) rows.push('Adhesive tabs: print at the order size.');
     rows.push(`Production canvas ${c.wIn}" × ${c.hIn}" (finished ${printW}" × ${printH}").`);
     const unsure = fin.pockets && fin.pockets.sides.length === 0;

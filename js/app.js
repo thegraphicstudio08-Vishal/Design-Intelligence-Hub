@@ -256,7 +256,7 @@ function renderSpecBox(spec) {
       </div>
     </div>
     <div style="margin-top:8px; font-size:11px; color:#8b4513; border-top:1px dashed var(--bb-orange-mid); padding-top:6px;">
-      <strong>Material:</strong> ${spec.material} · ${req && req.family === 'banner' ? 'Hem 1.25&quot; each side · grommets 1&quot; inside edge, ≤48&quot; apart (real print files)' : spec.finishing}
+      <strong>Material:</strong> ${spec.material} · ${req && req.family === 'banner' && req.canvas ? 'Finishing: ' + req.canvas.note.replace(/"/g, '&quot;') + ' · grommets 1&quot; inside the finished edge (SOP table)' : spec.finishing}
     </div>
   `;
   box.classList.add('visible');
@@ -440,7 +440,7 @@ function checkAndApplyAutoOrientation(artW, artH) {
     }
     badge.style.cssText = 'margin-top:8px; background:#fffbeb; border:1px solid #f59e0b; border-left:4px solid #d97706; border-radius:6px; padding:7px 10px; font-size:11.5px; color:#92400e; font-weight:700; display:flex; align-items:flex-start; gap:6px; line-height:1.4;';
     const fmt = v => +(+v).toFixed(2);
-    badge.innerHTML = `<span>⚠️</span> <span>Orientation mismatch: artwork is <u>${isArtLandscape ? 'landscape' : 'portrait'}</u>, ordered size is <u>${isOrderLandscape ? 'landscape' : 'portrait'}</u> (${fmt(curW)}&quot; W × ${fmt(curH)}&quot; H). Order size kept — see the Orientation check.</span>`;
+    badge.innerHTML = `<span>⚠️</span> <span>Orientation mismatch: artwork is <u>${isArtLandscape ? 'landscape' : 'portrait'}</u>, ordered size is <u>${isOrderLandscape ? 'landscape' : 'portrait'}</u> (${fmt(curW)}&quot; W × ${fmt(curH)}&quot; H). Order size kept — compare with <b>↻ Rotate Artwork</b> or <b>⤾ Rotate Artboard</b> on the canvas (see the Orientation check).</span>`;
   }
   return false;
 }

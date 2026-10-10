@@ -854,7 +854,8 @@ body {
   gap: 10px;
 }
 .vi-title { font-size: 14px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
-.vi-controls { display: flex; align-items: center; gap: 8px; }
+.vi-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.vi-controls .vi-toggle { white-space: nowrap; }
 .vi-toggle {
   display: inline-flex;
   align-items: center;
@@ -1369,7 +1370,6 @@ body {
     margin: 0 auto !important;
     max-width: 100% !important;
     width: 100% !important;
-    max-height: 980px !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     page-break-after: avoid !important;
@@ -1747,5 +1747,93 @@ body {
   border-color: #ff5f1f !important;
   box-shadow: 0 0 0 2px rgba(255, 95, 31, 0.25);
 }
+
+/* ── DPO logo (Design Pre-Press Operations) ── */
+.dpo-logo-icon { width: 34px; height: 34px; border-radius: 8px; }
+.dpo-logo .bb-logo-name { display: inline-flex; align-items: center; gap: 7px; font-size: 16px; letter-spacing: 0.06em; }
+.dpo-logo .bb-logo-sub { letter-spacing: 0.1em; }
+.dpo-cmyk { display: inline-flex; gap: 3px; }
+.dpo-cmyk i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+
+/* ── Canvas toolbar: rotate artwork / artboard, finishing chips ── */
+.vi-rotate-group { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.vi-rotate-group .btn { font-size: 11px; white-space: nowrap; }
+.vi-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #eef2f7;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.orient-alert-hint {
+  margin: -4px 12px 12px;
+  font-size: 11px;
+  color: #92400e;
+  font-weight: 600;
+}
+
+/* ── SOP banner template legend (under the canvas) ── */
+.canvas-sop-legend {
+  margin: 10px 0 0;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+  font-family: Inter, sans-serif;
+}
+
+.csl-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  padding: 8px 12px;
+  background: #0e2246;
+  color: #e2e8f0;
+}
+
+.csl-title { font-size: 11px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: #ffffff; }
+.csl-src { font-size: 11.5px; color: #93c5fd; font-weight: 600; }
+.csl-src q { color: #ffffff; quotes: '"' '"'; }
+.csl-src.csl-warn { color: #fcd34d; }
+
+.csl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  border-bottom: 1px solid #edf1f6;
+}
+
+.csl-cell { padding: 7px 12px; border-right: 1px solid #edf1f6; border-top: 1px solid #edf1f6; min-width: 0; }
+.csl-cell span { display: block; font-size: 9.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #64748b; }
+.csl-cell strong { display: block; font-size: 12px; color: #0f172a; margin-top: 1px; line-height: 1.35; overflow-wrap: anywhere; }
+.csl-cell.warn strong { color: #b45309; }
+
+.csl-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 7px 12px;
+  background: #f7f9fc;
+  font-size: 11px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.csl-key span { display: inline-flex; align-items: center; gap: 6px; }
+.csl-sw { display: inline-block; width: 22px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.csl-trim { border: 2px solid #f97316; height: 8px; width: 20px; }
+.csl-safe { border: 2px dashed #16a34a; height: 8px; width: 20px; }
+.csl-hem { background: repeating-linear-gradient(-45deg, #eef2f6 0 3px, #b8c4d2 3px 4px); border: 1px solid #cbd5e1; }
+.csl-pocket { background: repeating-linear-gradient(-45deg, #dbeafe 0 3px, #93b4f5 3px 4px); border: 1px solid #93c5fd; }
+.csl-grommet { width: 11px; height: 11px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #f8fafc, #94a3b8); border: 1px solid #334155; box-shadow: inset 0 0 0 3px transparent; position: relative; }
+.csl-grommet::after { content: ''; position: absolute; left: 3px; top: 3px; width: 3px; height: 3px; border-radius: 50%; background: #e8ecf2; border: 0.5px solid #475569; }
+.csl-note { background: #b45309; height: 8px; }
 
 

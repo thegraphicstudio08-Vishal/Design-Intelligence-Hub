@@ -18,7 +18,7 @@ const SopRules = {
     chart125: 'Production print files (Desktop/Print): banners, flags, magnets, posters, stands printed at 125 ppi',
     chart72: 'Production print file US2382836 (36x136 in vinyl) printed at 72 ppi; SOP 1_Banners inspects at 72 ppi 100% zoom',
     small300: 'Production print files: hand flags 6x4 in and business cards printed at 300 ppi',
-    hem: 'Production print files: vinyl/canvas/fabric banners with grommets or stitched edges = order size + 1.25" each side',
+    hem: 'Production print files: hemmed / stitched / welded edges stated in the file name = order size + 1.25" each side (grommets alone add no hem)',
     polePocket: 'Production print file US2382836 (Top Pole Pocket): height + 5.25", width unchanged',
     resolutionChart: 'SOP Banner (ISO 2026) slide 2 + PR-DPO-03 Rev 15 · resolution chart: up to 12" 600 ppi · 12–24" 300 · 24–120" 125 · over 120" 72',
     vendorGiant: 'PR-DPO-03 Rev 15 · Giant Media vendor files at 100 ppi',
@@ -94,7 +94,7 @@ const SopRules = {
   GROMMET_TABLE: [[4.00, 2], [8.99, 3], [11.99, 4], [14.99, 5], [17.99, 6], [20.99, 7], [23.99, 8], [26.99, 9], [29.99, 10]],
   BANNER_SAFE_IN: 1,        // SOP Banner (ISO 2026) slide 6: safe area 1" inside the visible edge
   POCKET_IN: 5.25,          // pole pocket allowance per side (production print file US2382836)
-  HEM_IN: 1.25,             // hem allowance per side with grommets / stitched / hemmed edges (production print files)
+  HEM_IN: 1.25,             // hem allowance per side, only when the file name states hemmed / stitched / welded edges
   GROMMET_INSET_IN: 1,      // grommet centre 1" inside the finished edge
   // SOP 1_Banners slide 7: pole diameter / pole in inch → material to leave (inches)
   POCKET_SIZE_TABLE: [[1, 2.25, 2.75], [1.5, 3.25, 3.75], [2, 4.25, 4.75], [2.5, 5.25, 5.75], [3, 6.25, 6.75],
@@ -258,15 +258,16 @@ const SopRules = {
 
   /**
    * Where the finishing goes on a banner of the ordered size. Inches; origin = top-left corner of the
-   * FINISHED size. Pole pocket bands (+5.25" on each pocket side), hem bands (+1.25" on the other sides
-   * when there are grommets / stitched / hemmed edges), grommet centres 1" inside the finished edge —
-   * per-side counts from the SOP grommet table, evenly spaced, corners included — and the canvas.
+   * FINISHED size. Pole pocket bands (+5.25" on each pocket side), hem bands (+1.25" on the other sides,
+   * only when the file name states hemmed / stitched / welded edges — grommets alone add no hem), grommet
+   * centres 1" inside the finished edge — per-side counts from the SOP grommet table, evenly spaced,
+   * corners included — and the canvas.
    */
   bannerLayout(dims, fin) {
     const W = dims.widthIn, H = dims.heightIn;
     const pocketSides = (fin.pockets && fin.pockets.sides) || [];
     const pocketMat = this.pocketMaterial(fin.pockets);             // custom size from the name → SOP slide 7 value
-    const hemOn = !!(fin.hem || (fin.grommets && fin.grommets.on));
+    const hemOn = !!fin.hem;
     const allow = {};
     ['top', 'bottom', 'left', 'right'].forEach(s => { allow[s] = pocketSides.includes(s) ? pocketMat.inches : hemOn ? this.HEM_IN : 0; });
 
@@ -358,8 +359,8 @@ const SopRules = {
             <div style="font-weight:800; margin-bottom:6px;">Pole pockets &amp; hems (production canvas)</div>
             <ul style="margin:0; padding-left:18px; line-height:1.6; color:#334155;">
               <li>Pole pocket: <strong>+${this.POCKET_IN}"</strong> on each pocket side (top · top &amp; bottom · left &amp; right), no grommets on that side</li>
-              <li>Grommets / stitched / hemmed edges: <strong>+${this.HEM_IN}"</strong> hem on each other side</li>
-              <li>No grommet / adhesive tabs: print at the order size</li>
+              <li>Hemmed / stitched / welded edges stated in the file name: <strong>+${this.HEM_IN}"</strong> hem on each other side</li>
+              <li>Grommets without a hem in the file name, no grommet, adhesive tabs: no hem allowance (order size on those sides)</li>
               <li>Safe area ${this.BANNER_SAFE_IN}" inside the finished (visible) edge</li>
             </ul>
             <div style="font-weight:800; margin:10px 0 6px;">Custom pole pocket size (slide 7)</div>
