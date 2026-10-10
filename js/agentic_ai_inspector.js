@@ -753,11 +753,15 @@ const AgenticAiInspector = {
     if (turn) {
       // Text runs sideways / upside down: turning the artwork makes it read correctly on the ordered size
       buttons.push(rot === turn ? btn('↺ Undo turn', 'CanvasInspector.setRotation(0)') : btn(`↻ Turn artwork ${howTo}`, `AgenticAiInspector.previewOrientation('turn', ${turn})`, true));
+    } else if (check.scenario === 'otherSize') {
+      // PR-DPO-03 cases 11–14: not the ordered size turned → the proof stays in the ordered orientation,
+      // the artwork is adjusted / stretched to the ordered size (customer approval)
+      if (!textKnown) buttons.push(rot ? btn('↺ Undo turn', 'CanvasInspector.setRotation(0)') : btn('↻ Turn artwork 90°', 'AgenticAiInspector.previewOrientation(\'turn\', 90)'));
     } else {
-      // Text reads upright: the artwork was made for the other orientation — show the order turned
-      // (the SOP mockup for the customer); turning the artwork only helps when the text direction is unknown
+      // PR-DPO-03 cases 5–10: the ordered size turned → update the admin to the artwork size and send the proof
+      // in the artwork's orientation; preview the order turned (also used by the proof)
       buttons.push(turned ? btn('↺ Back to ordered size', 'AgenticAiInspector.previewOrientation(\'order\', false)')
-        : btn(`Preview order as ${H}" × ${W}"`, 'AgenticAiInspector.previewOrientation(\'order\', true)', true));
+        : btn(`Proof in artwork orientation (${H}" × ${W}")`, 'AgenticAiInspector.previewOrientation(\'order\', true)', true));
       if (!textKnown) buttons.push(rot ? btn('↺ Undo turn', 'CanvasInspector.setRotation(0)') : btn('↻ Turn artwork 90°', 'AgenticAiInspector.previewOrientation(\'turn\', 90)'));
     }
     buttons.push(btn('Show on canvas', 'AgenticAiInspector.previewOrientation(\'show\')'));
@@ -771,9 +775,10 @@ const AgenticAiInspector = {
     }
     box.className = `spell-alert orient-alert ${check.status === 'FAIL' ? 'is-fail' : 'is-warn'}`;
     const preview = rot ? `Canvas shows the artwork turned ${rot}° on the ordered size — preview only.`
-      : turned ? `Canvas shows the order turned to ${H}" × ${W}" — preview only, the order is unchanged.` : '';
+      : turned ? `Canvas and proof show the order turned to ${H}" × ${W}" (artwork orientation). Update the admin size before printing.`
+      : check.scenario === 'otherSize' ? `Proof stays in the ordered orientation (${W}" × ${H}") with the artwork fitted — customer approval required.` : '';
     box.innerHTML = `
-      <div class="spell-alert-head">🔄 <span>Orientation ${turn ? 'issue: text is ' + (turn === 180 ? 'upside down' : 'sideways') : 'mismatch'}</span>
+      <div class="spell-alert-head">🔄 <span>Orientation${turn ? ' issue: text is ' + (turn === 180 ? 'upside down' : 'sideways') : check.scenario === 'turned' ? ': artwork is the ordered size turned' : ' mismatch'}</span>
         <button class="spell-alert-close" title="Close" onclick="AgenticAiInspector.closeOrientationAlert()">×</button></div>
       <div class="orient-alert-facts">
         <div><span>Customer artwork</span><strong>${a.orientationArtwork}${artSize ? ' · ' + artSize : ''}</strong></div>

@@ -987,7 +987,7 @@ const CanvasInspector = {
       const hasPolePockets = this.currentDims?.hasPolePockets || this.currentDims?.pocketType?.includes('Top Pole Pocket') || this.currentDims?.pocketType?.includes('Pocket');
       const hasGrommets = this.currentDims?.hasGrommets !== false && this.currentDims?.grommetType !== 'None' && !hasPolePockets;
       controlsHtml = `
-        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (1.25")</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Safe Area (${typeof SopRules !== 'undefined' ? SopRules.BANNER_SAFE_IN : 1}")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.cutLine ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('cutLine', this.checked)"> ✂️ Trim Line</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.bleed ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('bleed', this.checked)"> 📐 Bleed (0.125")</label>
         <label class="vi-toggle active"><input type="checkbox" ${this.guides.seams ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('seams', this.checked)"> 🧵 1.25" Hem Fold Lines</label>
@@ -1216,7 +1216,8 @@ const CanvasInspector = {
     return {
       orderW: W, orderH: H, canvasW: c.wIn, canvasH: c.hIn, confirmed: c.confirmed, note: c.note,
       allow: a, hemX: a.left, hemTop: a.top, hemBottom: a.bottom,
-      finishing: c.finishing || null, layout: lay, safeIn: 1.25
+      finishing: c.finishing || null, layout: lay,
+      safeIn: (SopRules.safeArea(spec, st.parsedFilename) || {}).inches || SopRules.BANNER_SAFE_IN
     };
   },
 
@@ -1297,7 +1298,7 @@ const CanvasInspector = {
       ctx.restore();
     }
 
-    // Safe area 1.25" inside the finished edge
+    // Safe area inside the finished edge (SOP Banner ISO 2026: 1")
     if (this.guides.safeArea !== false) {
       const si = b.safeIn * s;
       ctx.save();
@@ -1357,10 +1358,10 @@ const CanvasInspector = {
       else if (fin.pockets) bits.push('Pole pocket side NOT in file name');
       const hemSides = ['top', 'bottom', 'left', 'right'].filter(sd => !pocketSides.includes(sd) && a[sd] > 0);
       if (hemSides.length) bits.push(`Hem ${a[hemSides[0]]}" ${hemSides.length === 4 ? 'each side' : hemSides.join(' & ')}`);
-      bits.push('Safe 1.25"');
+      bits.push(`Safe ${b.safeIn}"`);
       lines.push(bits.join(' · '));
     } else {
-      lines.push('No grommets / pole pockets / hems in the file name — confirm the finishing from the order · Safe 1.25"');
+      lines.push(`No grommets / pole pockets / hems in the file name — confirm the finishing from the order · Safe ${b.safeIn}"`);
     }
     // Shown under the canvas (not on it), so it never covers grommet marks or the artwork
     this.bannerLegend = lines;

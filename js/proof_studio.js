@@ -20,8 +20,8 @@ const ProofStudio = {
   },
 
   options: {
-    enableCropShot: true, // Checkbox toggle for Print Preview Crop Shot
-    section2View: 'crop', // 'crop' or 'mockup'
+    printPreview: 'auto', // Proof 03 print preview screenshot: 'auto' (SOP: only for low resolution) / true / false
+    showTemplate: 'auto', // Proof 02 template section: 'auto' (template-based products) / true / false
     cropX: null,          // Default null -> dynamically centered based on product orientation
     cropY: null,          // Default null -> dynamically centered based on product orientation
     cropZoomManual: null, // Optional manual override, default null (uses SOP auto calculation)
@@ -49,16 +49,14 @@ const ProofStudio = {
     }
   },
 
+  // Kept for older buttons / callers: 'crop' adds the print preview screenshot, 'mockup' the template section
   setSection2View(mode) {
-    this.options.section2View = mode;
-    this.refreshCurrentProof();
+    if (mode === 'crop') this.setPrintPreview(true);
+    else this.setTemplateSection(true);
   },
 
   setLayoutMode(mode) {
-    // Kept for backward compatibility
-    this.options.enableCropShot = (mode !== 'multislot');
-    this.refreshCurrentProof();
-    this.updateSidebarControls();
+    this.setPrintPreview(mode !== 'multislot');
   },
 
   setCropZoom(zoom) {
@@ -77,9 +75,9 @@ const ProofStudio = {
   /**
    * Calculate exact Photoshop Print Size zoom scale per BannerBuzz SOP:
    * Calibrated with Photoshop Preferences (Screen Resolution = 143 PPI, Print SOP = 125 PPI)
-   * Rule:
-   * - Both dimensions >= 72" (w >= 72 && h >= 72): 100% scale (scale ratio 1.0)
-   * - Otherwise (either dimension < 72"): 114.4% scale zoom (scale ratio 143/125 = 1.144) Print Preview
+   * Rule (SOP Banner ISO 2026 slide 8 · PR-DPO-03 Rev 15):
+   * - Longest side over 120" (72 ppi files): 100% zoom (scale ratio 1.0)
+   * - Otherwise: Photoshop "Print size" — 114.4% (scale ratio 143/125 = 1.144)
    * Converts physical print inches to screen CSS pixels at standard 96 PPI.
    */
   calculateCropScale(printW, printH, spec) {
@@ -92,20 +90,19 @@ const ProofStudio = {
       h = spec.bleed[1];
     }
 
-    // User / BannerBuzz SOP Rule:
-    // "need 72" both side for 100% zoom othervice we consider print previu"
-    // Both sides >= 72" -> 100% scale (1.0)
-    // If either side < 72" -> 114.4% scale zoom (1.144) Photoshop Print Size Preview (143 PPI Screen / 125 PPI Banner Print)
-    const isBoth72 = (w >= 72 && h >= 72);
-    let sopScale = isBoth72 ? 1.0 : 1.144;
-    let percentText = isBoth72 ? '100%' : '114.4%';
-    let badgeText = isBoth72 ? 'AUTO 100% SCALE CROP' : 'AUTO 114.4% PRINT PREVIEW CROP';
-    let buttonText = isBoth72 ? '🔍 Crop Shot (100%)' : '🔍 Print Preview (114.4%)';
-    let subtitleDetail = isBoth72 ? '100% Actual Scale Detail Inspection' : 'Photoshop Print Size Preview · 114.4% Scale';
-    let modeText = isBoth72
-      ? '100% Actual Scale Detail Inspection · SOP Sharpness Verified'
-      : 'Photoshop Print Size Preview (114.4% Scale at 143 PPI Screen) · SOP Verified';
-    let ruleText = isBoth72 ? '≥72" Both Sides: 100% Scale' : '<72" Dimension: 114.4% Print Preview';
+    // SOP Banner (ISO 2026) slide 8 / PR-DPO-03: screenshot at 100% zoom for 72 ppi files (over 120"),
+    // Photoshop "Print size" for the rest (114.4% = 143 PPI laptop screen / 125 PPI print)
+    const isLarge = Math.max(w, h) > 120;
+    const isBoth72 = isLarge;                     // kept for older callers
+    let sopScale = isLarge ? 1.0 : 1.144;
+    let percentText = isLarge ? '100%' : '114.4%';
+    let badgeText = isLarge ? '100% ZOOM · 72 PPI FILE' : 'PRINT SIZE · 114.4%';
+    let buttonText = isLarge ? '🔍 Print preview (100%)' : '🔍 Print preview (print size)';
+    let subtitleDetail = isLarge ? '100% zoom' : 'actual print size';
+    let modeText = isLarge
+      ? 'Screenshot at 100% zoom (72 ppi file, over 120")'
+      : 'Screenshot at Photoshop Print Size (114.4% at 143 PPI screen)';
+    let ruleText = isLarge ? 'Over 120": 100% zoom' : 'Up to 120": print size';
 
     if (this.options.cropZoomManual) {
       sopScale = this.options.cropZoomManual;
@@ -130,6 +127,7 @@ const ProofStudio = {
       modeText,
       ruleText,
       isBoth72,
+      isLarge,
       physicalW,
       physicalH,
       minDim: Math.min(w, h),
@@ -151,7 +149,7 @@ const ProofStudio = {
     if (this._sizeCache[key]) return this._sizeCache[key];
     const ci = (typeof CanvasInspector !== 'undefined') ? CanvasInspector.currentImg : null;
     if (ci && ci.src === src && ci.naturalWidth > 0) {
-      return (this._sizeCache[key] = { w: ci.naturalWidth, h: ci.naturalHeight });
+      return (this._sizeCache[key] = { w: ci.naturalWidth, h: ci.naturalHeight, img: ci });
     }
     if (this._sizeLoading !== key) {
       this._sizeLoading = key;
@@ -159,7 +157,7 @@ const ProofStudio = {
       im.onload = () => {
         this._sizeLoading = null;
         if (im.naturalWidth > 0 && im.naturalHeight > 0) {
-          this._sizeCache[key] = { w: im.naturalWidth, h: im.naturalHeight };
+          this._sizeCache[key] = { w: im.naturalWidth, h: im.naturalHeight, img: im };
           if (onReady) onReady();
         }
       };
@@ -196,6 +194,168 @@ const ProofStudio = {
     return { src: url, angle };
   },
 
+  /**
+   * Which proofs this order needs — PR-DPO-03 Rev 15 · 2. Proof Process:
+   *  Proof 01 small size proof (always) · Proof 02 template based proof (template products) ·
+   *  Proof 03 print preview screenshot ONLY for low-resolution artwork or a print-quality concern.
+   * The designer can still switch the print preview / template section on or off; a new artwork resets that.
+   */
+  _proofPlan(spec, analysis, artworkSrc) {
+    const key = (artworkSrc || '').length + ':' + (artworkSrc || '').slice(-40);
+    if (this._planKey !== key) { this._planKey = key; this.options.printPreview = 'auto'; this.options.showTemplate = 'auto'; }
+    const rep = (typeof appState !== 'undefined' && appState.report) ? appState.report : null;
+    const pp = rep && Array.isArray(rep.checks) ? rep.checks.find(c => c.id === 'proofPlan') : null;
+    const resConcern = pp && pp.resConcern ? pp.resConcern : null;
+    const pv = this.options.printPreview;
+    const templateBased = typeof SopRules !== 'undefined' ? SopRules.isTemplateBased(spec, analysis) : false;
+    const tv = this.options.showTemplate;
+    const plan = {
+      resConcern,
+      autoPreview: !!resConcern,
+      showPrintPreview: pv === 'auto' || pv === undefined ? !!resConcern : !!pv,
+      previewOverride: !(pv === 'auto' || pv === undefined),
+      templateBased,
+      showTemplate: tv === 'auto' || tv === undefined ? templateBased : !!tv
+    };
+    this._lastPlan = plan;
+    return plan;
+  },
+
+  /** Designer switch for Proof 03 (sidebar check box): on / off; 'auto' follows the SOP rule */
+  setPrintPreview(on) {
+    this.options.printPreview = on;
+    this.refreshCurrentProof();
+    this.updateSidebarControls();
+  },
+
+  setTemplateSection(on) {
+    this.options.showTemplate = on;
+    this.refreshCurrentProof();
+  },
+
+  /**
+   * Proof 01 artwork with the customer's custom finishing marked (SOP Banner slide 8: "If any custom requirement
+   * — custom grommet, pole pocket — highlight it to the customer"): pole pocket bands and custom grommet positions.
+   * Standard all-round grommets and hems are not customer choices and are not drawn. RGB JPEG, cached.
+   */
+  _finishingHighlight(src, spec, analysis, W, H, onReady) {
+    if (typeof SopRules === 'undefined' || !src || SopRules.family(spec, analysis) !== 'banner') return null;
+    const fin = SopRules.bannerFinishing(analysis);
+    if (!fin.found) return null;
+    const lay = SopRules.bannerLayout({ widthIn: W, heightIn: H }, fin);
+    const pockets = lay.pocketSides;
+    const g = lay.grommets && lay.grommets.where !== 'all' ? lay.grommets : null;
+    if (!pockets.length && !g) return null;
+    const key = [src.length, src.slice(-40), W, H, pockets.join(','), g ? g.where : ''].join('|');
+    if (this._hlCache && this._hlCache.key === key) return this._hlCache;
+    const size = this._artworkSize(src, onReady);
+    if (!size || !size.img) return null;
+    const k = 1400 / Math.max(W, H);                                  // px per inch
+    const a = lay.allow, aL = pockets.includes('left') ? a.left : 0, aR = pockets.includes('right') ? a.right : 0;
+    const aT = pockets.includes('top') ? a.top : 0, aB = pockets.includes('bottom') ? a.bottom : 0;
+    const cv = document.createElement('canvas');
+    cv.width = Math.round((W + aL + aR) * k);
+    cv.height = Math.round((H + aT + aB) * k);
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cv.width, cv.height);
+    const fx = aL * k, fy = aT * k, fw = W * k, fh = H * k;
+    const s = Math.min(fw / size.w, fh / size.h);
+    ctx.drawImage(size.img, fx + (fw - size.w * s) / 2, fy + (fh - size.h * s) / 2, size.w * s, size.h * s);
+    const font = px => `bold ${Math.round(px)}px Inter, Arial, sans-serif`;
+    pockets.forEach(side => {
+      const r = side === 'top' ? [0, 0, cv.width, fy] : side === 'bottom' ? [0, fy + fh, cv.width, cv.height - fy - fh]
+        : side === 'left' ? [0, fy, fx, fh] : [fx + fw, fy, cv.width - fx - fw, fh];
+      ctx.fillStyle = '#dbeafe'; ctx.fillRect(r[0], r[1], r[2], r[3]);
+      ctx.setLineDash([12, 8]); ctx.lineWidth = 3; ctx.strokeStyle = '#2563eb';
+      ctx.beginPath();
+      if (side === 'top') { ctx.moveTo(fx, fy); ctx.lineTo(fx + fw, fy); }
+      if (side === 'bottom') { ctx.moveTo(fx, fy + fh); ctx.lineTo(fx + fw, fy + fh); }
+      if (side === 'left') { ctx.moveTo(fx, fy); ctx.lineTo(fx, fy + fh); }
+      if (side === 'right') { ctx.moveTo(fx + fw, fy); ctx.lineTo(fx + fw, fy + fh); }
+      ctx.stroke(); ctx.setLineDash([]);
+      const thick = side === 'top' || side === 'bottom' ? r[3] : r[2];
+      ctx.save();
+      ctx.fillStyle = '#1e40af'; ctx.font = font(Math.max(14, thick * 0.42)); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.translate(r[0] + r[2] / 2, r[1] + r[3] / 2);
+      if (side === 'left' || side === 'right') ctx.rotate(side === 'left' ? -Math.PI / 2 : Math.PI / 2);
+      ctx.fillText('POLE POCKET', 0, 0);
+      ctx.restore();
+    });
+    if (g) {
+      const rad = Math.max(10, 0.7 * k);
+      g.points.forEach(([x, y]) => {
+        ctx.beginPath(); ctx.arc(fx + x * k, fy + y * k, rad, 0, Math.PI * 2);
+        ctx.fillStyle = '#f1f5f9'; ctx.fill(); ctx.lineWidth = Math.max(3, rad * 0.35); ctx.strokeStyle = '#dc2626'; ctx.stroke();
+      });
+    }
+    let url;
+    try { url = cv.toDataURL('image/jpeg', 0.92); } catch (e) { return null; }
+    const where = { corners: 'on the 4 corners', 'top-corners': 'on the top corners', top: 'along the top edge', left: 'along the left edge' };
+    const note = [pockets.length ? `Pole pocket on the ${pockets.join(' & ')} (shown in blue)` : '',
+      g ? `${g.kind.replace(/^Metal /, '')} ${where[g.where] || ''} (red circles)` : ''].filter(Boolean).join(' · ');
+    this._hlCache = { key, url, note };
+    return this._hlCache;
+  },
+
+  /** SOP proof file name (PR-DPO-03): the order's file name without process suffixes */
+  _proofBaseName(analysis) {
+    const n = (analysis && analysis.fname) || (typeof appState !== 'undefined' && appState.file && appState.file.name) || 'proof';
+    return n.replace(/\.[a-z0-9]+$/i, '').replace(/(_script)?(_(overall|print_file|print|crop[^_]*))+$/i, '').replace(/_script$/i, '');
+  },
+
+  /**
+   * Download a proof as JPG (RGB) the way PR-DPO-03 names them:
+   *  1 → Proof 01 small size proof  "<order file name>.jpg"
+   *  3 → Proof 03 print preview screenshot  "<order number>.jpg" (what the print preview box shows)
+   */
+  downloadProofJpg(which) {
+    const st = this._lastRender;
+    if (!st) return;
+    const save = (cv, name) => cv.toBlob(b => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }, 'image/jpeg', 0.92);
+    const withImage = (src, cb) => { const im = new Image(); im.onload = () => cb(im); im.src = src; };
+    if (which === 1) {
+      withImage(st.artworkProofSrc, im => {
+        const k = Math.min(1, 1600 / Math.max(im.naturalWidth, im.naturalHeight));
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(im.naturalWidth * k); cv.height = Math.round(im.naturalHeight * k);
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cv.width, cv.height);
+        ctx.drawImage(im, 0, 0, cv.width, cv.height);
+        save(cv, `${st.baseName}.jpg`);
+      });
+    } else if (which === 3) {
+      if (!st.showPrintPreview) { alert('No print preview screenshot in this proof — SOP: only for low-resolution artwork or a print-quality concern.'); return; }
+      if (this.slots.crop?.dataUrl) {
+        withImage(this.slots.crop.dataUrl, im => {
+          const cv = document.createElement('canvas'); cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+          cv.getContext('2d').drawImage(im, 0, 0); save(cv, `${st.orderNum}.jpg`);
+        });
+        return;
+      }
+      const vp = document.getElementById('proof-crop-viewport');
+      const vw = vp ? vp.clientWidth : 800, vh = vp ? vp.clientHeight : 240;
+      const cx = this.options.cropX != null ? this.options.cropX : st.cropX, cy = this.options.cropY != null ? this.options.cropY : st.cropY;
+      withImage(st.artworkSrc, im => {
+        const sc = 2;
+        const cv = document.createElement('canvas'); cv.width = vw * sc; cv.height = vh * sc;
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cv.width, cv.height);
+        ctx.drawImage(im, (vw / 2 - st.cropImg.w * cx / 100) * sc, (vh / 2 - st.cropImg.h * cy / 100) * sc, st.cropImg.w * sc, st.cropImg.h * sc);
+        // Label as in the SOP proof slide
+        ctx.font = `bold ${15 * sc}px Inter, Arial, sans-serif`;
+        const label = 'Print preview screenshot', tw = ctx.measureText(label).width + 24 * sc;
+        ctx.fillStyle = 'rgba(229, 231, 235, 0.95)'; ctx.fillRect(10 * sc, 10 * sc, tw, 30 * sc);
+        ctx.fillStyle = '#dc2626'; ctx.textBaseline = 'middle'; ctx.fillText(label, 22 * sc, 25 * sc);
+        save(cv, `${st.orderNum}.jpg`);
+      });
+    }
+  },
+
   /** Crop-shot image size: the artwork fitted inside its print size (same rule as the canvas — never stretched) */
   _cropImageSize(cropScaleInfo, artSize) {
     const boxW = cropScaleInfo.physicalW, boxH = cropScaleInfo.physicalH;
@@ -205,7 +365,7 @@ const ProofStudio = {
   },
 
   handleArtworkClick(e) {
-    if (!this.options.enableCropShot || this.slots.crop?.dataUrl) return;
+    if (!(this._lastPlan && this._lastPlan.showPrintPreview) || this.slots.crop?.dataUrl) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
     const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
@@ -272,28 +432,23 @@ const ProofStudio = {
   },
 
   updateSidebarControls() {
+    const plan = this._lastPlan || { showPrintPreview: false, autoPreview: false, previewOverride: false };
     const chk = document.getElementById('check-crop-shot');
-    if (chk) chk.checked = (this.options.enableCropShot !== false);
+    if (chk) chk.checked = !!plan.showPrintPreview;
     const badge = document.getElementById('crop-status-badge');
     if (badge) {
-      if (this.slots.crop?.dataUrl) {
-        badge.textContent = 'CUSTOM CROP';
-        badge.style.background = '#dcfce7';
-        badge.style.color = '#16a34a';
-      } else {
-        const lastDims = this._lastOrderData?.dims || {};
-        const lastSpec = this._lastOrderData?.spec || {};
-        const cropInfo = this.calculateCropScale(lastDims.widthIn, lastDims.heightIn, lastSpec);
-        badge.textContent = cropInfo.badgeText;
-        badge.style.background = '#ede9fe';
-        badge.style.color = '#4739d2';
-      }
-      badge.style.display = (this.options.enableCropShot !== false) ? 'inline-block' : 'none';
+      // Why the print preview screenshot is in (or out of) the proof — PR-DPO-03 Rev 15
+      const t = this.slots.crop?.dataUrl ? ['DESIGNER SCREENSHOT', '#dcfce7', '#16a34a']
+        : plan.previewOverride ? [plan.showPrintPreview ? 'ON · BY DESIGNER' : 'OFF · BY DESIGNER', '#f1f5f9', '#334155']
+        : plan.autoPreview ? ['AUTO ON · LOW RESOLUTION', '#fee2e2', '#b91c1c']
+        : ['AUTO OFF · NO RES. CONCERN', '#dcfce7', '#15803d'];
+      badge.textContent = t[0];
+      badge.style.background = t[1];
+      badge.style.color = t[2];
+      badge.style.display = 'inline-block';
     }
     const panel = document.getElementById('crop-shot-panel');
-    if (panel) {
-      panel.style.display = (this.options.enableCropShot !== false) ? 'block' : 'none';
-    }
+    if (panel) panel.style.display = plan.showPrintPreview ? 'block' : 'none';
   },
 
   refreshCurrentProof() {
@@ -819,217 +974,115 @@ const ProofStudio = {
       : 'Four/0 (Full-Color, Single-Sided)';
     const sizeTolerance = 'Up to +/- 0.5"';
 
-    // Build the dynamic proof view sections (Section 1 Artwork + Section 2 Crop / Template + Section 3 Specs)
-    const enableCropShot = (this.options.enableCropShot !== false);
-    const section2View = this.options.section2View || (enableCropShot ? 'crop' : 'mockup');
-    const isMockupView = (section2View === 'mockup' || !enableCropShot);
+    // ── PR-DPO-03 Rev 15 · 2. Proof Process ──
+    //  Proof 01 · Small size proof — always (custom finishing such as pole pockets marked for the customer)
+    //  Proof 02 · Template based proof — template-based products (PR-DPO-04 file requirement sheet)
+    //  Proof 03 · Print preview screenshot — ONLY for low-resolution artwork or a print-quality concern
+    //             (customers misread it otherwise — SOP purpose note)
+    const plan = this._proofPlan(spec, analysis, artworkSrc);
     const hasCustomCrop = Boolean(this.slots.crop?.dataUrl);
+    const rerender = () => { if (document.getElementById(targetElementId)) this.renderProof(orderData, targetElementId); };
 
-    // Calculate SOP Crop Scale: >72" -> 100%, <=72" -> 114.4%
+    // Print size of the screenshot: 100% zoom for 72 ppi files (over 120"), Photoshop "Print size" otherwise.
+    // The artwork keeps its own proportions inside that print size (never stretched)
     const cropScaleInfo = this.calculateCropScale(printW, printH, spec);
-    // The artwork keeps its own proportions inside that print size; until its pixel size is known the
-    // proof is drawn once more as soon as the image has loaded
-    const artSize = this._artworkSize(artworkSrc, () => {
-      if (document.getElementById(targetElementId)) this.renderProof(orderData, targetElementId);
-    });
+    const artSize = this._artworkSize(artworkSrc, rerender);
     const cropImg = this._cropImageSize(cropScaleInfo, artSize);
-
-    // Auto-center default focus if not explicitly set
     let cropX = (this.options.cropX !== null && this.options.cropX !== undefined) ? this.options.cropX : 50;
     let cropY = (this.options.cropY !== null && this.options.cropY !== undefined) ? this.options.cropY : 50;
     if (this.options.cropY === null || this.options.cropY === undefined) {
-      // Tall vertical items (flags, roll-ups, banners taller than wide): default focus on upper third (character face / primary logo)
+      // Tall items (flags, roll-ups, vertical banners): default focus on the upper third (face / main logo)
       cropY = (cropScaleInfo.h > cropScaleInfo.w * 1.2) ? 34 : 50;
     }
-
-    // Reticle dimensions for Section 1 (indicates visible viewport on the artwork)
     const reticleW = Math.max(8, Math.min(100, Math.round((750 / cropImg.w) * 100)));
     const reticleH = Math.max(8, Math.min(100, Math.round((240 / cropImg.h) * 100)));
+    const isMockupView = !plan.showPrintPreview;
 
-    let visualSectionsHtml = '';
-    let specSectionNum = 3;
+    // Proof 01 artwork with custom finishing marked (pole pockets, custom grommet positions)
+    const hl = this._finishingHighlight(artworkSrc, spec, analysis, printW, printH, rerender);
+    const artworkProofSrc = hl ? hl.url : artworkSrc;
+    const pickArea = plan.showPrintPreview && !hasCustomCrop && !hl;
+    this._lastRender = { artworkSrc, artworkProofSrc, cropImg, cropX, cropY, showPrintPreview: plan.showPrintPreview,
+      baseName: this._proofBaseName(analysis), orderNum: finalOrderNum || 'Proof03' };
 
-    if (!isMockupView) {
-      // ── BB Proof.png Official Layout: Section 1 Entire Artwork + Section 2 Print Quality Proof (100% / 114.4% Crop Shot) ──
-      specSectionNum = 3;
-      visualSectionsHtml = `
-        <!-- Section 1: Entire Artwork Proof -->
+    const circle = n => `<div style="width:24px; height:24px; border-radius:50%; background:#4739d2; color:#ffffff; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">${n}</div>`;
+    const sub = (t, color, bold) => t ? `<div style="font-size:10.5px; color:${color || '#64748b'};${bold ? ' font-weight:700;' : ''} margin-top:1px;">${t}</div>` : '';
+    const card = (n, title, subtitle, right, body) => `
         <div class="proof-card" style="border:1px solid #cbd5e1; border-radius:6px; padding:12px 16px; margin-bottom:12px; background:#ffffff; page-break-inside:avoid; break-inside:avoid;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <div style="width:24px; height:24px; border-radius:50%; background:#4739d2; color:#ffffff; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">1</div>
-              <div>
-                <h2 style="font-size:13.5px; font-weight:800; color:#111c38; margin:0;">Entire Artwork Proof</h2>
-                <div style="font-size:10.5px; color:#64748b;">This is the complete artwork that will be printed on your product.</div>
-                ${orientNote ? `<div style="font-size:10.5px; color:#b45309; font-weight:700; margin-top:2px;">↻ ${orientNote}</div>` : ''}
-              </div>
-            </div>
-            ${!hasCustomCrop ? `
-              <div class="no-print" style="font-size:10px; font-weight:600; color:#4739d2; background:#f5f3ff; border:1px solid #ddd6fe; padding:3px 8px; border-radius:4px;">
-                💡 Click artwork to adjust auto-crop focus point
-              </div>
-            ` : ''}
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">${circle(n)}<div>
+              <h2 style="font-size:13.5px; font-weight:800; color:#111c38; margin:0;">${title}</h2>${subtitle}
+            </div></div>
+            ${right || ''}
           </div>
-          <div style="border:1px solid #e2e8f0; border-radius:4px; padding:8px; background:#ffffff; text-align:center; height:180px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;">
-            <div style="position:relative; max-width:100%; max-height:100%; display:inline-flex; align-items:center; justify-content:center; ${!hasCustomCrop ? 'cursor:crosshair;' : ''}" ${!hasCustomCrop ? 'onclick="ProofStudio.handleArtworkClick(event)" title="Click to move Print Quality Crop Shot focus"' : ''}>
-              <img src="${artworkSrc}" alt="Entire Artwork Proof" class="proof-slot-img" style="max-width:100%; max-height:165px; object-fit:contain; display:block;" />
-              ${!hasCustomCrop ? `
-                <!-- Focus Reticle Box indicating exact auto crop inspection window -->
-                <div class="crop-reticle no-print" style="position:absolute; left:${cropX}%; top:${cropY}%; width:${reticleW}%; height:${reticleH}%; transform:translate(-50%, -50%); border:2px dashed #ff5f1f; background:rgba(255,95,31,0.18); box-shadow:0 0 0 1px rgba(0,0,0,0.25); pointer-events:none; box-sizing:border-box; transition:left 0.12s ease, top 0.12s ease;"></div>
-              ` : ''}
-            </div>
-          </div>
-        </div>
+          ${body}
+        </div>`;
+    const smallBtn = (label, call) => `<button type="button" class="no-print" onclick="${call}" style="background:#ffffff; color:#334155; border:1px solid #cbd5e1; border-radius:4px; padding:3px 9px; font-size:10px; font-weight:700; cursor:pointer; white-space:nowrap;">${label}</button>`;
 
-        <!-- Section 2: Print Quality Proof -->
-        <div class="proof-card" style="border:1px solid #cbd5e1; border-radius:6px; padding:12px 16px; margin-bottom:12px; background:#ffffff; page-break-inside:avoid; break-inside:avoid;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <div style="width:24px; height:24px; border-radius:50%; background:#4739d2; color:#ffffff; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">2</div>
-              <div>
-                <h2 style="font-size:13.5px; font-weight:800; color:#111c38; margin:0;">Print Quality Proof</h2>
-                <div style="font-size:10.5px; color:#64748b;">This is a zoomed-in view to help you review the print quality and detail (${cropScaleInfo.subtitleDetail}).</div>
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              ${hasCustomCrop ? `
-                <span style="font-size:9.5px; font-weight:800; color:#16a34a; background:#dcfce7; padding:3px 8px; border-radius:4px; border:1px solid #bbf7d0;">
-                  CUSTOM UPLOADED CROP
-                </span>
-              ` : `
-                <span style="font-size:9.5px; font-weight:800; color:#4739d2; background:#ede9fe; padding:3px 8px; border-radius:4px; border:1px solid #ddd6fe;">
-                  ${cropScaleInfo.badgeText}
-                </span>
-              `}
-              <div class="no-print" style="display:inline-flex; border:1px solid #cbd5e1; border-radius:4px; overflow:hidden;">
-                <button type="button" class="btn btn-sm" onclick="ProofStudio.setSection2View('crop')" style="background:#ff5f1f; color:#ffffff; border:none; padding:3px 8px; font-size:10px; font-weight:700; cursor:pointer;">
-                  ${cropScaleInfo.buttonText}
-                </button>
-                <button type="button" class="btn btn-sm" onclick="ProofStudio.setSection2View('mockup')" style="background:#ffffff; color:#334155; border:none; border-left:1px solid #cbd5e1; padding:3px 8px; font-size:10px; font-weight:700; cursor:pointer;" title="Switch to Official QNAP Product Template & 3D Mockup">
-                  📐 Official Template &amp; Mockup
-                </button>
-              </div>
-            </div>
-          </div>
+    let n = 0;
+    const sections = [];
 
-          <!-- SOP Scale Crop Shot Viewport -->
-          <div id="proof-crop-viewport" style="border:1px solid #cbd5e1; border-radius:4px; height:240px; overflow:hidden; position:relative; background:#f8fafc; display:flex; align-items:center; justify-content:center; cursor:${!hasCustomCrop ? 'grab' : 'default'}; user-select:none;">
-            ${hasCustomCrop ? `
-              <img src="${this.slots.crop.dataUrl}" alt="Custom Print Quality Crop Shot" class="proof-zoom-img" style="max-width:100%; max-height:100%; object-fit:contain;" />
-            ` : `
+    // ── Proof 01 · Entire artwork ──
+    sections.push(card(++n, 'Entire Artwork Proof',
+      sub('This is the complete artwork that will be printed on your product.')
+        + (orientNote ? sub('↻ ' + orientNote, '#b45309', true) : '')
+        + (hl ? sub('Please check: ' + hl.note + '.', '#1d4ed8', true) : ''),
+      pickArea ? `<div class="no-print" style="font-size:10px; font-weight:600; color:#4739d2; background:#f5f3ff; border:1px solid #ddd6fe; padding:3px 8px; border-radius:4px;">💡 Click the artwork to choose the print preview area</div>` : '',
+      `<div style="border:1px solid #e2e8f0; border-radius:4px; padding:8px; background:#ffffff; text-align:center; height:${hl ? 215 : 180}px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;">
+            <div style="position:relative; max-width:100%; max-height:100%; display:inline-flex; align-items:center; justify-content:center; ${pickArea ? 'cursor:crosshair;' : ''}" ${pickArea ? 'onclick="ProofStudio.handleArtworkClick(event)" title="Click to move the print preview area"' : ''}>
+              <img src="${artworkProofSrc}" alt="Entire Artwork Proof" class="proof-slot-img" style="max-width:100%; max-height:${hl ? 200 : 165}px; object-fit:contain; display:block;" />
+              ${pickArea ? `<div class="crop-reticle no-print" style="position:absolute; left:${cropX}%; top:${cropY}%; width:${reticleW}%; height:${reticleH}%; transform:translate(-50%, -50%); border:2px dashed #dc2626; background:rgba(220,38,38,0.12); box-shadow:0 0 0 1px rgba(0,0,0,0.25); pointer-events:none; box-sizing:border-box; transition:left 0.12s ease, top 0.12s ease;"></div>` : ''}
+            </div>
+          </div>`));
+
+    // ── Proof 03 · Print preview screenshot (only for low resolution / print-quality concern) ──
+    if (plan.showPrintPreview) {
+      const why = plan.resConcern
+        ? `Your artwork is ${plan.resConcern.ppi} PPI at the ordered size (${plan.resConcern.target} PPI recommended), so some areas may look soft or pixelated when printed. The marked area is shown below at actual print size.`
+        : 'This shows part of your artwork at actual print size — please check the print quality before you approve.';
+      sections.push(card(++n, 'Print Preview Screenshot',
+        sub(why, plan.resConcern ? '#b45309' : '#64748b', !!plan.resConcern),
+        `<span class="no-print" style="font-size:9.5px; font-weight:800; color:#4739d2; background:#ede9fe; padding:3px 8px; border-radius:4px; border:1px solid #ddd6fe; white-space:nowrap;">${hasCustomCrop ? 'DESIGNER SCREENSHOT' : cropScaleInfo.badgeText}</span>`,
+        `<div id="proof-crop-viewport" style="border:2px dashed ${plan.resConcern ? '#dc2626' : '#cbd5e1'}; border-radius:4px; height:240px; overflow:hidden; position:relative; background:#f8fafc; display:flex; align-items:center; justify-content:center; cursor:${!hasCustomCrop ? 'grab' : 'default'}; user-select:none;">
+            ${hasCustomCrop ? `<img src="${this.slots.crop.dataUrl}" alt="Print preview screenshot" class="proof-zoom-img" style="max-width:100%; max-height:100%; object-fit:contain;" />` : `
               <div style="position:relative; width:100%; height:100%; overflow:hidden; pointer-events:none;">
-                <img id="proof-crop-img" src="${artworkSrc}" alt="Print Quality Zoom" class="proof-zoom-img" style="
-                  position: absolute;
-                  width: ${cropImg.w}px;
-                  height: ${cropImg.h}px;
-                  max-width: none !important;
-                  max-height: none !important;
-                  left: calc(50% - ${Math.round(cropImg.w * (cropX / 100))}px);
-                  top: calc(50% - ${Math.round(cropImg.h * (cropY / 100))}px);
-                  transition: left 0.12s ease, top 0.12s ease;
-                  display: block;
-                " />
+                <img id="proof-crop-img" src="${artworkSrc}" alt="Print preview screenshot" class="proof-zoom-img" style="position:absolute; width:${cropImg.w}px; height:${cropImg.h}px; max-width:none !important; max-height:none !important; left:calc(50% - ${Math.round(cropImg.w * (cropX / 100))}px); top:calc(50% - ${Math.round(cropImg.h * (cropY / 100))}px); transition:left 0.12s ease, top 0.12s ease; display:block;" />
               </div>
-              <div class="no-print" style="position:absolute; bottom:8px; right:10px; background:rgba(15,23,42,0.88); color:#ffffff; font-size:10px; font-weight:700; padding:4px 12px; border-radius:4px; display:flex; align-items:center; gap:8px; box-shadow:0 2px 6px rgba(0,0,0,0.3); backdrop-filter:blur(4px); z-index:2; pointer-events:none;">
-                <span>🔍 ${cropScaleInfo.modeText}</span>
-                <span style="color:#4ade80;">● Photoshop Print Size Verified</span>
-              </div>
-              <div class="no-print" style="position:absolute; top:8px; left:10px; background:rgba(255,255,255,0.92); color:#475569; font-size:9.5px; font-weight:600; padding:2px 8px; border-radius:4px; border:1px solid #cbd5e1; box-shadow:0 1px 3px rgba(0,0,0,0.08); pointer-events:none;">
-                ✋ Drag to pan or click Section 1 to reposition
-              </div>
-            `}
-          </div>
+              <div style="position:absolute; top:8px; left:10px; background:rgba(229,231,235,0.95); color:#dc2626; font-size:11px; font-weight:800; padding:3px 10px; border-radius:3px; pointer-events:none;">Print preview screenshot</div>
+              <div class="no-print" style="position:absolute; bottom:8px; right:10px; background:rgba(15,23,42,0.88); color:#ffffff; font-size:10px; font-weight:700; padding:4px 12px; border-radius:4px; pointer-events:none;">🔍 ${cropScaleInfo.modeText} · ✋ drag to pan</div>`}
+          </div>`));
+    }
 
-          <!-- Quick link to official QNAP assets -->
-          ${officialTemplate || officialMockup ? `
-            <div class="no-print" style="margin-top:8px; padding:6px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; display:flex; justify-content:space-between; align-items:center; font-size:10.5px;">
-              <span style="color:#64748b; font-weight:500;">
-                Official BannerBuzz Template available (${officialTemplate ? officialTemplate.name : spec.name})
-              </span>
-              <a href="javascript:void(0)" onclick="ProofStudio.setSection2View('mockup')" style="color:#ff5f1f; font-weight:700; text-decoration:none;">
-                View Exact Production Template &amp; 3D Mockup →
-              </a>
-            </div>
-          ` : ''}
-        </div>
-      `;
-    } else {
-      // ── Official BannerBuzz Product Template & 3D Mockup View ──
-      specSectionNum = 3;
-      visualSectionsHtml = `
-        <!-- Section 1: Entire Artwork Proof -->
-        <div class="proof-card" style="border:1px solid #cbd5e1; border-radius:6px; padding:12px 16px; margin-bottom:12px; background:#ffffff; page-break-inside:avoid; break-inside:avoid;">
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-            <div style="width:24px; height:24px; border-radius:50%; background:#4739d2; color:#ffffff; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">1</div>
-            <div>
-              <h2 style="font-size:13.5px; font-weight:800; color:#111c38; margin:0;">Entire Artwork Proof</h2>
-              <div style="font-size:10.5px; color:#64748b;">This is the complete artwork that will be printed on your product.</div>
-              ${orientNote ? `<div style="font-size:10.5px; color:#b45309; font-weight:700; margin-top:2px;">↻ ${orientNote}</div>` : ''}
-            </div>
-          </div>
-          <div style="border:1px solid #e2e8f0; border-radius:4px; padding:8px; background:#ffffff; text-align:center; height:180px; display:flex; align-items:center; justify-content:center;">
-            <img src="${artworkSrc}" alt="Entire Artwork Proof" class="proof-slot-img" style="max-width:100%; max-height:100%; object-fit:contain;" />
-          </div>
-        </div>
-
-        <!-- Section 2: Exact Product Template & 3D Mockup -->
-        <div class="proof-card" style="border:1px solid #cbd5e1; border-radius:6px; padding:12px 16px; margin-bottom:12px; background:#ffffff; page-break-inside:avoid; break-inside:avoid;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <div style="width:24px; height:24px; border-radius:50%; background:#4739d2; color:#ffffff; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">2</div>
-              <div>
-                <h2 style="font-size:13.5px; font-weight:800; color:#111c38; margin:0;">Official Product Template &amp; 3D Mockup</h2>
-                <div style="font-size:10.5px; color:#64748b;">Exact BannerBuzz production specifications from \\\\192.168.0.250\\qnap\\Template_Mockups</div>
-              </div>
-            </div>
-            <div class="no-print" style="display:inline-flex; border:1px solid #cbd5e1; border-radius:4px; overflow:hidden;">
-              <button type="button" class="btn btn-sm" onclick="ProofStudio.setSection2View('crop')" style="background:#ffffff; color:#334155; border:none; padding:3px 8px; font-size:10px; font-weight:700; cursor:pointer;" title="Switch back to 100% Zoom Crop Shot">
-                🔍 Crop Shot
-              </button>
-              <button type="button" class="btn btn-sm" onclick="ProofStudio.setSection2View('mockup')" style="background:#ff5f1f; color:#ffffff; border:none; border-left:1px solid #cbd5e1; padding:3px 8px; font-size:10px; font-weight:700; cursor:pointer;">
-                📐 Official Template &amp; Mockup
-              </button>
-            </div>
-          </div>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-            <!-- Column 1: Official Template -->
+    // ── Proof 02 · Template based proof (template products) ──
+    if (plan.showTemplate) {
+      sections.push(card(++n, 'Template Based Proof',
+        sub("Your product's official template and finished look, for reference."),
+        smallBtn('Hide', 'ProofStudio.setTemplateSection(false)'),
+        `<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
             <div style="border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; background:#f8fafc; text-align:center;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <div style="font-size:11px; font-weight:800; color:#111c38;">Official Product Template / Die-Line</div>
-                <span style="font-size:8.5px; font-weight:800; color:#16a34a; background:#dcfce7; padding:1px 5px; border-radius:3px; border:1px solid #bbf7d0;">
-                  REFERENCE ONLY
-                </span>
-              </div>
+              <div style="font-size:11px; font-weight:800; color:#111c38; margin-bottom:6px; text-align:left;">Product Template / Die-Line</div>
               <div style="height:125px; display:flex; align-items:center; justify-content:center; background:#ffffff; border:1px solid #cbd5e1; border-radius:4px; padding:4px; overflow:hidden; cursor:pointer;" onclick="if(typeof openAssetLightbox==='function') openAssetLightbox('${templateSrc}', 'Official BannerBuzz Template', '${officialTemplate ? officialTemplate.name : spec.name}')" title="Click to enlarge">
                 <img src="${templateSrc}" alt="Official Product Template" style="max-width:100%; max-height:100%; object-fit:contain;" />
               </div>
-              <div style="margin-top:5px; font-size:9.5px; color:#475569; font-weight:600; text-align:left; display:flex; justify-content:space-between;">
-                <span>${officialTemplate ? officialTemplate.dims : dimsDisplay}</span>
-                <span style="color:#ff5f1f; font-weight:700;">🔍 Click to enlarge</span>
-              </div>
+              <div style="margin-top:5px; font-size:9.5px; color:#475569; font-weight:600; text-align:left;">${officialTemplate ? officialTemplate.dims : dimsDisplay}</div>
             </div>
-
-            <!-- Column 2: Official 3D Mockup -->
             <div style="border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; background:#f8fafc; text-align:center;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <div style="font-size:11px; font-weight:800; color:#111c38;">3D Physical Finished Mockup</div>
-                <span style="font-size:8.5px; font-weight:800; color:#16a34a; background:#dcfce7; padding:1px 5px; border-radius:3px; border:1px solid #bbf7d0;">
-                  REFERENCE ONLY
-                </span>
-              </div>
+              <div style="font-size:11px; font-weight:800; color:#111c38; margin-bottom:6px; text-align:left;">Finished Product Mockup</div>
               <div style="height:125px; display:flex; align-items:center; justify-content:center; background:#ffffff; border:1px solid #cbd5e1; border-radius:4px; padding:4px; overflow:hidden; cursor:pointer;" onclick="if(typeof openAssetLightbox==='function') openAssetLightbox('${mockupSrc}', 'Official BannerBuzz 3D Mockup', '${officialMockup ? officialMockup.name : spec.name}')" title="Click to enlarge">
                 <img src="${mockupSrc}" alt="Official 3D Mockup" style="max-width:100%; max-height:100%; object-fit:contain;" />
               </div>
-              <div style="margin-top:5px; font-size:9.5px; color:#475569; font-weight:600; text-align:left; display:flex; justify-content:space-between;">
-                <span>${officialMockup ? officialMockup.dims : 'Finished Hardware Assembly'}</span>
-                <span style="color:#ff5f1f; font-weight:700;">🔍 Click to enlarge</span>
-              </div>
+              <div style="margin-top:5px; font-size:9.5px; color:#475569; font-weight:600; text-align:left;">${officialMockup ? officialMockup.dims : 'Finished product'}</div>
             </div>
-          </div>
-        </div>
-      `;
+          </div>`));
     }
+
+    // Designer shortcuts (never printed)
+    const tools = [
+      !plan.showTemplate && (officialTemplate || officialMockup) ? smallBtn('+ Template &amp; mockup section', 'ProofStudio.setTemplateSection(true)') : '',
+      !plan.showPrintPreview ? smallBtn('+ Print preview screenshot (print-quality concern)', 'ProofStudio.setPrintPreview(true)') : ''
+    ].filter(Boolean).join('');
+    let visualSectionsHtml = sections.join('') + (tools ? `<div class="no-print" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; margin:-4px 0 10px;">${tools}</div>` : '');
+    let specSectionNum = n + 1;
 
     el.innerHTML = `
       <div class="bb-official-proof-wrap" id="printable-proof-sheet" style="font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background:#ffffff; color:#111c38; max-width:860px; margin:0 auto; padding:20px 24px; border:1px solid #dbe2ea; border-radius:8px; box-shadow:0 8px 24px rgba(17,28,56,0.06); box-sizing:border-box;">

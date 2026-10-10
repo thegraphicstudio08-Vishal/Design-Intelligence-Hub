@@ -66,13 +66,24 @@ const PrecheckEngine = {
         detail: `Artwork is ${art.toLowerCase()}, order is ${order.toLowerCase()}. SOP 4_Custom Flags: this flag can be used vertically and horizontally.`,
         action: 'Confirm with the customer which way the flag will hang.' };
     }
-    if (sop && sop.orientationSwapAllowed) {
-      return { status: 'WARNING', found, required,
-        detail: `Artwork is ${art.toLowerCase()}, order is ${order.toLowerCase()} (${printW}" W × ${printH}" H). SOP 1_Banners slide 26: send a mockup; after the customer approves, change the orientation on admin. If a pole pocket is selected, place it for the new orientation.`,
-        action: 'Send a mockup to the customer and wait for approval before changing the admin orientation.' };
+    // PR-DPO-03 Rev 15 · Artwork placement process: the ordered size turned → update the admin to the artwork
+    // size (proof in the artwork's orientation); any other size → adjust / stretch to the ordered size (approval)
+    const pl = (typeof SopRules !== 'undefined')
+      ? SopRules.placement(analysis.detectedInchesW || analysis.pixelWidth, analysis.detectedInchesH || analysis.pixelHeight,
+          { widthIn: printW, heightIn: printH }, sop && sop.canvas && sop.canvas.finishing, analysis.fileExt)
+      : null;
+    if (pl && pl.kind === 'turned') {
+      return { status: 'WARNING', scenario: 'turned', found, required,
+        detail: `The artwork is the ordered size turned: artwork ${art.toLowerCase()}, order ${order.toLowerCase()} ${printW}" W × ${printH}" H. ${SopRules.SOURCES.placement}, case ${pl.cases}${pl.finishingConcern ? ' — the pole pocket / wind flap position changes with the orientation, so the customer must confirm the finishing' : ''}. Status: ${pl.status}.`,
+        action: pl.action };
+    }
+    if (pl) {
+      return { status: 'WARNING', scenario: 'otherSize', found, required,
+        detail: `Orientation mismatch: the artwork is ${art.toLowerCase()} but the order is ${order.toLowerCase()} (${printW}" W × ${printH}" H), and the artwork is not the ordered size turned. ${SopRules.SOURCES.placement}, case ${pl.cases}: proof in the ordered orientation, customer approval required. Status: ${pl.status}.`,
+        action: pl.action };
     }
     return { status: 'FAIL', found, required,
-      detail: `Orientation mismatch: the artwork is ${art.toLowerCase()} but the order is ${order.toLowerCase()} (${printW}" W × ${printH}" H). The text reads upright, so the artwork was made for the other orientation — it cannot simply be rotated.`,
+      detail: `Orientation mismatch: the artwork is ${art.toLowerCase()} but the order is ${order.toLowerCase()} (${printW}" W × ${printH}" H).`,
       action: 'Confirm with the customer whether the order size is the wrong way round, or ask for artwork in the ordered orientation.' };
   },
 
@@ -125,6 +136,44 @@ const PrecheckEngine = {
     });
   },
 
+  /**
+   * Which proofs to send, per PR-DPO-03 Rev 15 · 2. Proof Process and PR-DPO-04 File requirement:
+   * Proof 01 small size proof (always) · Proof 02 template based proof (template products) · Proof 03 print
+   * preview screenshot ONLY for low resolution / print-quality concerns · mockup when the product needs one.
+   */
+  proofPlanCheck(analysis, spec, sop, printW, printH, resConcern) {
+    if (typeof SopRules === 'undefined') return null;
+    const parsed = analysis.parsedFilename || {};
+    const req = SopRules.fileRequirement(spec, parsed);
+    const templateBased = SopRules.isTemplateBased(spec, parsed);
+    const fin = sop && sop.canvas && sop.canvas.finishing;
+    const lay = sop && sop.canvas && sop.canvas.layout;
+    const customFinishing = !!(fin && ((fin.pockets && fin.pockets.sides.length) || (lay && lay.grommets && lay.grommets.where !== 'all')));
+    const zoom = SopRules.inspectZoom({ widthIn: printW, heightIn: printH });
+    const proofs = ['Proof 01 · Small size proof'];
+    if (templateBased) proofs.push('Proof 02 · Template based proof');
+    if (resConcern) proofs.push('Proof 03 · Print preview screenshot');
+    const mockup = req && /^yes$/i.test(req.mockupSend) ? 'Send a mockup with the proof (file requirement sheet).'
+      : req && /^yes$/i.test(req.mockupIfInsist) ? 'Mockup only if the customer insists.' : '';
+    const notes = [];
+    notes.push(resConcern
+      ? `Artwork gives ${resConcern.ppi} PPI at the ordered size; SOP asks ${resConcern.target} PPI. Send the Print preview screenshot (${zoom.label}) and highlight the low-resolution area.`
+      : 'No resolution concern — the Print preview screenshot is not needed (send it only for low resolution or a print-quality concern; customers misread it otherwise).');
+    if (customFinishing) notes.push(`Custom finishing (${SopRules.describeFinishing(fin, lay)}) — highlight it on the proof.`);
+    if (mockup) notes.push(mockup);
+    if (req) notes.push(`File requirement: ${req.vendor || '—'} · process file ${req.processFormat || '—'} (.pdf) · print file ${req.printFormat || '—'} (${req.printExt || '.pdf'})${req.differentProcess ? ' · different process — see the product SOP' : ''}.`);
+    notes.push('Proof files: JPG, RGB.');
+    return {
+      id: 'proofPlan', name: 'Proof to send (PR-DPO-03)', icon: '🖼️',
+      resConcern, templateBased, customFinishing,          // read by Proof Studio
+      status: resConcern ? 'WARNING' : 'PASS',
+      found: proofs.join(' · ') + (mockup ? ' · Mockup' : ''),
+      required: 'Proof 01 always · Proof 02 for template products · Proof 03 only for low resolution / print-quality concern · JPG, RGB',
+      detail: notes.join(' '),
+      action: resConcern ? 'Use the "Low Resolution File" status and attach the Print preview screenshot — sending this status (or a print-quality comment) without it is a designer error.' : ''
+    };
+  },
+
   evaluate(analysis, spec, userDims, overrides = {}) {
     const checks = [];
     const printW = userDims?.widthIn || spec.defaultW || 36;
@@ -143,6 +192,7 @@ const PrecheckEngine = {
       ? `${canvas.wIn}" × ${canvas.hIn}"${canvas.confirmed ? ` (${canvas.note})` : ' (finishing allowance not confirmed — use template)'}`
       : '—';
     const diffPct = analysis.aspectRatioMismatchPercent || 0;
+    let resConcern = null;     // { ppi, target } when the artwork is below the SOP resolution → Proof 03 needed
     const reqTol = `${printW}" × ${printH}" (±0.5" SOP tolerance)`;
 
     if (analysis.isVector && !analysis.embeddedRasterFound) {
@@ -172,6 +222,7 @@ const PrecheckEngine = {
           };
       const target = sop?.resolution?.target || reqDpi;
       const minResolution = sop?.resolution?.min || minDpi;
+      if (t.ppiAtOrder < target) resConcern = { ppi: t.ppiAtOrder, target };
 
       let st = t.ppiAtOrder >= target ? 'PASS' : t.ppiAtOrder >= minResolution ? 'WARNING' : 'FAIL';
       if (st === 'PASS' && (t.ratioDiffPct > 1.5 || diffPct > 1.5)) st = 'WARNING';
@@ -186,6 +237,11 @@ const PrecheckEngine = {
         : `Proportion differs by ${actualDiff}% (Artwork ${analysis.aspectRatioArtwork || 'custom'}:1 vs Order ${analysis.aspectRatioOrder || +(printW/printH).toFixed(2)}:1): fitted whole it covers ${t.fitSizeIn.w}" × ${t.fitSizeIn.h}" (gap ${t.gapIn.w}" W / ${t.gapIn.h}" H to extend with background), or filled it crops ${t.cropPctIfFilled}% of the artwork.`;
 
       const hybridLabel = isHybrid ? 'Hybrid Vector + Raster: ' : '';
+      // PR-DPO-03 artwork placement: not the ordered size → adjust (open) / stretch (flattened) with approval
+      const plS = (typeof SopRules !== 'undefined' && !t.rotated)
+        ? SopRules.placement(analysis.pixelWidth, analysis.pixelHeight, { widthIn: printW, heightIn: printH }, sop && sop.canvas && sop.canvas.finishing, ext)
+        : null;
+      const placementAction = plS && plS.kind === 'otherSize' ? `${plS.action} Status: ${plS.status} (SOP placement case ${plS.cases}).` : '';
       checks.push({
         id: 'sizeTransform',
         name: 'Size Transform to Order',
@@ -194,11 +250,12 @@ const PrecheckEngine = {
         found: `${hybridLabel}${analysis.pixelWidth} × ${analysis.pixelHeight} px (${analysis.aspectRatioArtwork}:1) → ${printW}" × ${printH}" = ${t.ppiAtOrder} PPI${t.rotated ? ' (artwork rotated vs order)' : ''}`,
         required: `${reqTol} · Target ${target} PPI (min ${minResolution}) · Canvas ${canvasTxt}`,
         detail: `${fitTxt}${sop?.resolution?.source ? ` ${sop.resolution.source}.` : ''}`,
-        action: st === 'PASS' ? '' : (actualDiff > 5.0
-          ? 'Contact customer to confirm correct ordered dimensions or request artwork sized to fit aspect ratio without distortion.'
-          : t.ppiAtOrder < target
-          ? `Artwork gives ${t.ppiAtOrder} PPI at order size; SOP asks ${target} PPI. Request higher-resolution/vector artwork, or show low-resolution area in the crop shot proof.`
-          : 'Confirm with customer: extend background to fill the order size, or crop edge allowance.')
+        action: st === 'PASS' ? '' : [
+          t.ppiAtOrder < target
+            ? `Artwork gives ${t.ppiAtOrder} PPI at order size; SOP asks ${target} PPI. Use the "Low Resolution File" status and attach the Print preview screenshot proof (Proof 03) highlighting the low-resolution area — PR-DPO-03.`
+            : '',
+          actualDiff > 1.5 ? (placementAction || 'Confirm with customer: extend background to fill the order size, or crop edge allowance.') : ''
+        ].filter(Boolean).join(' ')
       });
     } else {
       checks.push({
@@ -345,6 +402,8 @@ const PrecheckEngine = {
     // ──────────────────────────────────────────────────────────────────────────
     const fc = this.finishingCheck(sop, printW, printH);
     if (fc) checks.push(fc);
+    const pp = this.proofPlanCheck(analysis, spec, sop, printW, printH, resConcern);
+    if (pp) checks.push(pp);
 
     // ──────────────────────────────────────────────────────────────────────────
     // CHECKPOINT 8: Color Mode & Profile (SWOP v2)

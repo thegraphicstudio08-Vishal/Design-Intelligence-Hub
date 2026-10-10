@@ -20,6 +20,12 @@ const SopRules = {
     small300: 'Production print files: hand flags 6x4 in and business cards printed at 300 ppi',
     hem: 'Production print files: vinyl/canvas/fabric banners with grommets or stitched edges = order size + 1.25" each side',
     polePocket: 'Production print file US2382836 (Top Pole Pocket): height + 5.25", width unchanged',
+    resolutionChart: 'SOP Banner (ISO 2026) slide 2 + PR-DPO-03 Rev 15 · resolution chart: up to 12" 600 ppi · 12–24" 300 · 24–120" 125 · over 120" 72',
+    vendorGiant: 'PR-DPO-03 Rev 15 · Giant Media vendor files at 100 ppi',
+    bannerSafe: 'SOP Banner (ISO 2026) slide 6 · safe area 1" inside the visible (finished) edge',
+    proof: 'PR-DPO-03 Rev 15 (23.7.2026) · 2. Proof Process',
+    placement: 'PR-DPO-03 Rev 15 · Artwork placement process (custom size products, cases 1–14)',
+    fileReq: 'PR-DPO-04 File requirement (Process, Proof, Print)',
     grommets: 'SOP Standard Grommets Placement table (banner height / width in ft → grommets per side, corners included)',
     hangingOptions: 'SOP 1_Banners slides 3, 9–10 · hanging options: no grommet, adhesive tabs, metal grommets, top / top & bottom / left & right pole pockets',
     pocketTable: 'SOP 1_Banners slide 7 · Custom pole pocket size (pole diameter or pole in inch → material to leave)',
@@ -51,13 +57,23 @@ const SopRules = {
   resolution(spec, dims, parsed) {
     const t = this._text(spec, parsed) + ' ' + (parsed?.finishing || '').toLowerCase();
     const longest = Math.max(dims?.widthIn || 0, dims?.heightIn || 0);
-    if (/die-cut|die cut|white ink|cutout|cut-out/.test(t)) {
+    // Vendor files: Giant Media 100 ppi (vendor code in the file name, e.g. "Flag_Fabric_Gian_US2396245_…")
+    if (/(^|[_\-])gian([_\-]|$)/i.test(parsed?.fname || '')) {
+      return { target: 100, min: 72, confirmed: true, source: this.SOURCES.vendorGiant };
+    }
+    // SOP resolution chart by banner size (longest side)
+    const chart = !(longest > 0) ? 125 : longest <= 12 ? 600 : longest <= 24 ? 300 : longest <= 120 ? 125 : 72;
+    const min = { 600: 300, 300: 150, 125: 72, 72: 54 }[chart];
+    if (/die-cut|die cut|white ink|cutout|cut-out/.test(t) && chart < 300) {
       return { target: 300, min: 150, confirmed: true, source: this.SOURCES.dieCut300 };
     }
-    if (longest > 0 && longest <= 12) {
-      return { target: 300, min: 150, confirmed: true, source: this.SOURCES.small300 };
-    }
-    return { target: 125, min: 72, confirmed: true, source: this.SOURCES.chart125 + ' · minimum: ' + this.SOURCES.chart72 };
+    return { target: chart, min, confirmed: true, source: this.SOURCES.resolutionChart };
+  },
+
+  /** Zoom for inspecting / the print preview screenshot: 100% for 72 ppi files (over 120"), "Print size" for the rest */
+  inspectZoom(dims) {
+    const longest = Math.max(dims?.widthIn || 0, dims?.heightIn || 0);
+    return longest > 120 ? { mode: '100%', label: '100% zoom (72 ppi file)' } : { mode: 'print', label: 'Photoshop "Print Size"' };
   },
 
   safeArea(spec, parsed) {
@@ -65,7 +81,7 @@ const SopRules = {
     const fam = this.family(spec, parsed);
     if (/clamp/.test(t)) return { inches: 1.0, confirmed: true, source: this.SOURCES.clampBar };
     if (/fabric-mesh|fabric mesh/.test(t)) return { inches: 1.5, confirmed: true, source: this.SOURCES.fabricMesh };
-    if (fam === 'banner') return { inches: 1.25, confirmed: true, source: this.SOURCES.banners };
+    if (fam === 'banner') return { inches: this.BANNER_SAFE_IN, confirmed: true, source: this.SOURCES.bannerSafe };
     if (/trade-show|straight/.test(t)) return { inches: 1.25, confirmed: true, source: this.SOURCES.tradeShow };
     if (fam === 'flag') return { inches: 0.5, confirmed: true, source: this.SOURCES.flags };
     const catalog = parseFloat(spec?.safeArea);
@@ -76,12 +92,110 @@ const SopRules = {
   // SOP Standard Grommets Placement — grommets on ONE side of that length (corners included):
   // up to 4.00 ft → 2 · 4.01–8.99 → 3 · 9.00–11.99 → 4 · … · 27.00–29.99 → 10
   GROMMET_TABLE: [[4.00, 2], [8.99, 3], [11.99, 4], [14.99, 5], [17.99, 6], [20.99, 7], [23.99, 8], [26.99, 9], [29.99, 10]],
+  BANNER_SAFE_IN: 1,        // SOP Banner (ISO 2026) slide 6: safe area 1" inside the visible edge
   POCKET_IN: 5.25,          // pole pocket allowance per side (production print file US2382836)
   HEM_IN: 1.25,             // hem allowance per side with grommets / stitched / hemmed edges (production print files)
   GROMMET_INSET_IN: 1,      // grommet centre 1" inside the finished edge
   // SOP 1_Banners slide 7: pole diameter / pole in inch → material to leave (inches)
   POCKET_SIZE_TABLE: [[1, 2.25, 2.75], [1.5, 3.25, 3.75], [2, 4.25, 4.75], [2.5, 5.25, 5.75], [3, 6.25, 6.75],
     [3.5, 7.25, 7.75], [4, 8.25, 8.75], [4.5, 9.25, 9.75], [5, 10.25, 10.75], [5.5, 11.25, 11.75]],
+
+  /**
+   * This product's row of PR-DPO-04 File requirement (Process, Proof, Print): template-based or not, in-house /
+   * vendor, process & print file format, whether a mockup goes with the proof. Matched by product name.
+   */
+  fileRequirement(spec, parsed) {
+    if (typeof SOP_FILE_REQUIREMENTS === 'undefined') return null;
+    const norm = t => String(t || '').toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ' ').trim();
+    const names = [spec?.name, parsed?.productName, spec?.slug && spec.slug.replace(/-/g, ' ')].filter(Boolean).map(norm);
+    if (!this._fileReqIndex) {
+      this._fileReqIndex = new Map();
+      SOP_FILE_REQUIREMENTS.forEach(r => { const k = norm(r.product); if (!this._fileReqIndex.has(k)) this._fileReqIndex.set(k, r); });
+    }
+    for (const n of names) {
+      if (this._fileReqIndex.has(n)) return this._fileReqIndex.get(n);
+      const plural = n.endsWith('s') ? n.slice(0, -1) : n + 's';
+      if (this._fileReqIndex.has(plural)) return this._fileReqIndex.get(plural);
+    }
+    return null;
+  },
+
+  /** Template-based product (Proof 02 · Template based proof): from the file requirement sheet, else the product family */
+  isTemplateBased(spec, parsed) {
+    const r = this.fileRequirement(spec, parsed);
+    if (r) return /^yes$/i.test(r.template);
+    return ['display', 'flag'].includes(this.family(spec, parsed)) || !!spec?.isShapedTemplate;
+  },
+
+  /**
+   * PR-DPO-03 Artwork placement process (custom size products). Compares the artwork with the ordered size:
+   *  · proper     — same size and orientation (cases 1–4): no changes
+   *  · turned     — the ordered size turned (cases 5–10): update the admin to the artwork size; if the finishing
+   *                 depends on the orientation (pole pockets, wind flaps) confirm it with the customer
+   *  · otherSize  — not the ordered size (cases 11–14): adjust (open file) or stretch (flattened file) the artwork
+   *                 to the ordered size; customer approval, Design Review
+   * @param artW, artH artwork width / height (any unit); dims order size; fin bannerFinishing(); ext file extension
+   */
+  placement(artW, artH, dims, fin, ext) {
+    const W = dims?.widthIn, H = dims?.heightIn;
+    if (!(artW > 0 && artH > 0 && W > 0 && H > 0)) return null;
+    const a = artW / artH, o = W / H;
+    const same = Math.abs(a - o) / o <= 0.02;
+    const turned = !same && Math.abs(a - 1 / o) / (1 / o) <= 0.02 && Math.abs(o - 1) > 0.02;
+    const flatten = /^(jpe?g|png|gif|bmp|webp|tiff?)$/i.test(ext || '');
+    const finishingConcern = !!(fin && ((fin.pockets && (fin.pockets.sides.length || fin.pocketSidesUnknown)) || fin.windFlaps));
+    const fmt = v => +(+v).toFixed(2);
+    if (same) {
+      return { kind: 'proper', cases: '1–4', action: 'No changes required.', approval: false,
+        status: 'Design Review if proof requested · V - Production if not' };
+    }
+    if (turned) {
+      return finishingConcern
+        ? { kind: 'turned', cases: '7 / 10', finishingConcern: true, approval: true, status: 'Designer Comment',
+            action: `Update the admin to the artwork size (${fmt(H)}" × ${fmt(W)}") and confirm the finishing with the customer — pole pockets / wind flaps change with the orientation.` }
+        : { kind: 'turned', cases: '5–6 / 8–9', finishingConcern: false, approval: false,
+            status: 'Proof requested: Design Review (communicate with customer) · not requested: V - Production',
+            action: `Update the admin to the artwork size (${fmt(H)}" × ${fmt(W)}"); send the proof in the artwork's orientation and notify the customer.` };
+    }
+    return { kind: 'otherSize', cases: flatten ? '12 / 14' : '11 / 13', flatten, approval: true, status: 'Design Review',
+      action: `${flatten ? 'Stretch the artwork (flattened file)' : 'Adjust the artwork (open file)'} to the ordered size ${fmt(W)}" × ${fmt(H)}"; send the proof in the ordered orientation and notify the customer — customer approval required.` };
+  },
+
+  /** SOP reference (HTML): proof files, when to send the print preview screenshot, artwork placement, resolution */
+  renderProofReference() {
+    const th = 'style="text-align:left; padding:5px 8px; background:#1e3a8a; color:#fff; font-size:11px;"';
+    const td = 'style="padding:4px 8px; border-bottom:1px solid #e2e8f0; vertical-align:top;"';
+    return `
+      <div class="sop-section" style="margin-top:14px;">
+        <div class="sop-section-title">Proof process &amp; artwork placement (PR-DPO-03 Rev 15)</div>
+        <div style="font-size:11.5px; color:#64748b; margin-bottom:10px;">Sources: ${this.SOURCES.proof}; ${this.SOURCES.placement}; SOP Banner (ISO 2026) slide 8; ${this.SOURCES.resolutionChart}.</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px; font-size:12px;">
+          <div>
+            <div style="font-weight:800; margin-bottom:6px;">Proof files — JPG, RGB</div>
+            <ul style="margin:0; padding-left:18px; line-height:1.6; color:#334155;">
+              <li><strong>Proof 01 · Small size proof</strong> — the whole artwork (every proof)</li>
+              <li><strong>Proof 02 · Template based proof</strong> — template-based products only</li>
+              <li><strong>Proof 03 · Print preview screenshot</strong> — ONLY for low-resolution artwork ("Low Resolution File" status) or a print-quality concern ("Design Review": slight blur, grainy, good from distance). Highlight the low-resolution area.</li>
+              <li>Screenshot at 100% zoom for 72 ppi files, "Print size" for the rest</li>
+              <li>Highlight custom requirements (custom grommets, pole pockets) on the proof</li>
+            </ul>
+            <div style="margin-top:6px; color:#b91c1c; font-weight:600;">Designer errors: "Low Resolution File" status or a print-quality comment without the print preview screenshot.</div>
+          </div>
+          <div>
+            <div style="font-weight:800; margin-bottom:6px;">Artwork placement (custom size products)</div>
+            <table style="width:100%; border-collapse:collapse;">
+              <tr><th ${th}>Artwork</th><th ${th}>Action</th><th ${th}>Status</th></tr>
+              <tr><td ${td}>Ordered size &amp; orientation</td><td ${td}>No changes</td><td ${td}>Design Review / V - Production</td></tr>
+              <tr><td ${td}>Ordered size turned (opposite orientation)</td><td ${td}>Update admin to the artwork size; proof in artwork orientation, notify customer</td><td ${td}>Design Review / V - Production</td></tr>
+              <tr><td ${td}>Turned + pole pockets / wind flaps</td><td ${td}>Update admin, confirm the finishing with the customer (approval)</td><td ${td}>Designer Comment</td></tr>
+              <tr><td ${td}>Other than ordered size</td><td ${td}>Adjust (open) / stretch (flattened) to the ordered size, proof in ordered orientation (approval)</td><td ${td}>Design Review</td></tr>
+            </table>
+            <div style="font-weight:800; margin:10px 0 6px;">Resolution chart</div>
+            <div style="color:#334155;">Up to 12": 600 ppi · 12–24": 300 · 24–120": 125 · over 120": 72 · Giant Media vendor: 100 ppi</div>
+          </div>
+        </div>
+      </div>`;
+  },
 
   /** Grommets on one side of this length (inches) — SOP table; past 29.99 ft one more every 3 ft, as the table runs */
   grommetsPerSide(lengthIn) {
@@ -246,7 +360,7 @@ const SopRules = {
               <li>Pole pocket: <strong>+${this.POCKET_IN}"</strong> on each pocket side (top · top &amp; bottom · left &amp; right), no grommets on that side</li>
               <li>Grommets / stitched / hemmed edges: <strong>+${this.HEM_IN}"</strong> hem on each other side</li>
               <li>No grommet / adhesive tabs: print at the order size</li>
-              <li>Safe area 1.25" inside the finished edge</li>
+              <li>Safe area ${this.BANNER_SAFE_IN}" inside the finished (visible) edge</li>
             </ul>
             <div style="font-weight:800; margin:10px 0 6px;">Custom pole pocket size (slide 7)</div>
             <table class="sop-mini-table" style="width:100%; border-collapse:collapse;">

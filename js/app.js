@@ -1371,6 +1371,7 @@ function renderSopGuideTab(spec) {
       ` : ''}
     </div>
     ${(typeof SopRules !== 'undefined' && SopRules.family(spec, appState.parsedFilename) === 'banner') ? SopRules.renderFinishingReference() : ''}
+    ${typeof SopRules !== 'undefined' ? SopRules.renderProofReference() : ''}
   `;
 }
 
@@ -1743,15 +1744,9 @@ function clearProofSlot(key) {
   generateProofView();
 }
 
+// Proof 03 print preview screenshot: the SOP decides automatically (low resolution only); this box overrides it
 function onCropShotToggle(checked) {
-  if (typeof ProofStudio !== 'undefined' && ProofStudio.options) {
-    ProofStudio.options.enableCropShot = checked;
-  }
-  const panel = document.getElementById('crop-shot-panel');
-  if (panel) panel.style.display = checked ? 'block' : 'none';
-  const badge = document.getElementById('crop-status-badge');
-  if (badge) badge.style.display = checked ? 'inline-block' : 'none';
-  generateProofView();
+  if (typeof ProofStudio !== 'undefined' && ProofStudio.setPrintPreview) ProofStudio.setPrintPreview(checked);
 }
 
 /**
@@ -1778,7 +1773,7 @@ function renderRulesCatalog() {
   // Banner finishing SOP (grommet table, pole pockets, hems) above the product list
   const finRef = document.getElementById('rules-finishing-sop');
   if (finRef && typeof SopRules !== 'undefined' && !finRef.innerHTML) {
-    finRef.innerHTML = `<div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin-bottom:14px;">${SopRules.renderFinishingReference()}</div>`;
+    finRef.innerHTML = `<div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin-bottom:14px;">${SopRules.renderProofReference()}${SopRules.renderFinishingReference()}</div>`;
   }
   filterRulesTable();
 }

@@ -329,20 +329,23 @@
           <div class="slot" style="margin-bottom:12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:10px;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
               <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; font-weight:700; color:var(--text-primary); margin:0;">
-                <input type="checkbox" id="check-crop-shot" checked onchange="onCropShotToggle(this.checked)" style="width:16px; height:16px; cursor:pointer; accent-color:#4739d2;" />
-                <span>4. Print Quality Crop Shot (Photoshop Print Size Zoom)</span>
+                <input type="checkbox" id="check-crop-shot" onchange="onCropShotToggle(this.checked)" style="width:16px; height:16px; cursor:pointer; accent-color:#4739d2;" />
+                <span>4. Print Preview Screenshot (Proof 03)</span>
               </label>
-              <span id="crop-status-badge" style="font-size:9.5px; font-weight:800; color:#4739d2; background:#ede9fe; padding:2px 6px; border-radius:3px;">AUTO CROP</span>
+              <span id="crop-status-badge" style="font-size:9.5px; font-weight:800; color:#15803d; background:#dcfce7; padding:2px 6px; border-radius:3px;">AUTO</span>
             </div>
-            
-            <div id="crop-shot-panel" style="margin-top:8px;">
+            <div style="font-size:10.5px; color:#64748b; line-height:1.35;">
+              PR-DPO-03 Rev 15: send it <strong>only</strong> for low-resolution artwork ("Low Resolution File") or a print-quality concern ("Design Review"). Added automatically when the pre-check finds low resolution; tick it for other print-quality concerns.
+            </div>
+
+            <div id="crop-shot-panel" style="margin-top:8px; display:none;">
               <div style="font-size:10.5px; color:#64748b; margin-bottom:8px; line-height:1.35;">
-                Automatically calculates Photoshop print size zoom (Both sides &ge; 72&quot; = 100%, otherwise = 114.4% SOP Print Preview). If you prefer your own crop shot, upload it below:
+                Screenshot zoom: 100% for files over 120&quot; (72 ppi), Photoshop &quot;Print size&quot; for the rest. Click the artwork in the proof to choose the area, or upload your own screenshot:
               </div>
-              
+
               <div class="upload-zone" style="padding:10px; font-size:11px;" id="drop-crop" onclick="document.getElementById('in-crop').click()">
-                <div style="font-weight:600; color:#475569;">📁 Upload Custom Crop Shot (Optional)</div>
-                <div style="font-size:9.5px; color:#94a3b8; margin-top:2px;">Click or drop image if not using auto-crop</div>
+                <div style="font-weight:600; color:#475569;">📁 Upload Your Own Screenshot (Optional)</div>
+                <div style="font-size:9.5px; color:#94a3b8; margin-top:2px;">Click or drop image instead of the automatic one</div>
               </div>
               <input type="file" id="in-crop" class="hidden-input" accept="image/*,.pdf" onchange="handleProofSlotFile('crop', event)" />
               
@@ -445,9 +448,11 @@
           <div id="proof-action-banner" class="no-print" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:12px 20px; border-radius:8px; border:1px solid var(--border); box-shadow:var(--shadow-sm);">
             <div>
               <div style="font-weight:800; font-size:15px; color:var(--bb-navy);">BannerBuzz Single Consolidated Customer Proof</div>
-              <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Replicates official proof layout from <strong>BB Proof.png</strong> (Header, Artwork, Print Quality Crop, Specs Matrix, Approval Callout)</div>
+              <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">PR-DPO-03 Rev 15 proof process: <strong>Proof 01</strong> artwork · <strong>Proof 02</strong> template (template products) · <strong>Proof 03</strong> print preview screenshot (only for low resolution) · JPG, RGB</div>
             </div>
-            <div style="display:flex; gap:10px; align-items:center;">
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <button onclick="ProofStudio.downloadProofJpg(1)" class="btn btn-outline" style="font-size:12px; padding:7px 12px;" title="Proof 01 · Small size proof — JPG, RGB, named after the order file">⬇ Proof 01 JPG</button>
+              <button onclick="ProofStudio.downloadProofJpg(3)" class="btn btn-outline" style="font-size:12px; padding:7px 12px;" title="Proof 03 · Print preview screenshot — JPG, RGB, named after the order number">⬇ Proof 03 JPG</button>
               <button onclick="openBBProofRefModal()" class="btn btn-outline" style="font-size:12px; padding:7px 14px; display:inline-flex; align-items:center; gap:6px;">
                 <span>📷</span> <span>View BB Proof.png Reference</span>
               </button>
@@ -571,16 +576,17 @@
   </div>
 
   <!-- ── SCRIPTS ── -->
-  <script src="js/sop_data.js?v=20261009c"></script>
-  <script src="js/sop_rules.js?v=20261009c"></script>
+  <script src="js/sop_data.js?v=20261010a"></script>
+  <script src="js/sop_file_requirements.js?v=20261010a"></script>
+  <script src="js/sop_rules.js?v=20261010a"></script>
   <script src="js/template_registry.js"></script>
   <script src="js/file_analyzer.js?v=20261009c"></script>
   <script src="js/artwork_text_check.js?v=20261009b"></script>
-  <script src="js/agentic_ai_inspector.js?v=20261009b"></script>
-  <script src="js/precheck_engine.js?v=20261009c"></script>
+  <script src="js/agentic_ai_inspector.js?v=20261010a"></script>
+  <script src="js/precheck_engine.js?v=20261010a"></script>
   <script src="js/previous_orders.js"></script>
-  <script src="js/canvas_inspector.js?v=20261009c"></script>
-  <script src="js/proof_studio.js?v=20261009c"></script>
-  <script src="js/app.js?v=20261009c"></script>
+  <script src="js/canvas_inspector.js?v=20261010a"></script>
+  <script src="js/proof_studio.js?v=20261010a"></script>
+  <script src="js/app.js?v=20261010a"></script>
 </body>
 </html>
