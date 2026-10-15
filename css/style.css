@@ -2067,6 +2067,33 @@ details.sample-files[open] > summary { margin-bottom: 8px; }
 }
 .tl-tip b { font-size: 10px; font-weight: 900; letter-spacing: 0.08em; color: #ffffff; background: #1d4ed8; padding: 2px 7px; border-radius: 3px; flex-shrink: 0; }
 
+/* ── QNAP product template bar (canvas toolbar) ── */
+.vi-qnap-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 6px;
+}
+.vqb-label { font-size: 11.5px; font-weight: 800; color: #4739d2; white-space: nowrap; }
+.vqb-select {
+  flex: 1;
+  min-width: 220px;
+  max-width: 100%;
+  font: 600 12px Inter, sans-serif;
+  color: #0f172a;
+  padding: 5px 8px;
+  border: 1px solid #c4b5fd;
+  border-radius: 5px;
+  background: #ffffff;
+}
+.vqb-opacity.on { background: #4739d2; border-color: #4739d2; color: #ffffff; }
+.vqb-note { font-size: 11px; color: #64748b; font-weight: 600; }
+
 /* ── Safe zone marks on the canvas (text / logos too close to the trim) ── */
 .safe-zone-overlay { position: absolute; pointer-events: none; z-index: 16; }
 .sz-mark {

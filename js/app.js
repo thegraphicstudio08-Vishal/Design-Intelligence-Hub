@@ -944,8 +944,22 @@ async function runPreCheck() {
       analysis.aiDefects = AgenticAiInspector.getDefects();
     }
 
+    // QNAP product template whose panel is not the ordered product size (a canopy wall 117" × 42" on a 10 × 10 ft
+    // tent): size, resolution and orientation are measured on the template panel the artwork is made for
+    let checkDims = appState.userDims;
+    if (typeof ProductTemplates !== 'undefined' && analysis && analysis.pixelWidth && appState.userDims) {
+      const pf = appState.parsedFilename;
+      const fname = (pf && pf.fname) || (appState.file && appState.file.name) || '';
+      const panel = ProductTemplates.panelFor(effectiveSpec, appState.userDims, pf, fname, analysis.pixelWidth, analysis.pixelHeight);
+      if (panel) {
+        checkDims = Object.assign({}, appState.userDims, { widthIn: panel.w, heightIn: panel.h });
+        FileAnalyzer._evaluateMeasurementsAndOrientation(analysis, panel.w, panel.h);
+        analysis.templatePanel = { w: panel.w, h: panel.h, on: panel.on, name: panel.t.name, product: panel.t.product };
+      }
+    }
+
     // 2. Evaluate SOP Checkpoints
-    const report = PrecheckEngine.evaluate(analysis, effectiveSpec, appState.userDims, appState.overrides);
+    const report = PrecheckEngine.evaluate(analysis, effectiveSpec, checkDims, appState.overrides);
     appState.report = report;
 
     // 3. Search Previous Orders

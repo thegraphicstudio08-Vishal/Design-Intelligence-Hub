@@ -208,7 +208,9 @@ const ProofStudio = {
     const pp = rep && Array.isArray(rep.checks) ? rep.checks.find(c => c.id === 'proofPlan') : null;
     const resConcern = pp && pp.resConcern ? pp.resConcern : null;
     const pv = this.options.printPreview;
-    const templateBased = typeof SopRules !== 'undefined' ? SopRules.isTemplateBased(spec, analysis) : false;
+    // template-based: the SOP file-requirement sheet says so, or the order has a QNAP product template on the canvas
+    const templateBased = (typeof SopRules !== 'undefined' ? SopRules.isTemplateBased(spec, analysis) : false)
+      || !!(typeof CanvasInspector !== 'undefined' && CanvasInspector.productTemplate);
     const tv = this.options.showTemplate;
     const plan = {
       resConcern,
@@ -927,9 +929,16 @@ const ProofStudio = {
     // Only real or designer-uploaded files; generated pictures are no longer shown as templates/mockups
     const placeholder = (label) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
       `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180"><rect width="320" height="180" fill="#f8fafc" stroke="#cbd5e1" stroke-dasharray="6 4"/><text x="160" y="86" font-family="Arial" font-size="14" font-weight="700" fill="#64748b" text-anchor="middle">${label}</text><text x="160" y="108" font-family="Arial" font-size="11" fill="#94a3b8" text-anchor="middle">Upload it in the Proof Studio slot</text></svg>`);
+    // QNAP product template with the customer's artwork placed on it (safe / visible outlines), as on the canvas
+    const qnapT = (typeof CanvasInspector !== 'undefined') ? CanvasInspector.productTemplate : null;
+    const qnapComposite = !this.slots.template?.isCustom && qnapT && CanvasInspector.qnapComposite ? CanvasInspector.qnapComposite() : null;
     const templateSrc = this.slots.template?.dataUrl
+      || qnapComposite
       || (officialTemplate ? officialTemplate.templateFile : null)
       || placeholder('Real template not added yet');
+    const templateCaption = this.slots.template?.isCustom ? dimsDisplay
+      : qnapComposite ? `Your artwork on the ${qnapT.product} template · green line = safe area, blue line = visible area`
+      : officialTemplate ? officialTemplate.dims : dimsDisplay;
 
     const mockupSrc = this.slots.mockup?.dataUrl
       || (officialMockup ? officialMockup.mockupFile : null)
@@ -1131,7 +1140,7 @@ const ProofStudio = {
               <div style="height:125px; display:flex; align-items:center; justify-content:center; background:#ffffff; border:1px solid #cbd5e1; border-radius:4px; padding:4px; overflow:hidden; cursor:pointer;" onclick="if(typeof openAssetLightbox==='function') openAssetLightbox('${templateSrc}', 'Official BannerBuzz Template', '${officialTemplate ? officialTemplate.name : spec.name}')" title="Click to enlarge">
                 <img src="${templateSrc}" alt="Official Product Template" style="max-width:100%; max-height:100%; object-fit:contain;" />
               </div>
-              <div style="margin-top:5px; font-size:9.5px; color:#475569; font-weight:600; text-align:left;">${esc(!this.slots.template?.isCustom && officialTemplate ? officialTemplate.dims : dimsDisplay)}</div>
+              <div style="margin-top:5px; font-size:9.5px; color:#475569; font-weight:600; text-align:left;">${esc(templateCaption)}</div>
             </div>
             <div style="border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; background:#f8fafc; text-align:center;">
               <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; min-height:20px;">

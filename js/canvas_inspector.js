@@ -162,6 +162,17 @@ const CanvasInspector = {
       this.officialMockupImg = null;
     }
 
+    // QNAP product template (canopy walls, table covers, stands, backdrops…): matched to the order by product, size
+    // and panel; the designer can choose another one (or none) on the canvas toolbar
+    this.productTemplate = null;
+    this.artOpacity = 1;
+    if (typeof ProductTemplates !== 'undefined') {
+      const st = (typeof appState !== 'undefined') ? appState : {};
+      const fname = (st.parsedFilename && st.parsedFilename.fname) || (st.file && st.file.name) || '';
+      this.productTemplate = ProductTemplates.best(spec, dims, st.parsedFilename, fname);
+      if (this.productTemplate) ProductTemplates.load(this.productTemplate, () => this._afterTemplateLoad());
+    }
+
     // Update the contextual toolbar options in the DOM
     this.renderContextualToolbar();
 
@@ -1021,7 +1032,19 @@ const CanvasInspector = {
       </button>
     `;
 
-    container.innerHTML = modeSwitcherHtml + qnapToggleHtml + controlsHtml + aiBtnHtml;
+    // QNAP product template on the canvas: its own outlines replace the drawn SOP guides
+    const qnapBar = this._qnapBar();
+    if (this.productTemplate) {
+      qnapToggleHtml = '';
+      controlsHtml = `
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.safeArea ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('safeArea', this.checked)"> 🛡️ Template outlines (safe / visible)</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.dims ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('dims', this.checked)"> 📏 Dimensions</label>
+        <label class="vi-toggle active"><input type="checkbox" ${this.guides.loupe ? 'checked' : ''} onchange="CanvasInspector.toggleGuide('loupe', this.checked)"> 🔍 Zoom Loupe</label>
+        ${this._rotateButtons()}
+      `;
+    }
+
+    container.innerHTML = modeSwitcherHtml + qnapBar + qnapToggleHtml + controlsHtml + aiBtnHtml;
   },
 
   _drawTemplateMode(w, h, spec, dims) {
@@ -1541,8 +1564,12 @@ const CanvasInspector = {
     if (this.previewOrderTurned) [printW, printH] = [printH, printW];
 
     const isRotated = (this.currentRotation === 90 || this.currentRotation === 270);
-    // Real template: the canvas is the template's own bleed size
-    if (this.officialTemplate?.real && Array.isArray(this.officialTemplate.bleedIn)) {
+    // QNAP product template chosen: the canvas is the template's own size (with bleed)
+    const qnap = this._activeQnap();
+    if (qnap) {
+      [printW, printH] = qnap.t.fullIn;
+    } else if (this.officialTemplate?.real && Array.isArray(this.officialTemplate.bleedIn)) {
+      // Real template: the canvas is the template's own bleed size
       printW = this.officialTemplate.bleedIn[0];
       printH = this.officialTemplate.bleedIn[1];
     } else if (img && img.naturalWidth && img.naturalHeight) {
@@ -1566,7 +1593,7 @@ const CanvasInspector = {
       }
     }
     // Banner: the canvas is the SOP production canvas (order + hem / pole pocket), as in the real print files
-    const bannerSop = this._bannerSop(spec, { widthIn: printW, heightIn: printH });
+    const bannerSop = qnap ? null : this._bannerSop(spec, { widthIn: printW, heightIn: printH });
     if (bannerSop) {
       printW = bannerSop.canvasW;
       printH = bannerSop.canvasH;
@@ -1616,6 +1643,11 @@ const CanvasInspector = {
     }
     if (this.inspectorMode === 'mockup') {
       this._drawMockupMode(w, h, spec, dims);
+      return;
+    }
+
+    if (qnap) {
+      this._drawQnapSheet(img, w, h, pad, qnap.t, qnap.c);
       return;
     }
 
@@ -1699,6 +1731,190 @@ const CanvasInspector = {
   TRIM_STROKES: ['#fb7b48', '#f97316'],
   RECT_TYPES: ['banner', 'mesh-banner', 'yard-sign', 'marketing-flyer', 'business-card', 'aluminum-sign', 'acrylic-sign',
     'safety-parking-sign', 'magnet-rounded', 'perforated-window', 'a-frame', 'decal-sticker'],
+
+  // ── QNAP product templates (ProductTemplates) ──────────────────────────────────────────────────────────
+
+  productTemplate: null,   // QNAP_TEMPLATES record shown under the artwork, or null
+  artOpacity: 1,           // 0.5: the template shows through the artwork
+
+  /** The chosen QNAP template when its pictures are loaded and the artwork view is showing */
+  _activeQnap() {
+    if (!this.productTemplate || typeof ProductTemplates === 'undefined') return null;
+    if (this.inspectorMode && this.inspectorMode !== 'artwork') return null;
+    const c = ProductTemplates.load(this.productTemplate, () => this._afterTemplateLoad());
+    return c ? { t: this.productTemplate, c } : null;
+  },
+
+  _afterTemplateLoad() {
+    this.redraw();
+    this.renderContextualToolbar();
+    if (typeof SafeZoneCheck !== 'undefined') SafeZoneCheck.refresh();
+  },
+
+  /** Canvas toolbar: choose the QNAP template ('' = none, SOP guides) */
+  setProductTemplate(id) {
+    this.productTemplate = id && typeof ProductTemplates !== 'undefined' ? ProductTemplates.get(id) : null;
+    if (this.productTemplate && !ProductTemplates.load(this.productTemplate, () => this._afterTemplateLoad())) {
+      this.renderContextualToolbar();
+      return;
+    }
+    this._afterTemplateLoad();
+  },
+
+  /** Artwork at 50%: the template's bleed, visible and safe areas show through */
+  toggleArtOpacity() {
+    this.artOpacity = this.artOpacity < 1 ? 1 : 0.5;
+    this.redraw();
+    this.renderContextualToolbar();
+  },
+
+  /**
+   * Proof 02 picture: the customer's artwork on the QNAP template (as placed on the canvas) with the template's safe /
+   * visible outlines — JPEG data URL, cached; null when no template is chosen or loaded.
+   */
+  qnapComposite() {
+    const q = this.productTemplate && typeof ProductTemplates !== 'undefined' ? ProductTemplates.load(this.productTemplate) : null;
+    const img = this.currentImg;
+    if (!q || !img || !img.naturalWidth) return null;
+    const t = this.productTemplate;
+    const key = [t.id, img.src.length, img.src.slice(-40), this.currentRotation].join('|');
+    if (this._qnapComp && this._qnapComp.key === key) return this._qnapComp.url;
+    const W = q.img.naturalWidth, H = q.img.naturalHeight, s = W / t.fullIn[0];
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(q.img, 0, 0, W, H);
+    const turned = this.currentRotation === 90 || this.currentRotation === 270;
+    const p = ProductTemplates.placement(t, turned ? img.naturalHeight : img.naturalWidth, turned ? img.naturalWidth : img.naturalHeight);
+    const px = p.x * s, py = p.y * s, pw = p.w * s, ph = p.h * s;
+    ctx.save();
+    if (this.currentRotation) {
+      ctx.translate(px + pw / 2, py + ph / 2);
+      ctx.rotate((this.currentRotation * Math.PI) / 180);
+      const bw = turned ? ph : pw, bh = turned ? pw : ph;
+      ctx.drawImage(img, -bw / 2, -bh / 2, bw, bh);
+    } else {
+      ctx.drawImage(img, px, py, pw, ph);
+    }
+    ctx.restore();
+    if (q.edges) { ctx.imageSmoothingEnabled = true; ctx.drawImage(q.edges, 0, 0, W, H); }
+    let url = null;
+    try { url = cv.toDataURL('image/jpeg', 0.88); } catch (e) { return null; }
+    this._qnapComp = { key, url };
+    return url;
+  },
+
+  /** Toolbar row: template picker (best matches for this order) and the artwork opacity switch */
+  _qnapBar() {
+    if (typeof ProductTemplates === 'undefined' || !ProductTemplates.list().length) return '';
+    const st = (typeof appState !== 'undefined') ? appState : {};
+    const fname = (st.parsedFilename && st.parsedFilename.fname) || (st.file && st.file.name) || '';
+    const ranked = ProductTemplates.rank(this.currentSpec || {}, this.currentDims || {}, st.parsedFilename, fname).slice(0, 40);
+    const cur = this.productTemplate;
+    if (!ranked.length && !cur) return '';
+    const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    const opt = t => `<option value="${esc(t.id)}" ${cur && cur.id === t.id ? 'selected' : ''}>${esc(ProductTemplates.label(t))}</option>`;
+    const loading = cur && !ProductTemplates.load(cur);
+    return `
+      <div class="vi-qnap-bar">
+        <span class="vqb-label">🏛️ QNAP product template</span>
+        <select class="vqb-select" onchange="CanvasInspector.setProductTemplate(this.value)" title="Official template from \\\\192.168.0.250\\qnap\\Template_Mockups">
+          <option value="">— None (SOP guides) —</option>
+          ${ranked.map(r => opt(r.t)).join('')}
+          ${cur && !ranked.some(r => r.t.id === cur.id) ? opt(cur) : ''}
+        </select>
+        ${cur ? `<button type="button" class="btn btn-outline btn-sm vqb-opacity${this.artOpacity < 1 ? ' on' : ''}" onclick="CanvasInspector.toggleArtOpacity()" title="Show the template (bleed, visible and safe area) through the artwork">◐ Artwork ${this.artOpacity < 1 ? '50%' : '100%'}</button>` : ''}
+        ${loading ? '<span class="vqb-note">loading template…</span>' : ''}
+      </div>`;
+  },
+
+  /**
+   * QNAP template sheet: the official template (red bleed · white visible area · lavender safe area) is the artboard,
+   * the customer's artwork is placed on it — full size with bleed, visible area or safe area, whichever its proportions
+   * match, else fitted into the visible area — at 50% when the designer wants to see the template through it, and the
+   * template's area outlines are drawn on top. Sizes are on the pasteboard and in the legend, never on the artwork.
+   */
+  _drawQnapSheet(img, w, h, pad, t, c) {
+    const ctx = this.ctx;
+    const ox = pad.l, oy = pad.t, s = w / t.fullIn[0];
+    const fmt = v => +(+v).toFixed(2);
+    const isRotated = (this.currentRotation === 90 || this.currentRotation === 270);
+    this._drawPasteboard(this.canvas.width, this.canvas.height);
+    ctx.save();
+    ctx.shadowColor = 'rgba(15, 23, 42, 0.22)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 3;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(ox, oy, w, h);
+    ctx.restore();
+    ctx.drawImage(c.img, ox, oy, w, h);
+
+    // artwork on the template
+    const aw = img.naturalWidth || 1, ah = img.naturalHeight || 1;
+    const p = ProductTemplates.placement(t, isRotated ? ah : aw, isRotated ? aw : ah);
+    this.qnapPlacement = p;
+    const px = ox + p.x * s, py = oy + p.y * s, pw = p.w * s, ph = p.h * s;
+    ctx.save();
+    ctx.globalAlpha = this.artOpacity < 1 ? this.artOpacity : 1;
+    if (this.currentRotation) {
+      ctx.translate(px + pw / 2, py + ph / 2);
+      ctx.rotate((this.currentRotation * Math.PI) / 180);
+      const bw = isRotated ? ph : pw, bh = isRotated ? pw : ph;
+      ctx.drawImage(img, -bw / 2, -bh / 2, bw, bh);
+    } else {
+      ctx.drawImage(img, px, py, pw, ph);
+      this.artRect = { x: px, y: py, w: pw, h: ph };
+    }
+    ctx.restore();
+
+    // the template's area outlines (safe = green, visible = blue) and the sheet edge
+    if (this.guides.safeArea !== false && c.edges) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(c.edges, ox, oy, w, h);
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(ox + 0.5, oy + 0.5, w - 1, h - 1);
+    ctx.restore();
+    this._drawCropMarks(ox, oy, w, h, 4);
+
+    const vis = t.visIn || [0, 0, t.fullIn[0], t.fullIn[1]], safe = t.safeIn || vis;
+    if (this.guides.dims !== false) {
+      const yTop = Math.round(pad.t / 2) - 6, xLeft = Math.round(pad.l / 2) - 6;
+      this._dimLine(ox, yTop, w, [`${fmt(t.fullIn[0])}" W with bleed`, `visible ${fmt(vis[2] - vis[0])}"`], false, oy - yTop - 2);
+      this._dimLine(xLeft, oy, h, [`${fmt(t.fullIn[1])}" H with bleed`, `visible ${fmt(vis[3] - vis[1])}"`], true, ox - xLeft - 2);
+    }
+    const CW = this.canvas.width, CH = this.canvas.height;
+    if (pad.b >= 20 && !this.currentRotation && CW > 420) {
+      ctx.save();
+      ctx.font = '600 10px Inter, sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      const cap = `QNAP TEMPLATE · ${t.product} · ${t.name}`;
+      ctx.fillText(cap.length > 110 ? cap.slice(0, 108) + '…' : cap, CW - pad.r, CH - Math.max(12, pad.b / 2 - 4));
+      ctx.restore();
+    }
+
+    const ON = { full: 'the full template size (with bleed)', visible: 'the visible area', safe: 'the safe area', fit: 'fitted into the visible area (its proportions differ from the template)' };
+    const notes = [{ text: `Artwork placed on ${ON[p.on]}`, color: '#334155' }];
+    if (p.on !== 'full') notes.push({ text: 'Background does not run into the bleed — extend it to the full template size', color: '#b45309' });
+    if (this.artOpacity < 1) notes.push({ text: 'Artwork shown at 50% — the template shows through', color: '#4739d2' });
+    if (this.currentRotation) notes.push({ text: 'Preview turned — order unchanged', color: '#b45309' });
+    this.legend = {
+      title: 'QNAP Product Template', product: t.product, source: 'QNAP', words: t.src,
+      cards: [
+        { key: 'bleed', title: 'Bleed (red)', value: `${fmt(t.fullIn[0])}" × ${fmt(t.fullIn[1])}" with bleed`, desc: 'Cut off after printing — backgrounds and photos must run to here.' },
+        { key: 'trim', title: 'Visible area (white)', value: `${fmt(vis[2] - vis[0])}" × ${fmt(vis[3] - vis[1])}"`, desc: 'What shows on the finished product.' },
+        { key: 'safe', title: 'Safe area (lavender)', value: `${fmt(safe[2] - safe[0])}" × ${fmt(safe[3] - safe[1])}"`, desc: 'Keep all important text, logos and graphics inside this line.' },
+        { key: 'canvas', title: 'Template', value: t.name, desc: t.path || t.product }
+      ],
+      notes,
+      tip: 'Use ◐ Artwork 50% to see the template through the artwork; the Safe Area check measures text and logos against this template.'
+    };
+  },
 
   /** Room for the hem / pole pocket callouts beside the banner artboard */
   _bannerPadExtra(b) {

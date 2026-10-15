@@ -923,6 +923,14 @@ const FileAnalyzer = {
           matchedSpec = SPECS['custom-' + slug];
         }
       }
+      // Catalog products named by their size ("10x10 Canopy Tents", "6x6 Canopy"): try the size from the file name
+      if (!matchedSpec && slug && rawW && rawH) {
+        const base = slug.replace(/^custom-/, '');
+        const tries = [`${rawW}x${rawH}-${base}`, `${rawH}x${rawW}-${base}`, `${rawW}x${rawH}-${base.replace(/s$/, '')}`,
+          `${rawH}x${rawW}-${base.replace(/s$/, '')}`, `${rawW}x${rawH}-${base.replace(/-tents?$/, '')}`];
+        const hit = tries.find(k => SPECS[k]);
+        if (hit) { matchedSlug = hit; matchedSpec = SPECS[hit]; }
+      }
     }
 
     // 4. Finishing details

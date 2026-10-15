@@ -19,6 +19,13 @@ const PrecheckEngine = {
    * silently "fixed". SOP 4_Custom Flags: clip / suction-cup flags can be used both ways.
    */
   orientationCheck(analysis, spec, dims) {
+    const r = this._orientationCheck(analysis, spec, dims);
+    const tp = analysis && analysis.templatePanel;
+    if (tp && r && r.detail) r.detail = `Measured on the QNAP template panel “${tp.name}” (${tp.w}" × ${tp.h}"). ` + r.detail;
+    return r;
+  },
+
+  _orientationCheck(analysis, spec, dims) {
     const printW = dims.widthIn, printH = dims.heightIn;
     const sop = spec && spec._sop;
     const insp = (typeof AgenticAiInspector !== 'undefined') ? AgenticAiInspector : null;
@@ -271,6 +278,12 @@ const PrecheckEngine = {
           : `Target print size: ${printW}" × ${printH}". Ensure document artboard matches ordered dimensions.`,
         action: `Verify artboard size matches order size (${printW}" × ${printH}") and effective resolution ≥ ${sop?.resolution?.target || reqDpi} PPI in Adobe software.`
       });
+    }
+
+    // Canopy walls & co.: the size is checked on the QNAP template panel, not the product's nominal size
+    if (analysis.templatePanel) {
+      const tp = analysis.templatePanel, sz = checks.find(c => c.id === 'sizeTransform');
+      if (sz) sz.detail = `Measured on the QNAP template panel “${tp.name}” (${tp.w}" × ${tp.h}" — ${tp.product}). ` + sz.detail;
     }
 
     // ──────────────────────────────────────────────────────────────────────────

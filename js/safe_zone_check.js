@@ -26,6 +26,9 @@ const SafeZoneCheck = {
   // ── geometry ───────────────────────────────────────────────────────────
   /** Board size (inches), safe margin and the artwork turn, as the canvas shows them */
   geometry(report) {
+    // QNAP product template on the canvas: its own safe area (any shape) is the measure
+    const cq = (typeof CanvasInspector !== 'undefined' && CanvasInspector._activeQnap) ? CanvasInspector._activeQnap() : null;
+    if (cq) return { ok: true, qnap: cq, W: cq.t.fullIn[0], H: cq.t.fullIn[1], safeIn: null, rot: CanvasInspector.currentRotation || 0, tType: 'qnap' };
     const spec = (report && report.spec) || {};
     const d = (report && report.dimensions) || {};
     let W = parseFloat(d.widthIn), H = parseFloat(d.heightIn);
@@ -74,6 +77,38 @@ const SafeZoneCheck = {
     const d = { left: x0, top: y0, right: g.W - x1, bottom: g.H - y1 };
     const side = Object.keys(d).reduce((a, s) => d[s] < d[a] ? s : a, 'left');
     return { dist: Math.max(0, d[side]), side, sides: Object.keys(d).filter(s => d[s] < g.safeIn) };
+  },
+
+  /**
+   * QNAP template: sample a box (fractions of the upright artwork) on the template's area mask. Any point outside
+   * the safe area flags it; points in the bleed mean it will be cut off. side = where the outside part lies.
+   */
+  _measureQnap(b, g, place) {
+    const r = this._rotBox(b, g.rot);
+    const t = g.qnap.t, c = g.qnap.c, FW = t.fullIn[0], FH = t.fullIn[1];
+    const x0 = place.x + r.x * place.w, y0 = place.y + r.y * place.h, bw = r.w * place.w, bh = r.h * place.h;
+    let out = 0, bleed = 0, n = 0, sx = 0, sy = 0;
+    for (let i = 0; i < 9; i++) {
+      for (let j = 0; j < 9; j++) {
+        const fx = (x0 + bw * (0.04 + 0.92 * i / 8)) / FW, fy = (y0 + bh * (0.04 + 0.92 * j / 8)) / FH;
+        const v = ProductTemplates.maskAt(c, fx, fy);
+        n++;
+        if (v < 255) { out++; sx += fx; sy += fy; if (v === 0) bleed++; }
+      }
+    }
+    // side: the template edge nearest to the part that lies outside the safe area
+    let side = '';
+    if (out) {
+      const cx = sx / out, cy = sy / out;
+      const d = { left: cx, right: 1 - cx, top: cy, bottom: 1 - cy };
+      side = Object.keys(d).reduce((a, k) => d[k] < d[a] ? k : a, 'left');
+    }
+    return { out: out / n, intoBleed: bleed > 0, side, dist: bleed ? 0 : 1 - out / n };
+  },
+
+  /** "0.25" safe zone" or "template safe area" */
+  _zone(g) {
+    return g && g.qnap ? 'template safe area' : g && g.safeIn ? `${this._fmt(g.safeIn)} safe zone` : 'safe zone';
   },
 
   /** Measuring tolerance: OCR / pixel boxes are a pixel or two off, more on very large banners */
@@ -271,13 +306,18 @@ const SafeZoneCheck = {
 
     if (!obj.ok && !textWords) return { state: 'na', reason: obj.reason || 'The artwork could not be read.', items: [], g };
     const size = obj.size || { w: 1, h: 1 };
-    const place = this._placement(g, size.w || 1, size.h || 1);
-    const tol = this._tolerance(g);
+    const turned = g.rot % 180 !== 0;
+    const place = g.qnap
+      ? ProductTemplates.placement(g.qnap.t, turned ? (size.h || 1) : (size.w || 1), turned ? (size.w || 1) : (size.h || 1))
+      : this._placement(g, size.w || 1, size.h || 1);
+    const tol = g.qnap ? 0 : this._tolerance(g);
+    const measure = b => g.qnap ? this._measureQnap(b, g, place) : this._measure(b, g, place);
+    const outside = m => g.qnap ? m.out > 0 : m.dist < g.safeIn - tol;
     const items = [];
     const lines = textWords ? this._textLines(textWords, size) : [];
     lines.forEach(l => {
-      const m = this._measure(l.box, g, place);
-      if (m.dist < g.safeIn - tol) items.push(Object.assign({ kind: 'text', text: l.text, box: l.box }, m));
+      const m = measure(l.box);
+      if (outside(m)) items.push(Object.assign({ kind: 'text', text: l.text, box: l.box }, m));
     });
     const overlapsText = b => lines.some(l => {
       const ix = Math.min(b.x + b.w, l.box.x + l.box.w) - Math.max(b.x, l.box.x);
@@ -287,8 +327,8 @@ const SafeZoneCheck = {
     if (obj.ok && obj.items) {
       obj.items.forEach(o => {
         if (overlapsText(o.box)) return;
-        const m = this._measure(o.box, g, place);
-        if (m.dist < g.safeIn - tol) items.push(Object.assign({ kind: 'object', text: '', box: o.box }, m));
+        const m = measure(o.box);
+        if (outside(m)) items.push(Object.assign({ kind: 'object', text: '', box: o.box }, m));
       });
     }
     items.sort((a, b) => a.dist - b.dist);
@@ -301,8 +341,13 @@ const SafeZoneCheck = {
   /** One line per item, for the card and the alert */
   describe(it, g) {
     const what = it.kind === 'text' ? `Text “${it.text.length > 40 ? it.text.slice(0, 38) + '…' : it.text}”` : 'Design element (logo / graphic)';
-    const where = it.dist <= 0.005 ? `touches the ${it.side} edge (it will be cut)` : `is ${this._fmt(it.dist)} from the ${it.side} edge`;
-    return `${what} ${where}`;
+    return `${what} ${this.where(it, g)}`;
+  },
+
+  /** Where an item lies, in words */
+  where(it, g) {
+    if (g && g.qnap) return it.intoBleed ? `runs into the bleed on the ${it.side} (it will be cut off)` : `crosses the template safe area on the ${it.side}`;
+    return it.dist <= 0.005 ? `touches the ${it.side} edge (it will be cut)` : `is ${this._fmt(it.dist)} from the ${it.side} edge`;
   },
 
   /** The pre-check card */
@@ -311,8 +356,11 @@ const SafeZoneCheck = {
     const r = this.evaluate(report || {});
     this._last = Object.assign({ key: this._key(report) }, r);
     const spec = (report && report.spec) || {};
-    const safeTxt = r.g ? this._fmt(r.g.safeIn) : (spec.safeArea || '');
-    base.required = `Text, logos and important graphics at least ${safeTxt} inside the trim`;
+    const safeTxt = r.g && r.g.safeIn ? this._fmt(r.g.safeIn) : (spec.safeArea || '');
+    const zone = r.g ? this._zone(r.g) : `${safeTxt} safe zone`;
+    const onWhat = r.g && r.g.qnap ? `the QNAP template “${r.g.qnap.t.name}”` : r.g ? `the ordered size ${this._fmt(r.g.W)} × ${this._fmt(r.g.H)}` : '';
+    base.required = r.g && r.g.qnap ? 'Text, logos and important graphics inside the template safe area (lavender)'
+      : `Text, logos and important graphics at least ${safeTxt} inside the trim`;
     if (r.state === 'na') {
       return Object.assign(base, { status: 'WARNING', manual: true, found: 'Check by eye on the canvas',
         detail: `${r.reason} SOP: all logos, text and critical graphics stay at least ${safeTxt} inside the trim line so nothing is cut, hemmed or grommeted.`,
@@ -320,7 +368,7 @@ const SafeZoneCheck = {
     }
     if (r.state === 'waiting') {
       return Object.assign(base, { status: 'WARNING', manual: true, found: 'Checking text and logo positions…',
-        detail: `Every word the text reader finds and every logo / graphic near the edge is measured against the ${safeTxt} safe zone.`, action: '' });
+        detail: `Every word the text reader finds and every logo / graphic near the edge is measured against the ${zone}.`, action: '' });
     }
     const g = r.g;
     const scope = [r.textRead ? `${r.textLines} text line${r.textLines === 1 ? '' : 's'}` : 'text not readable automatically',
@@ -332,24 +380,25 @@ const SafeZoneCheck = {
           action: `Use the canvas guides (${safeTxt} safe zone).` });
       }
       return Object.assign(base, { status: 'PASS', manual: false,
-        found: `Text and graphics are inside the ${safeTxt} safe zone`,
-        detail: `Measured on the ordered size ${this._fmt(g.W)} × ${this._fmt(g.H)} (${scope}).${r.textRead ? '' : ' The text could not be read automatically — confirm it by eye.'}`,
+        found: `Text and graphics are inside the ${zone}`,
+        detail: `Measured on ${onWhat} (${scope}).${r.textRead ? '' : ' The text could not be read automatically — confirm it by eye.'}`,
         action: '', safeZone: r });
     }
     const n = r.items.length + (r.more || 0);
     const list = r.items.map(it => this.describe(it, g)).join(' · ') + (r.more ? ` · and ${r.more} more` : '');
+    const moveTo = g.qnap ? 'inside the lavender safe area of the template' : `at least ${safeTxt} inside the trim`;
     // Text read on the artwork is certain → Critical. Graphics alone may be decoration (frames, ornaments) → marked,
     // and confirmed by eye
     if (!r.items.some(it => it.kind === 'text')) {
       return Object.assign(base, { status: 'WARNING', manual: true,
-        found: `${n} graphic${n > 1 ? 's' : ''} inside the ${safeTxt} margin — check by eye`,
-        detail: `${list}. Decoration (frames, ornaments, patterns) may sit there; logos and important graphics must not — they can be cut off, hemmed or grommeted (measured on ${this._fmt(g.W)} × ${this._fmt(g.H)}; ${scope}).`,
-        action: `Look at the marked graphics: move logos / important graphics at least ${safeTxt} inside the trim.`, safeZone: r });
+        found: `${n} graphic${n > 1 ? 's' : ''} outside the ${zone} — check by eye`,
+        detail: `${list}. Decoration (frames, ornaments, patterns) may sit there; logos and important graphics must not — they can be cut off, hemmed or grommeted (measured on ${onWhat}; ${scope}).`,
+        action: `Look at the marked graphics: move logos / important graphics ${moveTo}.`, safeZone: r });
     }
     return Object.assign(base, { status: 'FAIL', manual: false,
-      found: `${n} item${n > 1 ? 's' : ''} outside the ${safeTxt} safe zone`,
-      detail: list + `. Content outside the safe zone can be cut off, folded into a hem or punched by a grommet (measured on ${this._fmt(g.W)} × ${this._fmt(g.H)}; ${scope}).`,
-      action: `Move the marked text / logos at least ${safeTxt} inside the trim, or confirm with the customer that they may be cut.`,
+      found: `${n} item${n > 1 ? 's' : ''} outside the ${zone}`,
+      detail: list + `. Content outside the safe area can be cut off, folded into a hem or punched by a grommet (measured on ${onWhat}; ${scope}).`,
+      action: `Move the marked text / logos ${moveTo}, or confirm with the customer that they may be cut.`,
       safeZone: r });
   },
 
@@ -357,7 +406,7 @@ const SafeZoneCheck = {
     const a = report && report.analysis;
     const ci = (typeof CanvasInspector !== 'undefined') ? CanvasInspector : null;
     return [(a && a.previewDataUrl || '').length, report && report.dimensions && report.dimensions.widthIn, report && report.dimensions && report.dimensions.heightIn,
-      ci ? ci.currentRotation : 0, ci ? !!ci.previewOrderTurned : false].join('|');
+      ci ? ci.currentRotation : 0, ci ? !!ci.previewOrderTurned : false, ci && ci.productTemplate ? ci.productTemplate.id : ''].join('|');
   },
 
   /** Recompute for the current report (text reading finished, artwork turned, pixels loaded) */
@@ -435,16 +484,19 @@ const SafeZoneCheck = {
     const n = r.items.length + (r.more || 0);
     const textN = r.items.filter(it => it.kind === 'text').length;
     box.classList.toggle('is-warn', !textN);
+    const zone = this._zone(r.g);
     box.innerHTML = `
-      <div class="spell-alert-head">⚠️ <span>${textN ? `${n} item${n > 1 ? 's' : ''} outside the ${this._fmt(r.g.safeIn)} safe zone`
-        : `${n} graphic${n > 1 ? 's' : ''} in the ${this._fmt(r.g.safeIn)} margin — check by eye`}</span>
+      <div class="spell-alert-head">⚠️ <span>${textN ? `${n} item${n > 1 ? 's' : ''} outside the ${zone}`
+        : `${n} graphic${n > 1 ? 's' : ''} outside the ${zone} — check by eye`}</span>
         <button class="spell-alert-close" title="Close" onclick="SafeZoneCheck.closeAlert()">×</button></div>
-      <div class="spell-alert-note">Important text and logos must stay ${this._fmt(r.g.safeIn)} inside the trim — closer to the edge they can be cut off, hemmed or grommeted.</div>
+      <div class="spell-alert-note">${r.g.qnap
+        ? `Measured on the QNAP template “${esc(r.g.qnap.t.name)}”: important text and logos must stay inside its lavender safe area — outside it they can be cut off, hemmed or hidden by the hardware.`
+        : `Important text and logos must stay ${this._fmt(r.g.safeIn)} inside the trim — closer to the edge they can be cut off, hemmed or grommeted.`}</div>
       ${r.items.slice(0, 5).map((it, i) => `
         <div class="spell-alert-row">
           <div class="spell-alert-words"><span class="spell-alert-kind">${it.kind === 'text' ? 'Text' : 'Logo / graphic'}</span>
             ${it.kind === 'text' ? `<span class="spell-alert-wrong" style="text-decoration:none;">${esc(it.text.length > 32 ? it.text.slice(0, 30) + '…' : it.text)}</span>` : ''}
-            <span class="sz-dist">${it.dist <= 0.005 ? 'touches the ' + it.side + ' edge' : this._fmt(it.dist) + ' from the ' + it.side + ' edge'}</span></div>
+            <span class="sz-dist">${r.g.qnap ? this.where(it, r.g) : it.dist <= 0.005 ? 'touches the ' + it.side + ' edge' : this._fmt(it.dist) + ' from the ' + it.side + ' edge'}</span></div>
           <button class="spell-alert-show" onclick="SafeZoneCheck.show(${i})">Show</button>
         </div>`).join('')}`;
   },
