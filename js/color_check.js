@@ -710,30 +710,40 @@ const ColorCheck = {
   },
 
   PRINT_VERSION_PX: 6000,   // longest side of the full-resolution print-colour copy (print preview screenshot)
-  _pv: null,                // { src, url } — last full-resolution print-colour copy
-  _pvBusy: null,
+  _pvCache: new Map(),      // `${maxPx}|${src}` → data URL (null = could not be made); the last few kept
+  _pvBusy: new Set(),
 
   /**
-   * The artwork in its printed (CMYK) colours at full resolution, for the print preview screenshot (Proof 03) and
-   * the web proof. Returns the cached data URL, or null while it is being made (onReady is called when done).
+   * The artwork in its printed (CMYK) colours — full resolution for the print preview screenshot (Proof 03), smaller
+   * for the entire artwork proof (Proof 01). Returns the cached data URL, or null while it is being made (onReady is
+   * called when done) or when it could not be made.
    */
-  printVersion(src, onReady) {
+  printVersion(src, onReady, maxPx) {
     if (!src) return null;
-    if (this._pv && this._pv.src === src) return this._pv.url;
-    if (this._pvBusy === src) return null;
-    this._pvBusy = src;
+    const px = maxPx || this.PRINT_VERSION_PX, key = px + '|' + src;
+    if (this._pvCache.has(key)) return this._pvCache.get(key);
+    if (this._pvBusy.has(key)) return null;
+    this._pvBusy.add(key);
+    const done = url => {
+      this._pvBusy.delete(key);
+      this._pvCache.set(key, url);
+      while (this._pvCache.size > 4) this._pvCache.delete(this._pvCache.keys().next().value);
+      if (url && onReady) onReady();
+    };
     const img = new Image();
     img.onload = () => setTimeout(() => {
-      if (this._pvBusy !== src) return;
       let url = null;
-      try { url = this._convertImage(img, this.PRINT_VERSION_PX); } catch (e) { console.warn('Print colours could not be made:', e); }
-      this._pvBusy = null;
-      this._pv = { src, url };
-      if (url && onReady) onReady();
+      try { url = this._convertImage(img, px); } catch (e) { console.warn('Print colours could not be made:', e); }
+      done(url);
     }, 20);
-    img.onerror = () => { if (this._pvBusy === src) { this._pvBusy = null; this._pv = { src, url: null }; } };
+    img.onerror = () => done(null);
     img.src = src;
     return null;
+  },
+
+  /** True while the print-colour copy of this artwork is being made */
+  isConverting(src, maxPx) {
+    return !!src && this._pvBusy.has((maxPx || this.PRINT_VERSION_PX) + '|' + src);
   },
 
   /**
@@ -805,21 +815,45 @@ const ColorCheck = {
     if (r.issues.merge) r.merge.boxes.forEach(b => boxes.push([b, C.merge]));
     if (r.issues.opacity) r.opacity.boxes.forEach(b => boxes.push([b, C.opacity]));
     const marks = boxes.map(([b, col]) => `<div style="position:absolute; left:${(b.x * 100).toFixed(2)}%; top:${(b.y * 100).toFixed(2)}%; width:${(b.w * 100).toFixed(2)}%; height:${(b.h * 100).toFixed(2)}%; border:2px dashed ${col}; border-radius:3px; box-shadow:0 0 0 1px rgba(255,255,255,0.7); pointer-events:none; box-sizing:border-box;"></div>`).join('');
-    const panel = (img, label, bg) => `
+    const panel = (img, label, bg, info) => `
       <div style="flex:1; min-width:0; text-align:center;">
         <div style="display:inline-block; position:relative; line-height:0; max-width:100%; background:${bg}; box-shadow:0 1px 4px rgba(15,23,42,0.18);">
           <img src="${img}" alt="${label}" style="display:block; max-width:100%; max-height:${hgt}px; object-fit:contain;" />${marks}
         </div>
         <div style="font-size:10.5px; font-weight:800; color:#334155; margin-top:6px; letter-spacing:0.02em;">${label}</div>
+        ${info || ''}
       </div>`;
+    // What RGB and CMYK are, in one line each — screens vs printing inks (team request, Oct 2026)
+    const explain = !(opts && opts.explain === false);
+    const ic = (path, color, size) => `<svg width="${size || 15}" height="${size || 15}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;">${path}</svg>`;
+    const IC = {
+      tv: '<rect x="2" y="7" width="20" height="13" rx="2"/><polyline points="17 2 12 7 7 2"/>',
+      laptop: '<rect x="4" y="4" width="16" height="11" rx="1.5"/><line x1="2" y1="19" x2="22" y2="19"/>',
+      phone: '<rect x="7" y="2" width="10" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/>',
+      tablet: '<rect x="4" y="2" width="16" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/>',
+      printer: '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>'
+    };
+    const infoCard = (icons, title, text, bg, border, ink) => `
+        <div style="margin:7px auto 0; max-width:330px; display:flex; gap:10px; align-items:center; text-align:left; background:${bg}; border:1px solid ${border}; border-radius:6px; padding:6px 10px;">
+          <div style="flex-shrink:0;">${icons}</div>
+          <div style="font-size:9.5px; line-height:1.4; color:${ink};"><b style="font-size:10px; letter-spacing:0.02em;">${title}</b><br>${text}</div>
+        </div>`;
+    const rgbIcons = `<div style="display:grid; grid-template-columns:repeat(2, 15px); gap:3px 4px;">${['tv', 'laptop', 'phone', 'tablet'].map(k => ic(IC[k], '#2563eb')).join('')}</div>`;
+    const cmykIcons = `<div style="display:flex; flex-direction:column; align-items:center; gap:3px;">${ic(IC.printer, '#0e2246', 20)}
+          <div style="display:flex; gap:2px;">${[['#00aeef', 'C'], ['#ec008c', 'M'], ['#fdee00', 'Y'], ['#231f20', 'K']].map(([c, t]) =>
+            `<span title="${t}" style="width:8px; height:8px; border-radius:50%; background:${c}; border:0.5px solid rgba(15,23,42,0.35); display:inline-block;"></span>`).join('')}</div></div>`;
+    const rgbInfo = explain ? infoCard(rgbIcons, 'RGB · for digital screens',
+      'TV, phone, laptop and tablet screens mix red, green and blue <b>light</b> — very bright, glowing colours are possible.', '#eff6ff', '#dbeafe', '#1e3a8a') : '';
+    const cmykInfo = explain ? infoCard(cmykIcons, 'CMYK · the global printing standard',
+      'Printers mix cyan, magenta, yellow and black <b>inks</b> on the material — some bright screen colours cannot be printed and come out duller.', '#f8fafc', '#e2e8f0', '#0f172a') : '';
     const key = [r.issues.gamut ? ['Bright colours that print duller', C.gamut] : null, r.issues.merge ? ['Colours that merge in print', C.merge] : null,
       r.issues.opacity ? ['Semi-transparent', C.opacity] : null].filter(Boolean)
       .map(([t, col]) => `<span style="display:inline-flex; align-items:center; gap:5px;"><i style="display:inline-block; width:14px; height:10px; border:2px dashed ${col}; border-radius:2px;"></i>${t}</span>`).join('');
     return `
       <div style="display:flex; gap:14px; align-items:flex-start;">
-        ${panel(src, 'ON SCREEN (RGB)', 'repeating-conic-gradient(#e5e7eb 0% 25%, #ffffff 0% 50%) 50% / 12px 12px')}
+        ${panel(src, 'ON SCREEN (RGB)', 'repeating-conic-gradient(#e5e7eb 0% 25%, #ffffff 0% 50%) 50% / 12px 12px', rgbInfo)}
         <div style="align-self:center; font-size:18px; color:#94a3b8; font-weight:800;">→</div>
-        ${panel(r.printPreview || src, 'PRINTED (CMYK · SWOP v2)', '#ffffff')}
+        ${panel(r.printPreview || src, 'PRINTED (CMYK · SWOP v2)', '#ffffff', cmykInfo)}
       </div>
       ${key ? `<div style="display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-top:8px; font-size:10.5px; color:#475569; font-weight:600;">${key}</div>` : ''}`;
   },

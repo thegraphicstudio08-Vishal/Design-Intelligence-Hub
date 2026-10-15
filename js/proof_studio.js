@@ -1026,12 +1026,19 @@ const ProofStudio = {
     const reticleH = Math.max(8, Math.min(100, Math.round((240 / cropImg.h) * 100)));
     const isMockupView = !plan.showPrintPreview;
 
+    // Proof 01 in the printed colours too (CMYK, SWOP v2): the same full-resolution copy as Proof 03 when both show the
+    // customer's artwork, otherwise a lighter 2000 px copy. A proof the designer uploaded is shown exactly as uploaded.
+    const canPrint = !overallCustom && typeof ColorCheck !== 'undefined' && ColorCheck.printVersion;
+    const p01Px = artworkSrc === realArtSrc && plan.showPrintPreview && !hasCustomCrop ? undefined : 2000;
+    const p01Print = canPrint ? ColorCheck.printVersion(artworkSrc, rerender, p01Px) : null;
+    const p01Converting = canPrint && !p01Print && ColorCheck.isConverting(artworkSrc, p01Px);
+    const p01Src = p01Print || artworkSrc;
     // Proof 01 artwork with custom finishing marked (pole pockets, custom grommet positions)
-    const hl = overallCustom ? null : this._finishingHighlight(artworkSrc, spec, analysis, printW, printH, rerender);
-    const artworkProofSrc = hl ? hl.url : artworkSrc;
+    const hl = overallCustom ? null : this._finishingHighlight(p01Src, spec, analysis, printW, printH, rerender);
+    const artworkProofSrc = hl ? hl.url : p01Src;
     const pickArea = plan.showPrintPreview && !hasCustomCrop && !hl && !overallCustom;
     this._lastRender = { artworkSrc: cropSrc, artworkProofSrc, cropImg, cropX, cropY, showPrintPreview: plan.showPrintPreview,
-      printColours: !!printColourSrc, baseName: this._proofBaseName(analysis), orderNum: finalOrderNum || 'Proof03' };
+      printColours: !!printColourSrc, proof01PrintColours: !!p01Print, baseName: this._proofBaseName(analysis), orderNum: finalOrderNum || 'Proof03' };
 
     // ── Proof sheet building blocks ──
     const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -1076,7 +1083,7 @@ const ProofStudio = {
 
     // ── Proof 01 · Small size proof (entire artwork) ──
     sections.push(card('01', 'Entire Artwork Proof',
-      sub('This is the complete artwork that will be printed on your product.')
+      sub('This is the complete artwork that will be printed on your product' + (p01Print ? ', shown in print colours (CMYK).' : '.'))
         + (orientNote ? sub('↻ ' + orientNote, '#b45309', true) : '')
         + (hl ? sub('Please check: ' + hl.note + '.', '#1d4ed8', true) : ''),
       rightGroup(
@@ -1088,6 +1095,8 @@ const ProofStudio = {
               ${pickArea ? `<div class="crop-reticle no-print" style="position:absolute; left:${cropX}%; top:${cropY}%; width:${reticleW}%; height:${reticleH}%; transform:translate(-50%, -50%); border:2px dashed #dc2626; background:rgba(220,38,38,0.12); box-shadow:0 0 0 1px rgba(0,0,0,0.25); pointer-events:none; box-sizing:border-box; transition:left 0.12s ease, top 0.12s ease;"></div>` : ''}
             </div>
             <div style="position:absolute; right:8px; bottom:6px; font-size:9.5px; font-weight:700; color:${MUTED}; background:rgba(255,255,255,0.9); padding:2px 6px; border-radius:3px;">${esc(dimsDisplay)}</div>
+            ${p01Print ? `<div style="position:absolute; left:8px; top:6px; background:rgba(14,34,70,0.9); color:#ffffff; font-size:9.5px; font-weight:800; letter-spacing:0.03em; padding:3px 8px; border-radius:3px; pointer-events:none;">CMYK PRINT COLOURS</div>`
+              : p01Converting ? `<div class="no-print" style="position:absolute; left:8px; top:6px; background:rgba(255,255,255,0.92); color:#64748b; font-size:9.5px; font-weight:700; padding:3px 8px; border-radius:3px; pointer-events:none;">converting to print colours…</div>` : ''}
           </div>`));
 
     // ── Colour preview · screen (RGB) vs print (CMYK) — bright RGB colours, colours merging, opacity ──
@@ -1154,7 +1163,8 @@ const ProofStudio = {
               <div style="position:absolute; top:8px; left:10px; display:flex; gap:6px; pointer-events:none;">
                 <span style="background:rgba(229,231,235,0.95); color:#dc2626; font-size:11px; font-weight:800; padding:3px 10px; border-radius:3px;">Print preview screenshot</span>
                 ${printColourSrc ? `<span style="background:rgba(14,34,70,0.9); color:#ffffff; font-size:10px; font-weight:800; padding:3px 8px; border-radius:3px; letter-spacing:0.03em;">CMYK PRINT COLOURS</span>`
-                  : `<span class="no-print" style="background:rgba(255,255,255,0.9); color:#64748b; font-size:10px; font-weight:700; padding:3px 8px; border-radius:3px;">converting to print colours…</span>`}
+                  : typeof ColorCheck !== 'undefined' && ColorCheck.isConverting && ColorCheck.isConverting(realArtSrc)
+                    ? `<span class="no-print" style="background:rgba(255,255,255,0.9); color:#64748b; font-size:10px; font-weight:700; padding:3px 8px; border-radius:3px;">converting to print colours…</span>` : ''}
               </div>
               <div class="no-print" style="position:absolute; bottom:8px; right:10px; background:rgba(15,23,42,0.88); color:#ffffff; font-size:10px; font-weight:700; padding:4px 12px; border-radius:4px; pointer-events:none;">🔍 ${cropScaleInfo.modeText} · ✋ drag to pan</div>`}
           </div>`));
