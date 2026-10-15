@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261010c">
+  <link rel="stylesheet" href="css/style.css?v=20261014a">
 </head>
 <body>
 
@@ -70,9 +70,67 @@
       <!-- PRE-CHECK MODE CONTROLS -->
       <div class="lp-block active" id="lp-precheck">
         
-        <!-- Order & Customer -->
+        <!-- Step 1 · Artwork upload first: a production file name fills in the order details -->
         <section class="lp-section">
-          <div class="lp-title">Order Information</div>
+
+          <div class="lp-title"><span class="lp-step-num">1</span>Upload Customer Artwork</div>
+          <div class="upload-zone" id="upload-zone" onclick="triggerArtworkUpload()" ondragover="handleDragOver(event)" ondragenter="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" role="button" tabindex="0" title="Click or drag artwork file to upload" style="cursor: pointer;">
+            <span class="upload-icon">📁</span>
+            <div class="upload-text-main">Click or drag artwork here</div>
+            <div class="upload-text-sub">SVG · AI · EPS · PDF · JPG · PNG · TIFF · PSD</div>
+          </div>
+          <input type="file" class="hidden-input" id="file-input" onchange="onFileInputChange(event)" accept=".svg,.ai,.eps,.pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff,.psd,.bmp" />
+
+          <!-- Filename Auto-Detection Banner -->
+          <div class="fn-banner" id="fn-banner"></div>
+          <div class="fn-proof-note" id="fn-proof-note">
+            ⚠️ <strong>Proof render detected:</strong> This file appears to be a script export. Resolution check will be evaluated against production source.
+          </div>
+
+          <!-- Preview Card -->
+          <div class="preview-card" id="preview-card">
+            <div class="preview-thumb-wrap">
+              <img id="preview-img" class="preview-img" src="" alt="Thumbnail" />
+            </div>
+            <div class="preview-meta">
+              <div class="preview-name" id="preview-name">file_name.pdf</div>
+              <div class="preview-size" id="preview-size">0 KB</div>
+            </div>
+            <div class="preview-remove" onclick="removeFile()" title="Remove file">✕</div>
+          </div>
+          <details class="sample-files">
+            <summary>⚡ Try a sample file name <span>30</span></summary>
+            <select class="fs" id="example-file-select" onchange="loadExampleFilename(this.value)" style="font-size:11.5px; border-color:#fdba74; background:#ffffff;">
+              <option value="">— Choose a Real Production File —</option>
+              <option value="US2395878_Desk_Flags_Blade_5.51_x_17.71_(inch)_Single-Sided_1pc.jpg">🚩 Desk Flags Blade 5.51×17.71 Inch (US2395878)</option>
+              <option value="Flag_Fabric_Gian_US2395441_1_1_qty_Teardrop_Flags_2_x_7_(FT)_Teardrop_Flags_Pole_Sleeve_at_Left_Side_Single_Sided_(PO)_script_Front_print_file.pdf">🚩 Teardrop Flags 2×7 FT (US2395441)</option>
+              <option value="Flag_Fabric_Gian_US2396245_2_1_qty_Personalized_Flags_5_x_3_(FT)_Personalized_Flags_Metal_Grommets_at_Left_Side_Double_Sided_(PO)_script_Front_print_file.pdf">🚩 Personalized Flags 5×3 FT (US2396245)</option>
+              <option value="Flag_Fabric_Feat_US2395880_1_1_qty_Feather_Flags_2.5_x_8_(FT)_Feather_Flags_Pole_Sleeve_at_Left_Side_(P)_print_file.pdf">🚩 Feather Flags 2.5×8 FT (US2395880)</option>
+              <option value="Canvas_Bann-US2392457_1_1_qty_Canvas_Banners_2_x_3_(FT)_Metal_Grommets_(SS)_script_print_file.pdf">🎌 Canvas Banners 2×3 FT (US2392457)</option>
+              <option value="Corflute_Bann-BS2310454_1_1_qty_Die-Cut_Yard_Signs_48_x_32_(Inch)_Single_Side_Metal_Stakes_(ES)_print_file.pdf">🪟 Die-Cut Yard Signs 48×32 Inch (BS2310454)</option>
+              <option value="Round_Sign_US2394551_1_1_qty_Circle_Yard_Signs_24_x_24_(Inch)_Single_Sided_(ES)_print_file.pdf">⭕ Circle Yard Signs 24×24 Inch (US2394551)</option>
+              <option value="Roll_Up_Stand_US2399120_1_1_qty_Roll_Up_Banner_Stands_33_x_80_(Inch)_print_file.pdf">🖼️ Roll-Up Banner Stands 33×80 Inch (US2399120)</option>
+              <option value="Table_Cover_US2398912_1_1_qty_Custom_Table_Covers_8_ft_x_6_ft_(FT)_print_file.pdf">🪑 Custom Table Covers 8×6 FT (US2398912)</option>
+              <option value="Flag_Fabric_Bann_US2395340_1_1_qty_Rectangle_Flags_6_x_4_(FT)_Rectangle_Flags_Double_Sided_3_Pole_Pockets_at_Left_Side_(P)_front_script_print_file.pdf">🚩 Rectangle Flags 6×4 FT (US2395340)</option>
+              <option value="Knitted_Polyester_Fabric_Bann-BS2311027_1_50_qty_Hand_Flags_6_Inch_x_4_Inch_(Inch)_Hand_Flags_Single_(ES)_print_file.pdf">🚩 Hand Flags 6×4 Inch (BS2311027)</option>
+              <option value="Magnet_Bann_BS2312109_1_1_qty_Truck_Magnetic_Signs_15.75_x_52.5_(Inch)_UV_Print_(MS)_print_file.pdf">🪟 Truck Magnetic Signs 15.75×52.5 Inch (BS2312109)</option>
+              <option value="Magnet_Bann_PRAU2366057_1_1_qty_Vehicle_Magnetic_Signs_23.62_x_12.99_(Inch)_UV_Print_(MS)_print_file.pdf">🪟 Vehicle Magnetic Signs 23.62×12.99 Inch (PRAU2366057 - EzLicence)</option>
+              <option value="N_A_SEZm_US2377020_1_1_qty_300_piece_Square_Business_Cards_2.5_Inch_x_2.5_Inch_(Inch)_Square_Standard_14_pt_Gloss_Finish_Front_and_Back_(SS)_Front_print_file.pdf">📄 Square Business Cards 2.5×2.5 Inch (US2377020)</option>
+              <option value="POLYESTER_FABRIC_Atla-US2382836_3_2_qty_Polyester_Fabric_Banners_2_x_6_(FT)_Single_Sided_Metal_Grommets_with_Stitched_Edges_(PO)_script_print_file.pdf">🎌 Polyester Fabric Banners 2×6 FT (US2382836)</option>
+              <option value="POLYESTER_FABRIC_Bann-AU2396585_1_1_qty_Fabric_Pop_Up_Counter_Display_-_Graphic_840_mm_x_840_mm_(MM)_(E)_print_file.pdf">🏪 Fabric Pop Up Counter 840×840 MM (AU2396585)</option>
+              <option value="PP_Material_Bannerstand_Material_Bann_US2400580_1(1)_2_qty_L_Banner_Stands_Graphic_2_Ft_x_5.33_Ft_(FT)_(E)_print_file.pdf">🖼️ L Banner Stands 2×5.33 FT (US2400580)</option>
+              <option value="PVC_FLEX_Atla-US2382836_1_1_qty_Custom_Vinyl_Banners_36_x_136_(Inch)_Single_Sided_Standard_Top_Pole_Pocket_(PO)_script_print_file.pdf">🎌 Custom Vinyl Banners 36×136 Inch (US2382836)</option>
+              <option value="PVC_FLEX_Bann-BS2311185_1_1_qty_Vinyl_Banners_6_x_3_(FT)_One_Side_Standard_Vinyl_(13_oz)_Yes_Lamination_Brass_Grommets_(MS)_script_print_file.pdf">🎌 Vinyl Banners 6×3 FT (BS2311185)</option>
+              <option value="PVC_FLEX_Bann-US2395381_1_1_qty_Outdoor_Banners_8_x_3_(FT)_Single_Sided_Metal_Grommets_Standard_(E)_script_print_file.pdf">🎌 Outdoor Banners 8×3 FT (US2395381)</option>
+              <option value="PVC_FLEX_Bann_US2382447_1_1_qty_Custom_Vinyl_Banners_4_x_3_(FT)_Single_Sided_Standard_Metal_Grommets_(P)_script_print_file.pdf">🎌 Custom Vinyl Banners 4×3 FT (US2382447)</option>
+              <option value="Poster_Paper_Bann_BS2311025_1_1_qty_Poster_Paper_18_x_24_(Inch)_(ES)_script_print_file.pdf">🪟 Poster Paper 18×24 Inch (BS2311025)</option>
+            </select>
+          </details>
+        </section>
+
+        <!-- Step 2 · Order details -->
+        <section class="lp-section">
+          <div class="lp-title"><span class="lp-step-num">2</span>Order Details<span class="lp-title-note">auto-filled from the file name</span></div>
           <div class="form-row">
             <div class="fg">
               <label class="fl" for="order-num">Order #</label>
@@ -179,69 +237,9 @@
           <div class="spec-box" id="spec-box"></div>
         </section>
 
-        <!-- Artwork Upload Zone & Production Sample Selector -->
+        <!-- Step 3 · Notes + run the pre-check -->
         <section class="lp-section">
-          <div style="margin-bottom:12px; background:#fff8f5; border:1px solid #fed7aa; border-radius:8px; padding:10px 12px;">
-            <label class="fl" for="example-file-select" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <span style="color:#c2410c; font-weight:800;">⚡ Test Real Production Filenames</span>
-              <span style="font-size:10px; color:#ea580c; font-weight:700; background:#ffedd5; padding:2px 6px; border-radius:4px;">30 Samples</span>
-            </label>
-            <select class="fs" id="example-file-select" onchange="loadExampleFilename(this.value)" style="font-size:11.5px; border-color:#fdba74; background:#ffffff;">
-              <option value="">— Choose a Real Production File —</option>
-              <option value="US2395878_Desk_Flags_Blade_5.51_x_17.71_(inch)_Single-Sided_1pc.jpg">🚩 Desk Flags Blade 5.51×17.71 Inch (US2395878)</option>
-              <option value="Flag_Fabric_Gian_US2395441_1_1_qty_Teardrop_Flags_2_x_7_(FT)_Teardrop_Flags_Pole_Sleeve_at_Left_Side_Single_Sided_(PO)_script_Front_print_file.pdf">🚩 Teardrop Flags 2×7 FT (US2395441)</option>
-              <option value="Flag_Fabric_Gian_US2396245_2_1_qty_Personalized_Flags_5_x_3_(FT)_Personalized_Flags_Metal_Grommets_at_Left_Side_Double_Sided_(PO)_script_Front_print_file.pdf">🚩 Personalized Flags 5×3 FT (US2396245)</option>
-              <option value="Flag_Fabric_Feat_US2395880_1_1_qty_Feather_Flags_2.5_x_8_(FT)_Feather_Flags_Pole_Sleeve_at_Left_Side_(P)_print_file.pdf">🚩 Feather Flags 2.5×8 FT (US2395880)</option>
-              <option value="Canvas_Bann-US2392457_1_1_qty_Canvas_Banners_2_x_3_(FT)_Metal_Grommets_(SS)_script_print_file.pdf">🎌 Canvas Banners 2×3 FT (US2392457)</option>
-              <option value="Corflute_Bann-BS2310454_1_1_qty_Die-Cut_Yard_Signs_48_x_32_(Inch)_Single_Side_Metal_Stakes_(ES)_print_file.pdf">🪟 Die-Cut Yard Signs 48×32 Inch (BS2310454)</option>
-              <option value="Round_Sign_US2394551_1_1_qty_Circle_Yard_Signs_24_x_24_(Inch)_Single_Sided_(ES)_print_file.pdf">⭕ Circle Yard Signs 24×24 Inch (US2394551)</option>
-              <option value="Roll_Up_Stand_US2399120_1_1_qty_Roll_Up_Banner_Stands_33_x_80_(Inch)_print_file.pdf">🖼️ Roll-Up Banner Stands 33×80 Inch (US2399120)</option>
-              <option value="Table_Cover_US2398912_1_1_qty_Custom_Table_Covers_8_ft_x_6_ft_(FT)_print_file.pdf">🪑 Custom Table Covers 8×6 FT (US2398912)</option>
-              <option value="Flag_Fabric_Bann_US2395340_1_1_qty_Rectangle_Flags_6_x_4_(FT)_Rectangle_Flags_Double_Sided_3_Pole_Pockets_at_Left_Side_(P)_front_script_print_file.pdf">🚩 Rectangle Flags 6×4 FT (US2395340)</option>
-              <option value="Knitted_Polyester_Fabric_Bann-BS2311027_1_50_qty_Hand_Flags_6_Inch_x_4_Inch_(Inch)_Hand_Flags_Single_(ES)_print_file.pdf">🚩 Hand Flags 6×4 Inch (BS2311027)</option>
-              <option value="Magnet_Bann_BS2312109_1_1_qty_Truck_Magnetic_Signs_15.75_x_52.5_(Inch)_UV_Print_(MS)_print_file.pdf">🪟 Truck Magnetic Signs 15.75×52.5 Inch (BS2312109)</option>
-              <option value="Magnet_Bann_PRAU2366057_1_1_qty_Vehicle_Magnetic_Signs_23.62_x_12.99_(Inch)_UV_Print_(MS)_print_file.pdf">🪟 Vehicle Magnetic Signs 23.62×12.99 Inch (PRAU2366057 - EzLicence)</option>
-              <option value="N_A_SEZm_US2377020_1_1_qty_300_piece_Square_Business_Cards_2.5_Inch_x_2.5_Inch_(Inch)_Square_Standard_14_pt_Gloss_Finish_Front_and_Back_(SS)_Front_print_file.pdf">📄 Square Business Cards 2.5×2.5 Inch (US2377020)</option>
-              <option value="POLYESTER_FABRIC_Atla-US2382836_3_2_qty_Polyester_Fabric_Banners_2_x_6_(FT)_Single_Sided_Metal_Grommets_with_Stitched_Edges_(PO)_script_print_file.pdf">🎌 Polyester Fabric Banners 2×6 FT (US2382836)</option>
-              <option value="POLYESTER_FABRIC_Bann-AU2396585_1_1_qty_Fabric_Pop_Up_Counter_Display_-_Graphic_840_mm_x_840_mm_(MM)_(E)_print_file.pdf">🏪 Fabric Pop Up Counter 840×840 MM (AU2396585)</option>
-              <option value="PP_Material_Bannerstand_Material_Bann_US2400580_1(1)_2_qty_L_Banner_Stands_Graphic_2_Ft_x_5.33_Ft_(FT)_(E)_print_file.pdf">🖼️ L Banner Stands 2×5.33 FT (US2400580)</option>
-              <option value="PVC_FLEX_Atla-US2382836_1_1_qty_Custom_Vinyl_Banners_36_x_136_(Inch)_Single_Sided_Standard_Top_Pole_Pocket_(PO)_script_print_file.pdf">🎌 Custom Vinyl Banners 36×136 Inch (US2382836)</option>
-              <option value="PVC_FLEX_Bann-BS2311185_1_1_qty_Vinyl_Banners_6_x_3_(FT)_One_Side_Standard_Vinyl_(13_oz)_Yes_Lamination_Brass_Grommets_(MS)_script_print_file.pdf">🎌 Vinyl Banners 6×3 FT (BS2311185)</option>
-              <option value="PVC_FLEX_Bann-US2395381_1_1_qty_Outdoor_Banners_8_x_3_(FT)_Single_Sided_Metal_Grommets_Standard_(E)_script_print_file.pdf">🎌 Outdoor Banners 8×3 FT (US2395381)</option>
-              <option value="PVC_FLEX_Bann_US2382447_1_1_qty_Custom_Vinyl_Banners_4_x_3_(FT)_Single_Sided_Standard_Metal_Grommets_(P)_script_print_file.pdf">🎌 Custom Vinyl Banners 4×3 FT (US2382447)</option>
-              <option value="Poster_Paper_Bann_BS2311025_1_1_qty_Poster_Paper_18_x_24_(Inch)_(ES)_script_print_file.pdf">🪟 Poster Paper 18×24 Inch (BS2311025)</option>
-            </select>
-          </div>
-
-          <div class="lp-title">Upload Customer Artwork</div>
-          <div class="upload-zone" id="upload-zone" onclick="triggerArtworkUpload()" ondragover="handleDragOver(event)" ondragenter="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" role="button" tabindex="0" title="Click or drag artwork file to upload" style="cursor: pointer;">
-            <span class="upload-icon">📁</span>
-            <div class="upload-text-main">Click or drag artwork here</div>
-            <div class="upload-text-sub">SVG · AI · EPS · PDF · JPG · PNG · TIFF · PSD</div>
-          </div>
-          <input type="file" class="hidden-input" id="file-input" onchange="onFileInputChange(event)" accept=".svg,.ai,.eps,.pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff,.psd,.bmp" />
-
-          <!-- Filename Auto-Detection Banner -->
-          <div class="fn-banner" id="fn-banner"></div>
-          <div class="fn-proof-note" id="fn-proof-note">
-            ⚠️ <strong>Proof render detected:</strong> This file appears to be a script export. Resolution check will be evaluated against production source.
-          </div>
-
-          <!-- Preview Card -->
-          <div class="preview-card" id="preview-card">
-            <div class="preview-thumb-wrap">
-              <img id="preview-img" class="preview-img" src="" alt="Thumbnail" />
-            </div>
-            <div class="preview-meta">
-              <div class="preview-name" id="preview-name">file_name.pdf</div>
-              <div class="preview-size" id="preview-size">0 KB</div>
-            </div>
-            <div class="preview-remove" onclick="removeFile()" title="Remove file">✕</div>
-          </div>
-        </section>
-
-        <!-- Pre-Check Trigger Button -->
-        <section class="lp-section">
+          <div class="lp-title"><span class="lp-step-num">3</span>Run the Pre-Check</div>
           <div class="fg">
             <label class="fl" for="notes">Special Production Notes</label>
             <input type="text" class="fi" id="notes" placeholder="Color code, pole pocket size, hem instructions…" />
@@ -596,11 +594,12 @@
   <script src="js/template_registry.js"></script>
   <script src="js/file_analyzer.js?v=20261009c"></script>
   <script src="js/artwork_text_check.js?v=20261009b"></script>
-  <script src="js/agentic_ai_inspector.js?v=20261010b"></script>
-  <script src="js/precheck_engine.js?v=20261010b"></script>
+  <script src="js/agentic_ai_inspector.js?v=20261014a"></script>
+  <script src="js/color_check.js?v=20261014b"></script>
+  <script src="js/precheck_engine.js?v=20261014a"></script>
   <script src="js/previous_orders.js"></script>
   <script src="js/canvas_inspector.js?v=20261010b"></script>
-  <script src="js/proof_studio.js?v=20261010c"></script>
-  <script src="js/app.js?v=20261010c"></script>
+  <script src="js/proof_studio.js?v=20261014b"></script>
+  <script src="js/app.js?v=20261014a"></script>
 </body>
 </html>

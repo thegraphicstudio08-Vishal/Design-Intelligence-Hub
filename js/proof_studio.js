@@ -22,6 +22,7 @@ const ProofStudio = {
   options: {
     printPreview: 'auto', // Proof 03 print preview screenshot: 'auto' (SOP: only for low resolution) / true / false
     showTemplate: 'auto', // Proof 02 template section: 'auto' (template-based products) / true / false
+    colourSection: 'auto', // Colour preview screen vs print: 'auto' (bright RGB / merge / opacity found) / true / false
     cropX: null,          // Default null -> dynamically centered based on product orientation
     cropY: null,          // Default null -> dynamically centered based on product orientation
     cropZoomManual: null, // Optional manual override, default null (uses SOP auto calculation)
@@ -202,7 +203,7 @@ const ProofStudio = {
    */
   _proofPlan(spec, analysis, artworkSrc) {
     const key = (artworkSrc || '').length + ':' + (artworkSrc || '').slice(-40);
-    if (this._planKey !== key) { this._planKey = key; this.options.printPreview = 'auto'; this.options.showTemplate = 'auto'; }
+    if (this._planKey !== key) { this._planKey = key; this.options.printPreview = 'auto'; this.options.showTemplate = 'auto'; this.options.colourSection = 'auto'; }
     const rep = (typeof appState !== 'undefined' && appState.report) ? appState.report : null;
     const pp = rep && Array.isArray(rep.checks) ? rep.checks.find(c => c.id === 'proofPlan') : null;
     const resConcern = pp && pp.resConcern ? pp.resConcern : null;
@@ -232,6 +233,12 @@ const ProofStudio = {
 
   setTemplateSection(on) {
     this.options.showTemplate = on;
+    this.refreshCurrentProof();
+  },
+
+  /** Designer switch for the colour preview section (screen RGB vs print CMYK); 'auto' follows the colour check */
+  setColourSection(on) {
+    this.options.colourSection = on;
     this.refreshCurrentProof();
   },
 
@@ -1021,7 +1028,7 @@ const ProofStudio = {
     // ── Proof sheet building blocks ──
     const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const NAVY = '#0e2246', ORANGE = '#ff5f1f', INK = '#111c38', MUTED = '#64748b', LINE = '#dbe2ea';
-    const proofTag = id => `<span style="display:inline-block; background:${NAVY}; color:#ffffff; font-size:9.5px; font-weight:800; letter-spacing:0.08em; padding:4px 8px; border-radius:3px; white-space:nowrap; flex-shrink:0;">PROOF ${id}</span>`;
+    const proofTag = id => `<span style="display:inline-block; background:${/^\d+$/.test(id) ? NAVY : '#EC008C'}; color:#ffffff; font-size:9.5px; font-weight:800; letter-spacing:0.08em; padding:4px 8px; border-radius:3px; white-space:nowrap; flex-shrink:0;">${/^\d+$/.test(id) ? 'PROOF ' + id : id}</span>`;
     const sub = (t, color, bold) => t ? `<div style="font-size:10.5px; color:${color || MUTED};${bold ? ' font-weight:700;' : ''} margin-top:1px; line-height:1.35;">${t}</div>` : '';
     const card = (id, title, subtitle, right, body) => `
         <div class="proof-card" style="border:1px solid ${LINE}; border-radius:6px; margin-bottom:12px; background:#ffffff; page-break-inside:avoid; break-inside:avoid; overflow:hidden;">
@@ -1075,6 +1082,24 @@ const ProofStudio = {
             <div style="position:absolute; right:8px; bottom:6px; font-size:9.5px; font-weight:700; color:${MUTED}; background:rgba(255,255,255,0.9); padding:2px 6px; border-radius:3px;">${esc(dimsDisplay)}</div>
           </div>`));
 
+    // ── Colour preview · screen (RGB) vs print (CMYK) — bright RGB colours, colours merging, opacity ──
+    const colourSrc = analysis?.previewDataUrl || realArtSrc;
+    const colourRes = (typeof ColorCheck !== 'undefined') ? ColorCheck.resultFor(colourSrc) : null;
+    const cv = this.options.colourSection;
+    const showColour = !!(colourRes && colourRes.ok) && (cv === 'auto' || cv === undefined ? colourRes.any : !!cv);
+    if (showColour) {
+      const notes = [];
+      if (colourRes.issues.gamut) notes.push('Some bright colours in your artwork (marked in pink) are brighter than printing inks can reproduce — they will print slightly duller, as shown on the right.');
+      if (colourRes.issues.merge) notes.push('The colours marked in orange become very similar in print and may blend into each other.');
+      if (colourRes.issues.opacity) notes.push('The areas marked in blue are semi-transparent — they print lighter and the material may show through.');
+      if (colourRes.issues.transparent) notes.push('Transparent areas of your artwork print as the white material.');
+      if (!notes.length) notes.push('Your colours print close to how they look on screen.');
+      sections.push(card('COLOUR', 'Colour Preview — Screen vs Print',
+        sub(notes.join(' '), colourRes.any ? '#9d174d' : MUTED, colourRes.any) + sub('Print colours show the CMYK conversion used for printing (U.S. Web Coated SWOP v2). Printed colours may vary slightly with the material and your screen.'),
+        rightGroup(smallBtn('Hide', 'ProofStudio.setColourSection(false)')),
+        ColorCheck.compareHtml(colourRes, colourSrc, { height: 190 }) + ColorCheck.swatchesHtml(colourRes)));
+    }
+
     // ── Proof 02 · Template based proof (template products) ──
     if (plan.showTemplate) {
       sections.push(card('02', 'Template Based Proof',
@@ -1126,6 +1151,7 @@ const ProofStudio = {
     // Designer shortcuts (never printed)
     const tools = [
       !plan.showTemplate ? smallBtn('+ Template &amp; mockup section', 'ProofStudio.setTemplateSection(true)') : '',
+      !showColour && colourRes && colourRes.ok ? smallBtn('+ Colour preview (screen vs print)', 'ProofStudio.setColourSection(true)') : '',
       !plan.showPrintPreview ? smallBtn('+ Print preview screenshot (print-quality concern)', 'ProofStudio.setPrintPreview(true)') : ''
     ].filter(Boolean).join('');
     const visualSectionsHtml = sections.join('') + (tools ? `<div class="no-print" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; margin:-4px 0 10px;">${tools}</div>` : '');

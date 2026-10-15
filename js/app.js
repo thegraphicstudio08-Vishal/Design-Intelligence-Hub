@@ -969,6 +969,9 @@ async function runPreCheck() {
       // the new report's live cards + pop-up alerts (orientation for this size, spelling)
       AgenticAiInspector.syncPrecheckReport();
     }
+
+    // 7. Colour check (RGB → CMYK, merge, opacity) on the real artwork pixels — updates its card when done
+    if (typeof ColorCheck !== 'undefined') ColorCheck.run(analysis && analysis.previewDataUrl);
   } catch (err) {
     console.error('Pre-check error:', err);
     alert('An error occurred during pre-check analysis: ' + err.message);
@@ -987,101 +990,12 @@ function renderResults(report, previousOrders) {
   const content = document.getElementById('results-content');
   content.style.display = 'flex';
 
-  const { overall, score, checks, analysis, spec, dimensions } = report;
-  const fails = checks.filter(c => c.status === 'FAIL' && !c.isOverridden).length;
-  const warns = checks.filter(c => c.status === 'WARNING' && !c.isOverridden).length;
-  const passes = checks.filter(c => c.status === 'PASS' || c.isOverridden).length;
+  const { spec, dimensions } = report;
+  appState.previousOrders = previousOrders;
+  if (typeof PrecheckEngine !== 'undefined' && PrecheckEngine.tally) PrecheckEngine.tally(report);
 
-  // Subnav Badges
-  const failBadge = document.getElementById('fail-badge');
-  const failTabBadge = document.getElementById('fail-tab-badge');
-  if (fails > 0) {
-    failBadge.textContent = fails;
-    failBadge.style.display = 'inline-block';
-    failTabBadge.textContent = fails;
-    failTabBadge.style.display = 'inline-block';
-  } else {
-    failBadge.style.display = 'none';
-    failTabBadge.style.display = 'none';
-  }
-
-  // 1. VECTOR "GOOD FOR PRINT" HERO BANNER
-  let vectorBannerHtml = '';
-  if (analysis.isVector) {
-    const isHybrid = !!analysis.embeddedRasterFound;
-    const heroTitle = isHybrid
-      ? 'Hybrid Vector + Raster Artwork Identified'
-      : 'Pure Vector Artwork Identified — Resolution Independent';
-    const heroDesc = isHybrid
-      ? `File format <strong>.${analysis.fileExt.toUpperCase()}</strong> contains scale-independent vector curves & text alongside ${analysis.embeddedRasterCount || 1} embedded raster graphic(s). Primary raster component is <strong>${analysis.pixelWidth}×${analysis.pixelHeight} px</strong> delivering <strong>${analysis.effectiveDpi} DPI</strong> (${analysis.colorSpace || 'DeviceCMYK'}).`
-      : `File format <strong>.${analysis.fileExt.toUpperCase()}</strong> is composed of mathematical geometric paths and curves. It will print 100% razor sharp at any scale with zero pixelation or degradation.`;
-
-    const heroSpecs = isHybrid
-      ? `
-        <span class="v-tag">✓ Vector Contours: Infinitely Scalable</span>
-        <span class="v-tag" style="background:#fff7ed; border-color:#fdba74; color:#c2410c; font-weight:700;">🖼️ Embedded Raster: ${analysis.pixelWidth}×${analysis.pixelHeight} px · ${analysis.effectiveDpi} DPI</span>
-        <span class="v-tag" style="background:#f1f5f9; border-color:#cbd5e1; color:#334155;">🎨 ${analysis.colorSpace || 'DeviceCMYK'} (${analysis.bitsPerComponent || 8}-bit)</span>
-      `
-      : `
-        <span class="v-tag">✓ Scale-Independent (Infinite DPI)</span>
-        <span class="v-tag">✓ Clean Contours</span>
-        <span class="v-tag">✓ Pure Vector Graphics</span>
-      `;
-
-    vectorBannerHtml = `
-      <div class="vector-hero-banner" style="${isHybrid ? 'border-left: 4px solid #ea580c;' : ''}">
-        <div class="vector-hero-icon">${isHybrid ? '⚡' : '⭐'}</div>
-        <div class="vector-hero-content">
-          <div class="vector-hero-badge">${isHybrid ? '⚡ Hybrid Vector & Raster Inspection' : '🌟 Good for Print Protocol'}</div>
-          <div class="vector-hero-title">${heroTitle}</div>
-          <div class="vector-hero-desc">${heroDesc}</div>
-          <div class="vector-hero-specs">${heroSpecs}</div>
-        </div>
-      </div>
-    `;
-  }
-
-  // 2. PREVIOUS ORDERS ALERT BANNER
-  let prevAlertHtml = '';
-  if (previousOrders && previousOrders.length > 0) {
-    const po = previousOrders[0];
-    prevAlertHtml = `
-      <div class="prev-alert-banner">
-        <div class="prev-alert-left">
-          <div class="prev-alert-icon">🔍</div>
-          <div>
-            <div class="prev-alert-title">Previous Relevant Order Found (${po.orderNum})</div>
-            <div class="prev-alert-desc">${po.approvalType} · Approved ${po.customerApprovedDate || po.date} · Match: ${po.artworkSimilarity}% Artwork, ${po.productSimilarity}% Product</div>
-          </div>
-        </div>
-        <button class="btn btn-sm btn-orange" onclick="switchTab('previous')">Review Previous Order →</button>
-      </div>
-    `;
-  }
-
-  // 3. SUMMARY CARD
-  const verdClass = overall === 'PASS' ? 'verd-pass' : overall === 'WARNING' ? 'verd-warning' : 'verd-fail';
-  const scoreClass = overall.toLowerCase();
-
-  document.getElementById('summary-card').innerHTML = `
-    ${vectorBannerHtml}
-    ${prevAlertHtml}
-    <div class="summary-top">
-      <div class="summary-score-block">
-        <div class="score-num ${scoreClass}">${score}</div>
-        <div class="score-label">SOP Quality Score</div>
-      </div>
-      <div class="summary-chips">
-        <div class="chip chip-pass"><span class="chip-dot"></span>${passes} Passed</div>
-        <div class="chip chip-warn"><span class="chip-dot"></span>${warns} Warning${warns !== 1 ? 's' : ''}</div>
-        <div class="chip chip-fail"><span class="chip-dot"></span>${fails} Critical</div>
-      </div>
-      <div class="summary-verdict ${verdClass}">${overall}</div>
-    </div>
-    <div class="summary-meta">
-      Order <strong>#${appState.orderNum || 'US-DRAFT'}</strong> · Customer: <strong>${appState.customerName || 'Customer'}</strong> · Product: <strong>${spec.name}</strong> · Size: <strong>${dimensions.widthIn}" × ${dimensions.heightIn}"</strong> · Checked: <strong>${new Date().toLocaleTimeString()}</strong>
-    </div>
-  `;
+  // 1. SUMMARY CARD — score, Passed / Critical, the issues to fix
+  renderSummaryCard(report);
 
   // Resolve official BannerBuzz template & mockup from QNAP registry (using product name and dimensions)
   const officialTemplate = (typeof getOfficialProductTemplate === 'function')
@@ -1091,8 +1005,11 @@ function renderResults(report, previousOrders) {
     ? getOfficialProductMockup(spec?.slug || spec?.name, dimensions || appState.userDims)
     : null;
 
-  // 4. CHECKS LIST
+  // 2. CHECKS (results first: Critical · Passed · Confirm by eye), then the canvas and the AI scanner
   document.getElementById('rt-checks').innerHTML = `
+    <!-- SOP Pre-Check Evaluation Cards -->
+    <div class="checks-list" id="checks-list">${checksListHtml(report)}</div>
+
     <!-- Interactive Canvas Visual Inspector Card -->
     <div class="visual-inspector-card">
       <div class="vi-toolbar">
@@ -1153,11 +1070,6 @@ function renderResults(report, previousOrders) {
     <div id="ai-inspector-panel-container">
       ${(typeof AgenticAiInspector !== 'undefined') ? AgenticAiInspector.renderAuditPanel() : ''}
     </div>
-
-    <!-- SOP Pre-Check Evaluation Cards -->
-    <div class="checks-list">
-      ${checks.map(c => renderCheckCard(c)).join('')}
-    </div>
   `;
 
   // 5. PREVIOUS ORDERS TAB
@@ -1170,20 +1082,188 @@ function renderResults(report, previousOrders) {
   switchTab('checks');
 }
 
+/** Re-score and redraw the summary and the check list (after a background check finishes) */
+function refreshPrecheckView(report) {
+  if (!report) return;
+  if (typeof PrecheckEngine !== 'undefined' && PrecheckEngine.tally) PrecheckEngine.tally(report);
+  renderSummaryCard(report);
+  renderChecksList(report);
+}
+
+function updateFailBadges(fails) {
+  const failBadge = document.getElementById('fail-badge');
+  const failTabBadge = document.getElementById('fail-tab-badge');
+  [failBadge, failTabBadge].forEach(b => {
+    if (!b) return;
+    b.textContent = fails;
+    b.style.display = fails > 0 ? 'inline-block' : 'none';
+  });
+}
+
+/**
+ * Summary card: SOP Quality Score with two results only — Passed and Critical (team request, Oct 2026) — the
+ * critical issues as a "fix before proofing" list that jumps to each card, and the next step.
+ */
+function renderSummaryCard(report) {
+  const card = document.getElementById('summary-card');
+  if (!card) return;
+  const { overall, score, checks, analysis, spec, dimensions } = report;
+  const counts = report.counts || { passes: 0, fails: 0, manual: 0 };
+  updateFailBadges(counts.fails);
+
+  // VECTOR "GOOD FOR PRINT" HERO BANNER
+  let vectorBannerHtml = '';
+  if (analysis.isVector) {
+    const isHybrid = !!analysis.embeddedRasterFound;
+    const heroTitle = isHybrid
+      ? 'Hybrid Vector + Raster Artwork Identified'
+      : 'Pure Vector Artwork Identified — Resolution Independent';
+    const heroDesc = isHybrid
+      ? `File format <strong>.${analysis.fileExt.toUpperCase()}</strong> contains scale-independent vector curves & text alongside ${analysis.embeddedRasterCount || 1} embedded raster graphic(s). Primary raster component is <strong>${analysis.pixelWidth}×${analysis.pixelHeight} px</strong> delivering <strong>${analysis.effectiveDpi} DPI</strong> (${analysis.colorSpace || 'DeviceCMYK'}).`
+      : `File format <strong>.${analysis.fileExt.toUpperCase()}</strong> is composed of mathematical geometric paths and curves. It will print 100% razor sharp at any scale with zero pixelation or degradation.`;
+    const heroSpecs = isHybrid
+      ? `
+        <span class="v-tag">✓ Vector Contours: Infinitely Scalable</span>
+        <span class="v-tag" style="background:#fff7ed; border-color:#fdba74; color:#c2410c; font-weight:700;">🖼️ Embedded Raster: ${analysis.pixelWidth}×${analysis.pixelHeight} px · ${analysis.effectiveDpi} DPI</span>
+        <span class="v-tag" style="background:#f1f5f9; border-color:#cbd5e1; color:#334155;">🎨 ${analysis.colorSpace || 'DeviceCMYK'} (${analysis.bitsPerComponent || 8}-bit)</span>
+      `
+      : `
+        <span class="v-tag">✓ Scale-Independent (Infinite DPI)</span>
+        <span class="v-tag">✓ Clean Contours</span>
+        <span class="v-tag">✓ Pure Vector Graphics</span>
+      `;
+    vectorBannerHtml = `
+      <div class="vector-hero-banner" style="${isHybrid ? 'border-left: 4px solid #ea580c;' : ''}">
+        <div class="vector-hero-icon">${isHybrid ? '⚡' : '⭐'}</div>
+        <div class="vector-hero-content">
+          <div class="vector-hero-badge">${isHybrid ? '⚡ Hybrid Vector & Raster Inspection' : '🌟 Good for Print Protocol'}</div>
+          <div class="vector-hero-title">${heroTitle}</div>
+          <div class="vector-hero-desc">${heroDesc}</div>
+          <div class="vector-hero-specs">${heroSpecs}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // PREVIOUS ORDERS ALERT BANNER
+  const previousOrders = appState.previousOrders;
+  let prevAlertHtml = '';
+  if (previousOrders && previousOrders.length > 0) {
+    const po = previousOrders[0];
+    prevAlertHtml = `
+      <div class="prev-alert-banner">
+        <div class="prev-alert-left">
+          <div class="prev-alert-icon">🔍</div>
+          <div>
+            <div class="prev-alert-title">Previous Relevant Order Found (${po.orderNum})</div>
+            <div class="prev-alert-desc">${po.approvalType} · Approved ${po.customerApprovedDate || po.date} · Match: ${po.artworkSimilarity}% Artwork, ${po.productSimilarity}% Product</div>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-orange" onclick="switchTab('previous')">Review Previous Order →</button>
+      </div>
+    `;
+  }
+
+  // The critical issues, each jumping to its card
+  const plain = html => String(html || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const short = t => (t.length > 120 ? t.slice(0, 117) + '…' : t);
+  const crit = checks.filter(c => c.status === 'FAIL' && !c.isOverridden);
+  const issuesHtml = crit.length ? `
+    <div class="summary-issues">
+      <div class="si-head">Fix before proofing</div>
+      ${crit.map(c => `
+        <button type="button" class="si-item" onclick="focusCheck('${c.id}')">
+          <span class="si-icon">${c.icon}</span>
+          <span class="si-text"><strong>${c.name}</strong><span>${esc(short(plain(c.found)))}</span></span>
+          <span class="si-go">View ›</span>
+        </button>`).join('')}
+    </div>` : `
+    <div class="summary-ready">✓ No critical issues — the artwork is ready for the customer proof.</div>`;
+
+  card.innerHTML = `
+    ${vectorBannerHtml}
+    ${prevAlertHtml}
+    <div class="summary-top">
+      <div class="summary-score-block">
+        <div class="score-num ${overall.toLowerCase()}">${score}</div>
+        <div class="score-label">SOP Quality Score</div>
+      </div>
+      <div class="summary-chips">
+        <div class="chip chip-pass"><span class="chip-dot"></span>${counts.passes} Passed</div>
+        <div class="chip chip-fail"><span class="chip-dot"></span>${counts.fails} Critical</div>
+      </div>
+      <div class="summary-verdict ${overall === 'PASS' ? 'verd-pass' : 'verd-fail'}">${overall}</div>
+    </div>
+    ${issuesHtml}
+    <div class="summary-meta">
+      <span>Order <strong>#${appState.orderNum || 'US-DRAFT'}</strong> · Customer: <strong>${appState.customerName || 'Customer'}</strong> · Product: <strong>${spec.name}</strong> · Size: <strong>${dimensions.widthIn}" × ${dimensions.heightIn}"</strong> · Checked: <strong>${new Date().toLocaleTimeString()}</strong></span>
+      <span class="summary-actions">
+        ${counts.manual ? `<button type="button" class="summary-link" onclick="focusCheck('manual-group')">${counts.manual} to confirm by eye ›</button>` : ''}
+        <button type="button" class="btn btn-orange btn-sm" onclick="setSubnav(document.querySelectorAll('.subnav-item')[2], 'proof')">Create proof ›</button>
+      </span>
+    </div>
+  `;
+}
+
+/** The check cards, grouped: Critical (fix first) · Passed · Confirm by eye (not scored, folded) */
+function checksListHtml(report) {
+  const checks = report.checks || [];
+  const crit = checks.filter(c => c.status === 'FAIL' && !c.isOverridden);
+  const passed = checks.filter(c => c.status === 'PASS' || c.isOverridden);
+  const manual = checks.filter(c => c.status === 'INFO' && !c.isOverridden);
+  const group = (cls, title, list, note) => list.length ? `
+    <div class="checks-group ${cls}">
+      <div class="checks-group-head"><span class="cg-dot"></span>${title}<span class="cg-count">${list.length}</span>${note ? `<span class="cg-note">${note}</span>` : ''}</div>
+      ${list.map(renderCheckCard).join('')}
+    </div>` : '';
+  return group('critical', 'Critical', crit, 'fix before proofing')
+    + group('passed', 'Passed', passed, '')
+    + (manual.length ? `
+    <details class="checks-group manual" id="cg-manual-group"${appState.manualGroupOpen ? ' open' : ''} ontoggle="appState.manualGroupOpen = this.open">
+      <summary class="checks-group-head"><span class="cg-dot"></span>Confirm by eye<span class="cg-count">${manual.length}</span><span class="cg-note">not scored — the tool cannot decide these alone</span></summary>
+      ${manual.map(renderCheckCard).join('')}
+    </details>` : '');
+}
+
+function renderChecksList(report) {
+  const el = document.getElementById('checks-list');
+  if (!el) return;
+  const open = [...el.querySelectorAll('.check-card.open')].map(c => c.id);
+  el.innerHTML = checksListHtml(report);
+  open.forEach(id => { const c = document.getElementById(id); if (c) c.classList.add('open'); });
+}
+
+/** Jump to a check card (from the summary), open it and flash it */
+function focusCheck(id) {
+  switchTab('checks');
+  if (id === 'manual-group') {
+    const g = document.getElementById('cg-manual-group');
+    if (g) { g.open = true; g.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    return;
+  }
+  const card = document.getElementById(`cc-${id}`);
+  if (!card) return;
+  const group = card.closest('details');
+  if (group) group.open = true;
+  card.classList.add('open', 'flash');
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => card.classList.remove('flash'), 1600);
+}
+
 function renderCheckCard(c) {
-  const stClass = c.isOverridden ? 'overridden' : c.status.toLowerCase();
-  const pillClass = c.isOverridden ? 'overridden' : c.status.toLowerCase();
-  const pillLabel = c.isOverridden ? 'OVERRIDDEN' : c.status;
+  const st = c.isOverridden ? 'overridden' : ({ PASS: 'pass', FAIL: 'fail', INFO: 'info' }[c.status] || 'info');
+  const pillLabel = c.isOverridden ? 'OVERRIDDEN' : ({ PASS: 'PASSED', FAIL: 'CRITICAL', INFO: 'CONFIRM' }[c.status] || c.status);
 
   return `
-    <div class="check-card ${stClass}" id="cc-${c.id}">
+    <div class="check-card ${st}" id="cc-${c.id}">
       <div class="check-header" onclick="toggleCheckCard('${c.id}')">
         <span class="check-icon">${c.icon}</span>
         <span class="check-name">
           ${c.name}
           ${c.isOverridden ? '<span class="override-tag">OVERRIDDEN</span>' : ''}
         </span>
-        <span class="check-pill pill-${pillClass}">${pillLabel}</span>
+        <span class="check-pill pill-${st}">${pillLabel}</span>
         <span class="check-chevron" id="chev-${c.id}">▾</span>
       </div>
       <div class="check-body" id="cb-${c.id}">
@@ -1191,12 +1271,18 @@ function renderCheckCard(c) {
         ${c.required ? `<div class="check-detail-row"><span class="cdl">SOP Target:</span><span class="cdv">${c.required}</span></div>` : ''}
         <div class="check-detail-row"><span class="cdl">Analysis:</span><span class="cdv detail">${c.detail}</span></div>
         ${c.action ? `<div class="check-detail-row"><span class="cdl">Action:</span><span class="cdv action">→ ${c.action}</span></div>` : ''}
+        ${c.visual ? `<div class="check-visual">${c.visual}</div>` : ''}
         ${c.isOverridden ? `<div class="check-detail-row"><span class="cdl">Reason:</span><span class="cdv" style="color:#7048e8;">${c.overrideReason}</span></div>` : ''}
-        
-        ${c.status !== 'PASS' && !c.isOverridden ? `
+
+        ${c.status === 'FAIL' && !c.isOverridden ? `
           <div class="check-actions">
             <button class="cta-btn cta-fixed" onclick="markCheckFixed('${c.id}')">✓ Mark Corrected</button>
-            <button class="cta-btn cta-override" onclick="openOverrideModal('${c.id}', '${c.name}')">Override with Reason…</button>
+            <button class="cta-btn cta-override" onclick="openOverrideModal('${c.id}', '${c.name.replace(/'/g, '')}')">Override with Reason…</button>
+          </div>
+        ` : ''}
+        ${c.status === 'INFO' && !c.isOverridden ? `
+          <div class="check-actions">
+            <button class="cta-btn cta-fixed" onclick="confirmCheck('${c.id}')">✓ Checked by eye</button>
           </div>
         ` : ''}
       </div>
@@ -1211,6 +1297,12 @@ function toggleCheckCard(id) {
 
 function markCheckFixed(id) {
   appState.overrides[id] = 'Designer confirmed file was corrected and validated.';
+  runPreCheck();
+}
+
+/** A "Confirm by eye" item the designer has looked at: counted as passed, with the reason logged */
+function confirmCheck(id) {
+  appState.overrides[id] = 'Designer checked this by eye and confirmed it.';
   runPreCheck();
 }
 

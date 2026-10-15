@@ -825,16 +825,16 @@ const AgenticAiInspector = {
   getSpellingSummary() {
     const st = this.textState || {};
     if (this.scanSkipReason) {
-      return { status: 'WARNING', found: 'Manual proofreading needed',
+      return { status: 'WARNING', manual: true, found: 'Manual proofreading needed',
         detail: 'The artwork pixels could not be read in the browser, so its text was not checked automatically.',
         action: 'Proofread names, phone numbers, web addresses and dates before creating the design file.' };
     }
     if (!this.textResult) {
       if (st.status === 'unavailable') {
-        return { status: 'WARNING', found: 'Text reader unavailable — proofread manually', detail: st.text,
+        return { status: 'WARNING', manual: true, found: 'Text reader unavailable — proofread manually', detail: st.text,
           action: 'Proofread names, phone numbers, web addresses and dates.' };
       }
-      return { status: 'WARNING', found: st.text || 'Waiting for the artwork…',
+      return { status: 'WARNING', manual: true, found: st.text || 'Waiting for the artwork…',
         detail: 'The text on the artwork is read automatically (OCR) and checked against US and UK English dictionaries, brand names and web-address endings.',
         action: '' };
     }
@@ -853,18 +853,18 @@ const AgenticAiInspector = {
         + (open.length > 8 ? ` +${open.length - 8} more` : '');
       // A word that is not in the dictionary but one or two letters from a real word is a spelling
       // mistake the customer must fix or confirm — the check fails until it is resolved
-      return { status: 'FAIL',
+      return { status: 'FAIL', manual: false,
         found: `${open.length} spelling mistake${open.length > 1 ? 's' : ''} found: ${list}`, detail: base,
         action: 'Click the marked words on the canvas. Ask the customer to confirm or correct them before creating the design file.' };
     }
     if (nWords < 3) {
       const readWords = this.textResult.words.filter(w => w.conf >= this.MIN_TEXT_CONF && /[A-Za-z]{2,}/.test(w.text)).map(w => w.text);
-      return { status: 'WARNING',
+      return { status: 'WARNING', manual: true,
         found: readWords.length ? `Only ${readWords.length} word${readWords.length > 1 ? 's' : ''} could be read clearly (${readWords.join(', ')}) — proofread the rest by eye` : 'No text could be read clearly — proofread manually',
         detail: base,
         action: 'Arched, script, very large/small or photo lettering cannot be read reliably by OCR. Proofread the artwork by eye.' };
     }
-    return { status: verify ? 'WARNING' : 'PASS',
+    return { status: verify ? 'WARNING' : 'PASS', manual: true,
       found: `No spelling mistakes found${reviewed ? ` · ${reviewed} reviewed by designer` : ''}${verify ? ` · ${verify} name${verify > 1 ? 's' : ''} to verify` : ''}`,
       detail: base, action: verify ? 'Check the spelling of the listed names against the order / customer details.' : '' };
   },
@@ -979,7 +979,7 @@ const AgenticAiInspector = {
 
     if (!r && !this.scanSkipReason) {
       return {
-        status: 'WARNING',
+        status: 'WARNING', manual: true,
         found: 'Scanning artwork…',
         detail: 'The stray line & dot scan runs as soon as the artwork is drawn on the canvas.',
         action: ''
@@ -987,7 +987,7 @@ const AgenticAiInspector = {
     }
     if (this.scanSkipReason) {
       return {
-        status: 'WARNING',
+        status: 'WARNING', manual: true,
         found: `Manual check needed${typos.length ? ' · ' + parts.join(', ') : ''}`,
         detail: this.scanSkipReason,
         action: 'Inspect the artwork at 100% zoom for stray lines, dots and smudges before creating the design file.'
@@ -1003,7 +1003,7 @@ const AgenticAiInspector = {
 
     if (parts.length) {
       return {
-        status: hasFatal ? 'FAIL' : 'WARNING',
+        status: hasFatal ? 'FAIL' : 'WARNING', manual: false,   // stray marks found → Critical
         found: `${parts.join(', ')} · checked ${r.checkedPct}% of the artwork${closedNote}`,
         detail: coverage + patternNote,
         action: 'Click a marker on the canvas (or 🎯 Locate) to zoom in. Remove real marks, or mark them intentional.'
@@ -1012,7 +1012,7 @@ const AgenticAiInspector = {
     }
     if (r.checkedPct < 40) {
       return {
-        status: 'WARNING',
+        status: 'WARNING', manual: true,
         found: reviewed
           ? `All findings reviewed by designer (${reviewed}) · photo areas need a visual check`
           : `No stray marks in the checked area (${r.checkedPct}%) · photo areas need a visual check`,
@@ -1021,7 +1021,7 @@ const AgenticAiInspector = {
       };
     }
     return {
-      status: 'PASS',
+      status: 'PASS', manual: false,
       found: reviewed
         ? `All findings reviewed by designer (${reviewed}) · checked ${r.checkedPct}% of the artwork`
         : `No stray lines or dots found · checked ${r.checkedPct}% of the artwork`,
@@ -1046,47 +1046,14 @@ const AgenticAiInspector = {
     Object.entries(updates).forEach(([id, summary]) => {
       const check = report.checks.find(c => c.id === id);
       if (!check) return;
+      delete check.manual;              // each summary states whether it is only a manual look
       Object.assign(check, summary);
-      // Re-render the card with the app's own template, keeping it open if the designer opened it
-      const cardEl = document.getElementById(`cc-${id}`);
-      if (cardEl && typeof renderCheckCard === 'function') {
-        const wasOpen = cardEl.classList.contains('open');
-        cardEl.outerHTML = renderCheckCard(check);
-        if (wasOpen) { const again = document.getElementById(`cc-${id}`); if (again) again.classList.add('open'); }
-      }
     });
-    this._refreshSummaryCard(report);
+    // Same scoring and layout as the first render: Critical / Passed / Confirm by eye
+    if (typeof refreshPrecheckView === 'function') refreshPrecheckView(report);
+    else if (typeof PrecheckEngine !== 'undefined' && PrecheckEngine.tally) PrecheckEngine.tally(report);
     this._renderSpellingAlert(false);   // keep an open alert in step with closed / intentional findings
     this._renderOrientationAlert();      // landscape artwork on a vertical order (or the reverse), turned text
-  },
-
-  /** Recount pass / warning / fail after the scan (same scoring as PrecheckEngine.evaluate). */
-  _refreshSummaryCard(report) {
-    const checks = report.checks;
-    const fails = checks.filter(c => c.status === 'FAIL' && !c.isOverridden).length;
-    const warns = checks.filter(c => c.status === 'WARNING' && !c.isOverridden).length;
-    const passes = checks.filter(c => c.status === 'PASS' || c.isOverridden).length;
-    let score = Math.max(0, 100 - fails * 20 - warns * 5);
-    if (report.analysis && report.analysis.isVector) score = Math.min(100, score + 5);
-    const overall = fails > 0 ? 'FAIL' : warns > 3 ? 'WARNING' : 'PASS';
-    Object.assign(report, { score, overall });
-
-    const card = document.getElementById('summary-card');
-    if (!card) return;
-    const scoreEl = card.querySelector('.score-num');
-    if (scoreEl) { scoreEl.textContent = score; scoreEl.className = `score-num ${overall.toLowerCase()}`; }
-    const chips = card.querySelector('.summary-chips');
-    if (chips) {
-      chips.innerHTML = `
-        <div class="chip chip-pass"><span class="chip-dot"></span>${passes} Passed</div>
-        <div class="chip chip-warn"><span class="chip-dot"></span>${warns} Warning${warns !== 1 ? 's' : ''}</div>
-        <div class="chip chip-fail"><span class="chip-dot"></span>${fails} Critical</div>`;
-    }
-    const verdict = card.querySelector('.summary-verdict');
-    if (verdict) {
-      verdict.textContent = overall;
-      verdict.className = `summary-verdict ${overall === 'PASS' ? 'verd-pass' : overall === 'WARNING' ? 'verd-warning' : 'verd-fail'}`;
-    }
   },
 
   /**

@@ -52,7 +52,7 @@ const PrecheckEngine = {
       };
     }
     if (!art || art === 'Unknown') {
-      return { status: 'WARNING', found, required,
+      return { status: 'WARNING', manual: true, found, required,
         detail: 'The artwork size could not be read, so its orientation cannot be compared with the order automatically.',
         action: `Confirm the artwork is ${order.toLowerCase()} (${printW}" W × ${printH}" H) and the text is upright.` };
     }
@@ -73,12 +73,12 @@ const PrecheckEngine = {
           { widthIn: printW, heightIn: printH }, sop && sop.canvas && sop.canvas.finishing, analysis.fileExt)
       : null;
     if (pl && pl.kind === 'turned') {
-      return { status: 'WARNING', scenario: 'turned', found, required,
+      return { status: 'WARNING', manual: false, scenario: 'turned', found, required,
         detail: `The artwork is the ordered size turned: artwork ${art.toLowerCase()}, order ${order.toLowerCase()} ${printW}" W × ${printH}" H. ${SopRules.SOURCES.placement}, case ${pl.cases}${pl.finishingConcern ? ' — the pole pocket / wind flap position changes with the orientation, so the customer must confirm the finishing' : ''}. Status: ${pl.status}.`,
         action: pl.action };
     }
     if (pl) {
-      return { status: 'WARNING', scenario: 'otherSize', found, required,
+      return { status: 'WARNING', manual: false, scenario: 'otherSize', found, required,
         detail: `Orientation mismatch: the artwork is ${art.toLowerCase()} but the order is ${order.toLowerCase()} (${printW}" W × ${printH}" H), and the artwork is not the ordered size turned. ${SopRules.SOURCES.placement}, case ${pl.cases}: proof in the ordered orientation, customer approval required. Status: ${pl.status}.`,
         action: pl.action };
     }
@@ -98,7 +98,7 @@ const PrecheckEngine = {
     const base = { id: 'finishing', name: 'Finishing (grommets · pole pockets · hems)', icon: '🪢',
       required: 'As the file name states — SOP grommet table (count per side by length), pole pocket +5.25" on the stated side(s), hem +1.25" only when the name says hemmed / stitched / welded edges' };
     if (!fin || !fin.found) {
-      return Object.assign(base, { status: 'WARNING',
+      return Object.assign(base, { status: 'WARNING', manual: true,
         found: 'No grommets / pole pockets / hems in the file name',
         detail: 'The production file name does not say how this banner is finished, so grommet marks, pole pockets and hems cannot be placed automatically.',
         action: 'Confirm the finishing from the order (admin) and set it in Finishing & Hardware Details.' });
@@ -128,7 +128,7 @@ const PrecheckEngine = {
     const unsure = fin.pockets && fin.pockets.sides.length === 0;
     const fromName = fin.source === 'filename';
     return Object.assign(base, {
-      status: unsure || !fromName ? 'WARNING' : 'PASS',
+      status: unsure || !fromName ? 'WARNING' : 'PASS', manual: true,   // confirm the finishing from the order
       found: `${fromName ? 'File name' : 'Finishing options (not in file name)'}: "${fin.words.join(' · ')}" → ${SopRules.describeFinishing(fin, lay)}`,
       detail: rows.join(' '),
       action: unsure ? 'Check the order for the pole pocket side before creating the file.'
@@ -263,7 +263,7 @@ const PrecheckEngine = {
         id: 'sizeTransform',
         name: 'Size Transform to Order',
         icon: '📐',
-        status: 'WARNING',
+        status: 'WARNING', manual: true,
         found: `${ext} Document — resolution not measurable in browser`,
         required: `${reqTol} · Target ${sop?.resolution?.target || reqDpi} PPI · Canvas ${canvasTxt}`,
         detail: analysis.embeddedRasterFound
@@ -276,7 +276,7 @@ const PrecheckEngine = {
     // ──────────────────────────────────────────────────────────────────────────
     // CHECKPOINT 1: Vector Artwork & "Good for Print" Protocol
     // ──────────────────────────────────────────────────────────────────────────
-    let vStatus = 'PASS', vFound = '', vDetail = '', vAction = '';
+    let vStatus = 'PASS', vFound = '', vDetail = '', vAction = '', vManual = false;
     if (analysis.isVector) {
       if (analysis.embeddedRasterFound) {
         // Hybrid Vector Artwork with embedded inside raster graphics
@@ -310,7 +310,7 @@ const PrecheckEngine = {
         vFound = `Raster (${analysis.effectiveDpi} DPI)`;
         vDetail = `GOOD FOR PRINT: ${analysis.goodForPrintReason}`;
       } else if (!analysis.effectiveDpi) {
-        vStatus = 'WARNING';
+        vStatus = 'WARNING'; vManual = true;
         vFound = `${ext} — resolution not readable`;
         vDetail = analysis.goodForPrintReason || 'Pixel size could not be read in the browser.';
         vAction = `Check the image size in Photoshop: needs ${reqDpi} ppi at ${printW}"×${printH}".`;
@@ -331,6 +331,7 @@ const PrecheckEngine = {
       name: 'Print Suitability ("Good for Print")',
       icon: analysis.isVector ? '⭐' : '🖨️',
       status: vStatus,
+      manual: vManual,
       found: vFound,
       required: analysis.isVector ? 'Vector Format (Preferred)' : `${spec.resolution} @ ${printW}"×${printH}"`,
       detail: vDetail,
@@ -355,13 +356,14 @@ const PrecheckEngine = {
       : (analysis.aiDefects || []);
     const qa = (typeof AgenticAiInspector !== 'undefined')
       ? AgenticAiInspector.getCheckSummary()
-      : { status: 'WARNING', found: 'Not checked', detail: 'Artwork QA scanner not loaded.', action: 'Inspect the artwork at 100% zoom.' };
+      : { status: 'WARNING', manual: true, found: 'Not checked', detail: 'Artwork QA scanner not loaded.', action: 'Inspect the artwork at 100% zoom.' };
 
     checks.push({
       id: 'linesAndDots',
       name: 'Lines & Dots (stray marks) · Spelling',
       icon: '🔍',
       status: qa.status,
+      manual: !!qa.manual,
       found: qa.found,
       required: 'No unwanted lines, dots or smudges on the artwork',
       detail: qa.detail,
@@ -407,17 +409,14 @@ const PrecheckEngine = {
     if (pp) checks.push(pp);
 
     // ──────────────────────────────────────────────────────────────────────────
-    // CHECKPOINT 8: Color Mode & Profile (SWOP v2)
+    // CHECKPOINT 8: Colour — RGB → CMYK (neon / bright colours), colours merging in print, opacity
     // ──────────────────────────────────────────────────────────────────────────
-    checks.push({
-      id: 'colorMode',
-      name: 'Color Mode & Profile',
-      icon: '🎨',
-      status: 'WARNING',
-      found: 'Browser Upload (RGB Preview)',
-      required: spec.colorMode || 'CMYK (8-bit) · Working SWOP v2',
-      detail: `SOP PS Settings: Print production requires CMYK (8-bit) with color profile 'Working CMYK: U.S. Web Coated (SWOP) v2'.`,
-      action: 'Confirm document is in CMYK mode in Photoshop/Illustrator. Note that vibrant RGB neon greens or electric blues may shift darker in CMYK.'
+    // The pixel analysis runs in the background (ColorCheck.run); until it is done the card says "checking"
+    checks.push((typeof ColorCheck !== 'undefined') ? ColorCheck.check(analysis) : {
+      id: 'colorMode', name: 'Colour: RGB → CMYK · Merge · Opacity', icon: '🎨', status: 'WARNING', manual: true,
+      found: 'Not checked automatically', required: 'CMYK (8-bit) · U.S. Web Coated (SWOP) v2',
+      detail: `SOP PS Settings: print production requires CMYK (8-bit) with colour profile 'Working CMYK: U.S. Web Coated (SWOP) v2'.`,
+      action: 'In Photoshop / Illustrator: View › Gamut Warning with SWOP v2 — bright RGB greens and blues print duller in CMYK.'
     });
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -445,7 +444,7 @@ const PrecheckEngine = {
       required: 'No spelling mistakes; correct brand names and web / e-mail addresses'
     }, (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector.getSpellingSummary)
       ? AgenticAiInspector.getSpellingSummary()
-      : { status: 'WARNING', found: 'Manual review required', detail: 'Proofread names, phone numbers, web addresses and dates.', action: '' }));
+      : { status: 'WARNING', manual: true, found: 'Manual review required', detail: 'Proofread names, phone numbers, web addresses and dates.', action: '' }));
 
     // Apply designer overrides
     checks.forEach(c => {
@@ -455,31 +454,45 @@ const PrecheckEngine = {
       }
     });
 
-    // Calculate score
-    const fails = checks.filter(c => c.status === 'FAIL' && !c.isOverridden).length;
-    const warns = checks.filter(c => c.status === 'WARNING' && !c.isOverridden).length;
-    const passes = checks.filter(c => c.status === 'PASS' || c.isOverridden).length;
-
-    let score = Math.max(0, 100 - (fails * 20) - (warns * 5));
-    if (analysis.isVector) score = Math.min(100, score + 5);
-
-    const overall = fails > 0 ? 'FAIL' : warns > 3 ? 'WARNING' : 'PASS';
-    const summary = fails > 0
-      ? `${fails} critical issue(s) detected. Artwork must be corrected before production.`
-      : warns > 0
-        ? `${warns} item(s) flagged for designer verification before production.`
-        : 'All automated SOP checkpoints passed. Artwork is ready for customer proofing and production.';
-
-    return {
+    const report = {
       productName: spec.name,
-      overall,
-      score,
-      summary,
       checks,
       analysis,
       spec,
       dimensions: { widthIn: printW, heightIn: printH }
     };
+    this.tally(report);
+    return report;
+  },
+
+  /**
+   * The SOP Quality Score has two results only (team request, Oct 2026): Passed or Critical.
+   *  · an issue the tool found → Critical
+   *  · something the tool cannot decide alone — a look by eye (safe area, bleed, font size), a reading still
+   *    running, a reminder, the proof guide — → "Confirm by eye": listed separately, never scored
+   */
+  MANUAL_ALWAYS: ['safeArea', 'bleed', 'fontSizes', 'proofPlan'],
+
+  settle(check) {
+    if (this.MANUAL_ALWAYS.includes(check.id)) check.status = 'INFO';
+    else if (check.status === 'WARNING') check.status = check.manual ? 'INFO' : 'FAIL';
+    return check;
+  },
+
+  /** Settle every check and (re)compute the score, verdict and counts of a report */
+  tally(report) {
+    const checks = report.checks || [];
+    checks.forEach(c => this.settle(c));
+    const fails = checks.filter(c => c.status === 'FAIL' && !c.isOverridden).length;
+    const passes = checks.filter(c => c.status === 'PASS' || c.isOverridden).length;
+    const manual = checks.filter(c => c.status === 'INFO' && !c.isOverridden).length;
+    let score = Math.max(0, 100 - fails * 20);
+    if (report.analysis && report.analysis.isVector) score = Math.min(100, score + 5);
+    const overall = fails > 0 ? 'FAIL' : 'PASS';
+    const summary = fails > 0
+      ? `${fails} critical issue${fails > 1 ? 's' : ''} to fix before proofing.`
+      : 'All automated SOP checks passed. Artwork is ready for customer proofing.';
+    return Object.assign(report, { score, overall, summary, counts: { passes, fails, manual } });
   }
 };
 
