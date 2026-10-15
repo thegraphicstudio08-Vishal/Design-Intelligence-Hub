@@ -1043,10 +1043,13 @@ const AgenticAiInspector = {
     if (typeof PrecheckEngine !== 'undefined' && PrecheckEngine.orientationCheck && report.analysis) {
       updates.orientation = PrecheckEngine.orientationCheck(report.analysis, report.spec, report.dimensions);
     }
+    // Text and logos against the safe zone: measured once the text reading is done
+    if (typeof SafeZoneCheck !== 'undefined') updates.safeArea = SafeZoneCheck.check(report);
     Object.entries(updates).forEach(([id, summary]) => {
       const check = report.checks.find(c => c.id === id);
       if (!check) return;
       delete check.manual;              // each summary states whether it is only a manual look
+      delete check.safeZone;
       Object.assign(check, summary);
     });
     // Same scoring and layout as the first render: Critical / Passed / Confirm by eye
@@ -1054,6 +1057,7 @@ const AgenticAiInspector = {
     else if (typeof PrecheckEngine !== 'undefined' && PrecheckEngine.tally) PrecheckEngine.tally(report);
     this._renderSpellingAlert(false);   // keep an open alert in step with closed / intentional findings
     this._renderOrientationAlert();      // landscape artwork on a vertical order (or the reverse), turned text
+    if (typeof SafeZoneCheck !== 'undefined') SafeZoneCheck.afterUpdate();   // safe-zone marks on the canvas + alert
   },
 
   /**

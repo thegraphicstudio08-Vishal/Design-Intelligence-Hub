@@ -1196,6 +1196,7 @@ const CanvasInspector = {
     this.redraw();
     this.renderContextualToolbar();
     if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderOrientationAlert) AgenticAiInspector._renderOrientationAlert();
+    if (typeof SafeZoneCheck !== 'undefined') SafeZoneCheck.refresh();   // the safe zone is measured on the turned artwork
   },
 
   /** Toolbar buttons: Rotate Artwork · Rotate Artboard (template board) · Reset, with the current state */
@@ -1266,14 +1267,12 @@ const CanvasInspector = {
     };
   },
 
-  /** Pasteboard around the banner artboard (canvas px): dimension lines top / left, notes underneath */
-  BANNER_PAD: { l: 56, r: 22, t: 46, b: 30 },
-
   /**
    * SOP banner template, drawn like a production template sheet:
    *  pasteboard · artboard (= production canvas) · hatched pole pocket / hem allowance (only what the file
-   *  name states) · artwork fitted into the finished size · trim line · safe area · metal grommets per the
-   *  SOP grommet table · dimension lines with the grommet count of each side · crop marks.
+   *  name states), named on the pasteboard beside it · artwork fitted into the finished size · trim line ·
+   *  safe area · metal grommets per the SOP grommet table · dimension lines with the grommet count of each side ·
+   *  crop marks. Sizes and finishing are written outside the template (pasteboard + legend), never on it.
    */
   _drawBannerSop(img, w, h, b, pad) {
     const ctx = this.ctx;
@@ -1288,8 +1287,7 @@ const CanvasInspector = {
     const fmt = v => +(+v).toFixed(2);
 
     // 1. Pasteboard and the artboard sheet on it
-    ctx.fillStyle = '#e8ecf2';
-    ctx.fillRect(0, 0, CW, CH);
+    this._drawPasteboard(CW, CH);
     ctx.save();
     ctx.shadowColor = 'rgba(15, 23, 42, 0.22)';
     ctx.shadowBlur = 12;
@@ -1298,7 +1296,8 @@ const CanvasInspector = {
     ctx.fillRect(ox, oy, w, h);
     ctx.restore();
 
-    // 2. Production allowance outside the finished size: pole pocket (blue) / hem (grey), hatched + labelled
+    // 2. Production allowance outside the finished size: pole pocket (blue) / hem (grey), hatched. Its name and
+    //    size are called out on the pasteboard beside it (right for top / bottom, below for left / right)
     const bands = {
       top: [ox, oy, w, ty - oy], bottom: [ox, ty + th, w, oy + h - ty - th],
       left: [ox, ty, tx - ox, th], right: [tx + tw, ty, ox + w - tx - tw, th]
@@ -1315,21 +1314,8 @@ const CanvasInspector = {
       ctx.beginPath();
       for (let k = -r[3]; k < r[2] + r[3]; k += 7) { ctx.moveTo(r[0] + k, r[1] + r[3]); ctx.lineTo(r[0] + k + r[3], r[1]); }
       ctx.stroke();
-      const thick = side === 'top' || side === 'bottom' ? r[3] : r[2];
-      if (thick >= 9) {
-        const label = `${pocket ? 'POLE POCKET' : 'HEM'} ${fmt(a[side])}"`;
-        ctx.font = `700 ${Math.max(8, Math.min(11, thick * 0.55))}px Inter, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const lw = ctx.measureText(label).width + 12, lh = Math.max(9, Math.min(16, thick - 2));
-        ctx.translate(r[0] + r[2] / 2, r[1] + r[3] / 2);
-        if (side === 'left' || side === 'right') ctx.rotate(side === 'left' ? -Math.PI / 2 : Math.PI / 2);
-        ctx.fillStyle = pocket ? 'rgba(239, 246, 255, 0.96)' : 'rgba(248, 250, 252, 0.96)';
-        ctx.fillRect(-lw / 2, -lh / 2, lw, lh);
-        ctx.fillStyle = pocket ? '#1e40af' : '#475569';
-        ctx.fillText(label, 0, 0.5);
-      }
       ctx.restore();
+      this._bandCallout(side, r, `${pocket ? 'Pole pocket' : 'Hem'}`, `${fmt(a[side])}"`, pocket ? '#1d4ed8' : '#475569', ox + w, oy + h);
     });
 
     // 3. Artwork fitted into the finished (order) size — never stretched; the part it does not cover stays grey
@@ -1359,7 +1345,7 @@ const CanvasInspector = {
     ctx.restore();
     if (this.guides.cutLine !== false) {
       ctx.save();
-      ctx.strokeStyle = '#f97316';
+      ctx.strokeStyle = this.GUIDE.trim;
       ctx.lineWidth = 1.6;
       ctx.strokeRect(tx, ty, tw, th);
       ctx.restore();
@@ -1378,29 +1364,8 @@ const CanvasInspector = {
     //    included), centres 1" inside the finished edge, evenly spaced; none through a pole pocket
     const g = b.layout && b.layout.grommets;
     if (g && this.guides.grommets !== false) {
-      const R = Math.max(3.2, Math.min(9, 0.375 * s));     // ~3/4" metal grommet
-      g.points.forEach(([x, y]) => {
-        const px = tx + x * s, py = ty + y * s;
-        ctx.save();
-        ctx.shadowColor = 'rgba(15, 23, 42, 0.35)';
-        ctx.shadowBlur = 2;
-        ctx.shadowOffsetY = 1;
-        const grad = ctx.createRadialGradient(px - R * 0.35, py - R * 0.35, R * 0.1, px, py, R);
-        grad.addColorStop(0, '#f8fafc');
-        grad.addColorStop(0.55, '#cbd5e1');
-        grad.addColorStop(1, '#64748b');
-        ctx.fillStyle = grad;
-        ctx.beginPath(); ctx.arc(px, py, R, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowColor = 'transparent';
-        ctx.lineWidth = 0.8;
-        ctx.strokeStyle = '#334155';
-        ctx.stroke();
-        ctx.fillStyle = '#e8ecf2';                          // the hole
-        ctx.beginPath(); ctx.arc(px, py, R * 0.45, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#475569';
-        ctx.stroke();
-        ctx.restore();
-      });
+      const size = Math.max(10, Math.min(18, 0.75 * s));   // ~3/4" grommet, never smaller than 10 px on screen
+      g.points.forEach(([x, y]) => this.drawGrommetMark(ctx, tx + x * s, ty + y * s, size));
     }
 
     // 6. Crop marks at the artboard corners
@@ -1428,48 +1393,9 @@ const CanvasInspector = {
     const labelW = [`${fmt(b.orderW)}" W (${ft(b.orderW)} ft)`, b.canvasW !== b.orderW ? `canvas ${fmt(b.canvasW)}"` : '', gW];
     const labelH = [`${fmt(b.orderH)}" H (${ft(b.orderH)} ft)`, b.canvasH !== b.orderH ? `canvas ${fmt(b.canvasH)}"` : '', gH];
     if (this.guides.dims !== false && pad.t >= 30 && pad.l >= 30) {
-      const fit = (parts, room) => {        // drop the less important parts when the side is short
-        ctx.font = '600 10.5px Inter, sans-serif';
-        for (let n = parts.length; n >= 1; n--) {
-          const t = parts.slice(0, n).filter(Boolean).join('  ·  ');
-          if (ctx.measureText(t).width + 16 <= room) return t;
-        }
-        return '';
-      };
-      const dim = (len, label, vertical) => {
-        ctx.save();
-        if (vertical) { ctx.translate(pad.l / 2, ty + len); ctx.rotate(-Math.PI / 2); }
-        else ctx.translate(tx, pad.t / 2);
-        ctx.strokeStyle = '#475569';
-        ctx.fillStyle = '#475569';
-        ctx.lineWidth = 1;
-        // extension lines down to the artboard edge
-        const ext = vertical ? (ox - pad.l / 2) : (oy - pad.t / 2);
-        ctx.setLineDash([2, 2]);
-        ctx.beginPath();
-        ctx.moveTo(0, -5); ctx.lineTo(0, ext);
-        ctx.moveTo(len, -5); ctx.lineTo(len, ext);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
-        [[0, 1], [len, -1]].forEach(([x, d]) => {
-          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + d * 6, -3); ctx.lineTo(x + d * 6, 3); ctx.closePath(); ctx.fill();
-        });
-        const t = fit(label, len);
-        if (t) {
-          ctx.font = '600 10.5px Inter, sans-serif';
-          const lw = ctx.measureText(t).width + 12;
-          ctx.fillStyle = '#e8ecf2';
-          ctx.fillRect(len / 2 - lw / 2, -8, lw, 16);
-          ctx.fillStyle = '#0f172a';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(t, len / 2, 0.5);
-        }
-        ctx.restore();
-      };
-      dim(tw, labelW, false);
-      dim(th, labelH, true);
+      const yTop = Math.round(pad.t / 2) - 6, xLeft = Math.round(pad.l / 2) - 6;
+      this._dimLine(tx, yTop, tw, labelW, false, oy - yTop - 2);
+      this._dimLine(xLeft, ty, th, labelH, true, ox - xLeft - 2);
     }
 
     // 8. Caption on the pasteboard (the rotation note takes this place when the artwork / artboard is turned)
@@ -1479,7 +1405,7 @@ const CanvasInspector = {
       ctx.fillStyle = '#64748b';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`SOP BANNER TEMPLATE · production canvas ${fmt(b.canvasW)}" × ${fmt(b.canvasH)}"`, CW - pad.r, CH - pad.b / 2);
+      ctx.fillText(`SOP BANNER TEMPLATE · production canvas ${fmt(b.canvasW)}" × ${fmt(b.canvasH)}" · safe ${fmt(b.safeIn)}"`, CW - pad.r, CH - Math.max(12, pad.b / 2 - 4));
       ctx.restore();
     }
 
@@ -1488,33 +1414,68 @@ const CanvasInspector = {
     const lay = b.layout;
     const hemSides = ['top', 'bottom', 'left', 'right'].filter(sd => !pocketSides.includes(sd) && a[sd] > 0);
     const sideList = list => list.length === 4 ? 'each side' : list.join(' & ');
-    const cells = [
-      ['Finished size', `${fmt(b.orderW)}" × ${fmt(b.orderH)}" (${ft(b.orderW)} × ${ft(b.orderH)} ft)`],
-      ['Production canvas', `${fmt(b.canvasW)}" × ${fmt(b.canvasH)}"`],
-      ['Grommets', g ? (g.where === 'corners' ? `${g.kind} · 4 corners` : `${g.kind} · ${g.total} total (top ${ps.top} · bottom ${ps.bottom} · left ${ps.left} · right ${ps.right})`)
-        : fin && fin.grommets && !fin.grommets.on ? 'No grommets' : 'Not in file name'],
-      ['Hem', lay && lay.hemOn && hemSides.length ? `${fin.hem.kind} +${fmt(a[hemSides[0]])}" ${sideList(hemSides)}` : 'No hem (not in file name)'],
-      ['Pole pocket', pocketSides.length ? `${pocketSides.join(' & ')} +${fmt(a[pocketSides[0]])}"` : fin && fin.pockets ? 'Side NOT in file name' : 'None', !pocketSides.length && fin && fin.pockets],
-      ['Safe area', `${b.safeIn}" inside the trim`]
+    const cards = [
+      { key: 'trim', title: 'Trim line (finished size)', value: `${fmt(b.orderW)}" × ${fmt(b.orderH)}" (${ft(b.orderW)} × ${ft(b.orderH)} ft)`,
+        desc: 'The size you ordered — where the banner is cut or folded.' },
+      { key: 'safe', title: 'Safe area', value: `${fmt(b.safeIn)}" inside the trim`, desc: 'Keep all text, logos and important graphics inside this line.' },
+      { key: 'canvas', title: 'Production canvas', value: `${fmt(b.canvasW)}" × ${fmt(b.canvasH)}"`,
+        desc: b.canvasW !== b.orderW || b.canvasH !== b.orderH ? 'Finished size plus the hem / pole pocket allowance — the print file size.' : 'Same as the finished size (no hem or pole pocket in the file name).' },
+      { key: 'grommet', title: 'Grommets', value: g ? (g.where === 'corners' ? `${g.kind} · 4 corners` : `${g.kind} · ${g.total} total`)
+        : fin && fin.grommets && !fin.grommets.on ? 'No grommets' : 'Not in file name',
+        desc: g && g.where !== 'corners' ? `Top ${ps.top} · bottom ${ps.bottom} · left ${ps.left} · right ${ps.right} — SOP grommet table, 1" inside the edge.` : 'SOP grommet table, centres 1" inside the edge.' },
+      { key: 'hem', title: 'Hem', value: lay && lay.hemOn && hemSides.length ? `${fin.hem.kind} +${fmt(a[hemSides[0]])}" ${sideList(hemSides)}` : 'No hem (not in file name)',
+        desc: lay && lay.hemOn && hemSides.length ? 'Folded and welded / stitched — no important content here.' : 'Only added when the file name states hemmed / stitched / welded edges.' },
+      { key: 'pocket', title: 'Pole pocket', value: pocketSides.length ? `${pocketSides.join(' & ')} +${fmt(a[pocketSides[0]])}"` : fin && fin.pockets ? 'Side NOT in file name' : 'None',
+        desc: pocketSides.length ? 'Folded back for the pole — the artwork is not visible here.' : 'Only on the sides the file name states.', warn: !pocketSides.length && fin && fin.pockets }
     ];
-    const key = [['trim', 'Trim / finished edge'], ['safe', `Safe area ${b.safeIn}"`]];
-    if (hemSides.length) key.push(['hem', 'Hem allowance']);
-    if (pocketSides.length) key.push(['pocket', 'Pole pocket']);
-    if (g) key.push(['grommet', 'Grommet (SOP table)']);
-    if (this.currentRotation || this.previewOrderTurned) key.push(['note', 'Preview turned — order unchanged']);
-    this.bannerLegend = {
+    const notes = [];
+    if (this.currentRotation || this.previewOrderTurned) notes.push({ text: 'Preview turned — order unchanged', color: '#b45309' });
+    this.legend = {
+      title: 'SOP Banner Template', product: (this.currentSpec && this.currentSpec.name) || '',
       source: fin && fin.found ? (fin.source === 'filename' ? 'File name' : 'Finishing options') : null,
       words: fin && fin.found ? fin.words.join(' · ') : '',
-      cells, key
+      warn: fin && fin.found ? null : 'No grommets / pole pockets / hems in the file name — confirm the finishing from the order',
+      cards, notes,
+      tip: 'Backgrounds run to the edge of the production canvas; text and logos stay inside the safe area, clear of hems, pockets and grommets.'
     };
   },
 
-  /** The banner SOP legend card under the canvas (file-name finishing, grommet counts, canvas size, key) */
+  /** Name and size of a hem / pole pocket band, called out on the pasteboard beside the artboard */
+  _bandCallout(side, r, name, size, color, artRight, artBottom) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 1;
+    ctx.font = '700 10px Inter, sans-serif';
+    ctx.textBaseline = 'middle';
+    if (side === 'top' || side === 'bottom') {
+      const x = artRight + 10, y0 = r[1], y1 = r[1] + r[3];
+      ctx.beginPath();
+      ctx.moveTo(x - 4, y0); ctx.lineTo(x, y0); ctx.lineTo(x, y1); ctx.lineTo(x - 4, y1);
+      ctx.stroke();
+      const ym = (y0 + y1) / 2;
+      ctx.textAlign = 'left';
+      ctx.fillText(name, x + 6, ym - (r[3] >= 22 ? 6 : 0));
+      if (r[3] >= 22) { ctx.font = '600 10px Inter, sans-serif'; ctx.fillText(size, x + 6, ym + 7); }
+      else { const nw = ctx.measureText(name + ' ').width; ctx.font = '600 10px Inter, sans-serif'; ctx.fillText(size, x + 6 + nw, ym); }
+    } else {
+      const y = artBottom + 10, x0 = r[0], x1 = r[0] + r[2];
+      ctx.beginPath();
+      ctx.moveTo(x0, y - 4); ctx.lineTo(x0, y); ctx.lineTo(x1, y); ctx.lineTo(x1, y - 4);
+      ctx.stroke();
+      ctx.textAlign = side === 'left' ? 'left' : 'right';
+      ctx.fillText(`${name} ${size}`, side === 'left' ? x0 : x1, y + 11);
+    }
+    ctx.restore();
+  },
+
+  /** Template legend under the canvas: bleed / trim / safe (and finishing) cards with their values, notes, tip */
   _renderLegend() {
     const wrap = this.canvas && this.canvas.parentElement;
     if (!wrap) return;
     let el = document.getElementById('canvas-sop-legend');
-    const L = this.inspectorMode && this.inspectorMode !== 'artwork' ? null : this.bannerLegend;
+    const L = this.inspectorMode && this.inspectorMode !== 'artwork' ? null : this.legend;
     if (!L) { if (el) el.style.display = 'none'; return; }
     if (!el || el.previousElementSibling !== wrap) {
       if (el) el.remove();
@@ -1523,16 +1484,21 @@ const CanvasInspector = {
       wrap.insertAdjacentElement('afterend', el);
     }
     const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
-    el.className = 'canvas-sop-legend';
+    el.className = 'canvas-sop-legend tpl-legend';
     el.style.cssText = '';
     el.innerHTML = `
       <div class="csl-head">
-        <span class="csl-title">SOP Banner Template</span>
-        ${L.source ? `<span class="csl-src">${L.source}: <q>${esc(L.words)}</q></span>`
-          : '<span class="csl-src csl-warn">No grommets / pole pockets / hems in the file name — confirm the finishing from the order</span>'}
+        <span class="csl-title">${esc(L.title)}</span>
+        ${L.product ? `<span class="tl-product">${esc(L.product)}</span>` : ''}
+        ${L.source ? `<span class="csl-src">${L.source}: <q>${esc(L.words)}</q></span>` : L.warn ? `<span class="csl-src csl-warn">${esc(L.warn)}</span>` : ''}
       </div>
-      <div class="csl-grid">${L.cells.map(([k, v, warn]) => `<div class="csl-cell${warn ? ' warn' : ''}"><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`).join('')}</div>
-      <div class="csl-key">${L.key.map(([k, t]) => `<span><i class="csl-sw csl-${k}"></i>${esc(t)}</span>`).join('')}</div>`;
+      <div class="tl-cards">${L.cards.map(c => `
+        <div class="tl-card tl-${c.key}${c.warn ? ' warn' : ''}">
+          <i class="tl-sw tl-sw-${c.key}"></i>
+          <div class="tl-txt"><span class="tl-title">${esc(c.title)}</span><strong>${esc(c.value)}</strong><em>${esc(c.desc || '')}</em></div>
+        </div>`).join('')}</div>
+      ${L.notes && L.notes.length ? `<div class="tl-notes">${L.notes.map(n => `<span><i style="background:${esc(n.color)};"></i>${esc(n.text)}</span>`).join('')}</div>` : ''}
+      ${L.tip ? `<div class="tl-tip"><b>PRO TIP</b>${esc(L.tip)}</div>` : ''}`;
   },
 
   /**
@@ -1550,10 +1516,11 @@ const CanvasInspector = {
   redraw() {
     this.artRect = null;
     this._loupeCanvasUrl = null;   // the zoom loupe's picture of the canvas is out of date
-    this.bannerLegend = null;      // set again by the banner layout when it draws
+    this.legend = null;            // set again by the print sheet / banner layout when it draws
     this._redrawCanvas();
     this._drawRotationNote();
     this._renderLegend();
+    if (typeof SafeZoneCheck !== 'undefined') SafeZoneCheck.placeOverlay();   // safe-zone marks follow the artwork
     // Stray line & dot scan + markers: always on the real artwork image, whichever layout drew it
     if (typeof AgenticAiInspector !== 'undefined' && this.canvas && this.currentImg) {
       AgenticAiInspector.onCanvasRedraw(this.canvas, this.currentImg, this.currentSpec, this.currentDims);
@@ -1609,8 +1576,11 @@ const CanvasInspector = {
     const viewW = printW;
     const viewH = printH;
 
-    // Banner template: a pasteboard around the artboard carries the dimension lines and notes
-    const pad = bannerSop ? this.BANNER_PAD : { l: 0, r: 0, t: 0, b: 0 };
+    // Artwork view: a pasteboard around the artboard carries the dimension lines, crop marks and bleed —
+    // size and format information sits outside the template, never on the artwork
+    const framed = this.inspectorMode !== 'template' && this.inspectorMode !== 'mockup';
+    const pad = !framed ? { l: 0, r: 0, t: 0, b: 0 }
+      : Object.assign({}, this.SHEET_PAD, bannerSop ? this._bannerPadExtra(bannerSop) : {});
 
     // Viewport scaling strictly preserving physical product aspect ratio (never squeeze or stretch!)
     const maxViewportW = 860 - pad.l - pad.r;
@@ -1654,40 +1624,327 @@ const CanvasInspector = {
       return;
     }
 
-    // 1. Draw solid white substrate
-    this.ctx.fillStyle = '#ffffff';
-    this.ctx.fillRect(0, 0, w, h);
+    const ctx = this.ctx;
+    const ox = pad.l, oy = pad.t;
+    const tType = this.getTemplateType(this.currentSpec, this.currentDims);
+    const sheet = this._sheetInfo(spec, tType, printW, printH, w, h);
 
+    // 0. Pasteboard, bleed band outside the trim, artboard with a soft shadow
+    this._drawPasteboard(this.canvas.width, this.canvas.height);
+    if (sheet.bleedPx && this.guides.bleed !== false) this._drawBleedBand(ox, oy, w, h, sheet.bleedPx);
+    ctx.save();
+    ctx.shadowColor = 'rgba(15, 23, 42, 0.22)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 3;
+    // 1. Draw solid white substrate
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(ox, oy, w, h);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(ox, oy);
     // 2. Draw artwork image with aspect ratio preservation (never distorted or stretched)
     // Always fit (never stretch): any gap left over is the real area the artwork does not cover at order size
-    this.ctx.save();
+    ctx.save();
     if (this.currentRotation !== 0) {
-      this.ctx.translate(w / 2, h / 2);
-      this.ctx.rotate((this.currentRotation * Math.PI) / 180);
+      ctx.translate(w / 2, h / 2);
+      ctx.rotate((this.currentRotation * Math.PI) / 180);
       const boxW = isRotated ? h : w;
       const boxH = isRotated ? w : h;
       const r = this._fitRect(img.naturalWidth || boxW, img.naturalHeight || boxH, boxW, boxH);
-      this.ctx.drawImage(img, r.x - boxW / 2, r.y - boxH / 2, r.w, r.h);
+      ctx.drawImage(img, r.x - boxW / 2, r.y - boxH / 2, r.w, r.h);
     } else {
       const r = this._fitRect(img.naturalWidth || w, img.naturalHeight || h, w, h);
-      this.ctx.drawImage(img, r.x, r.y, r.w, r.h);
-      this.artRect = { x: r.x, y: r.y, w: r.w, h: r.h };   // where the artwork sits on the canvas (px)
+      ctx.drawImage(img, r.x, r.y, r.w, r.h);
+      this.artRect = { x: ox + r.x, y: oy + r.y, w: r.w, h: r.h };   // where the artwork sits on the canvas (px)
     }
-    this.ctx.restore();
+    ctx.restore();
 
     // 2.4 Official QNAP Template Overlay when enabled via toolbar toggle or in template mode
     if (this.guides.officialOverlay && this.officialTemplateImg && this.officialTemplateImg.complete && this.officialTemplateImg.naturalWidth > 0) {
       const t = this.officialTemplateImg;
       const r = this._fitRect(t.naturalWidth, t.naturalHeight, w, h);
-      this.ctx.save();
-      this.ctx.globalAlpha = 0.65;
-      this.ctx.drawImage(t, r.x, r.y, r.w, r.h);
-      this.ctx.restore();
+      ctx.save();
+      ctx.globalAlpha = 0.65;
+      ctx.drawImage(t, r.x, r.y, r.w, r.h);
+      ctx.restore();
     }
 
-    // 3. Draw Product-Specific Die-Line Template and SOP Overlays
-    const tType = this.getTemplateType(this.currentSpec, this.currentDims);
-    this._drawProductTemplate(w, h, tType);
+    // 3. Product die-line and SOP guides. Flyers and business cards: exact trim / safe lines; other products keep
+    //    their own template drawing, its size / safe / bleed / hardware labels go to the legend under the canvas
+    let labels = [];
+    if (sheet.ownGuides) this._drawSheetGuides(w, h, sheet);
+    else labels = this._captureLabels(() => this._drawProductTemplate(w, h, tType));
+    ctx.restore();
+
+    // 4. Crop marks, dimension lines and the caption on the pasteboard; legend card under the canvas
+    this._drawCropMarks(ox, oy, w, h, sheet.bleedPx + 4);
+    this._drawSheetDims(ox, oy, w, h, sheet, pad);
+    this.legend = this._sheetLegend(sheet, labels);
+  },
+
+  // ── Print sheet (pasteboard, bleed, trim, safe, dimensions, legend) ─────────────────────────────────────
+
+  /** Pasteboard around the artboard (canvas px): dimension lines top / left, caption underneath */
+  SHEET_PAD: { l: 66, r: 30, t: 56, b: 40 },
+
+  /** One colour language for the print guides — canvas, legend and the reference sheet the team uses */
+  GUIDE: {
+    trim: '#1d4ed8', safe: '#16a34a', bleed: '#e11d48', bleedFill: 'rgba(244, 63, 94, 0.15)',
+    board: '#e9eef5', dot: '#d2dae6', ink: '#0f172a', muted: '#475569'
+  },
+
+  /** Template labels that carry size / format information: listed in the legend, never written over the artwork */
+  INFO_LABEL: /^\s*(✂|🛡|📐|🧵|🎗|🔩|⭕|⚠|🪝|👕|🧲|\|\|)/u,
+  TRIM_STROKES: ['#fb7b48', '#f97316'],
+  RECT_TYPES: ['banner', 'mesh-banner', 'yard-sign', 'marketing-flyer', 'business-card', 'aluminum-sign', 'acrylic-sign',
+    'safety-parking-sign', 'magnet-rounded', 'perforated-window', 'a-frame', 'decal-sticker'],
+
+  /** Room for the hem / pole pocket callouts beside the banner artboard */
+  _bannerPadExtra(b) {
+    const a = b.allow || {};
+    const out = {};
+    if (a.top > 0 || a.bottom > 0) out.r = 104;
+    if (a.left > 0 || a.right > 0) out.b = 60;
+    return out;
+  },
+
+  /** Trim / safe / bleed of the product shown, in inches and canvas px */
+  _sheetInfo(spec, tType, printW, printH, w, h) {
+    const st = (typeof appState !== 'undefined') ? appState : {};
+    const ppi = w / printW;
+    const rect = this.RECT_TYPES.includes(tType) && !(this.officialTemplate && this.officialTemplate.real && Array.isArray(this.officialTemplate.bleedIn));
+    const bleedIn = parseFloat(spec.bleed) > 0 ? parseFloat(spec.bleed) : 0;
+    let safeIn = (typeof SopRules !== 'undefined' && SopRules.safeArea) ? SopRules.safeArea(spec, st.parsedFilename).inches : null;
+    if (!(safeIn > 0)) safeIn = parseFloat(spec.safeArea) > 0 ? parseFloat(spec.safeArea) : 0;
+    const truePx = bleedIn * ppi;
+    return {
+      rect, tType, W: printW, H: printH, ppi, bleedIn, safeIn,
+      bleedPx: rect && bleedIn > 0 ? Math.max(7, Math.min(14, truePx)) : 0,
+      bleedEnlarged: rect && bleedIn > 0 && truePx < 7,
+      ownGuides: ['marketing-flyer', 'business-card'].includes(tType),
+      name: spec.name || ''
+    };
+  },
+
+  /** Run a template drawing with its info labels collected instead of drawn, and its cut line in the trim colour */
+  _captureLabels(fn) {
+    const ctx = this.ctx, out = [];
+    const proto = Object.getPrototypeOf(ctx);
+    const fill = proto.fillText;
+    const stroke = Object.getOwnPropertyDescriptor(proto, 'strokeStyle');
+    const re = this.INFO_LABEL, trims = this.TRIM_STROKES, blue = this.GUIDE.trim;
+    ctx.fillText = function (t, x, y, m) {
+      const s = String(t);
+      if (re.test(s)) {
+        const color = String(this.fillStyle).toLowerCase();
+        if (!out.some(o => o.text === s.trim())) out.push({ text: s.trim(), color: trims.includes(color) ? blue : color });
+        return;
+      }
+      return m === undefined ? fill.call(this, t, x, y) : fill.call(this, t, x, y, m);
+    };
+    if (stroke && stroke.set) {
+      Object.defineProperty(ctx, 'strokeStyle', {
+        configurable: true,
+        get() { return stroke.get.call(this); },
+        set(v) { stroke.set.call(this, typeof v === 'string' && trims.includes(v.toLowerCase()) ? blue : v); }
+      });
+    }
+    try { fn(); } finally { delete ctx.fillText; delete ctx.strokeStyle; }
+    return out;
+  },
+
+  /**
+   * BannerBuzz grommet mark (CMYK Grommet.svg): square with a white → grey border and cyan · magenta / black · yellow
+   * quarters, centred on the grommet position. Same proportions and colours as the SVG (outer square 187.14 units,
+   * quarters 83.74, inset 9.83, 4-unit #231f20 outline). size = width of the mark in px.
+   */
+  drawGrommetMark(ctx, cx, cy, size) {
+    const s = Math.max(6, size), k = s / 187.14;
+    const x0 = cx - s / 2, y0 = cy - s / 2;
+    ctx.save();
+    ctx.setLineDash([]);
+    const grad = ctx.createLinearGradient(x0, y0 + s, x0 + s, y0);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(1, '#d1d3d4');
+    ctx.fillStyle = grad;
+    ctx.fillRect(x0, y0, s, s);
+    const q = 83.74 * k, ix = x0 + 9.83 * k, iy = y0 + 9.83 * k;
+    ctx.fillStyle = '#00aeef'; ctx.fillRect(ix, iy, q, q);
+    ctx.fillStyle = '#ec008c'; ctx.fillRect(ix + q, iy, q, q);
+    ctx.fillStyle = '#231f20'; ctx.fillRect(ix, iy + q, q, q);
+    ctx.fillStyle = '#fdee00'; ctx.fillRect(ix + q, iy + q, q, q);
+    ctx.lineWidth = Math.max(0.7, 4 * k);
+    ctx.strokeStyle = '#231f20';
+    ctx.strokeRect(x0, y0, s, s);
+    ctx.restore();
+  },
+
+  /** Soft grey pasteboard with a dot grid, like a design app */
+  _drawPasteboard(CW, CH) {
+    const ctx = this.ctx, G = this.GUIDE;
+    ctx.save();
+    ctx.fillStyle = G.board;
+    ctx.fillRect(0, 0, CW, CH);
+    ctx.fillStyle = G.dot;
+    for (let y = 7; y < CH; y += 14) for (let x = 7; x < CW; x += 14) ctx.fillRect(x, y, 1.2, 1.2);
+    ctx.restore();
+  },
+
+  /** Bleed: the band outside the trim, where backgrounds must extend (trimmed off after printing) */
+  _drawBleedBand(ox, oy, w, h, b) {
+    const ctx = this.ctx, G = this.GUIDE;
+    ctx.save();
+    ctx.fillStyle = G.bleedFill;
+    ctx.beginPath();
+    ctx.rect(ox - b, oy - b, w + 2 * b, h + 2 * b);
+    ctx.rect(ox, oy, w, h);
+    ctx.fill('evenodd');
+    ctx.strokeStyle = G.bleed;
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([5, 3]);
+    ctx.strokeRect(ox - b + 0.5, oy - b + 0.5, w + 2 * b - 1, h + 2 * b - 1);
+    ctx.restore();
+  },
+
+  /** Flyers / business cards: exact trim line and safe area (the safe line is where the Safe Area check measures) */
+  _drawSheetGuides(w, h, s) {
+    const ctx = this.ctx, G = this.GUIDE;
+    if (this.guides.cutLine !== false) {
+      ctx.save();
+      ctx.strokeStyle = G.trim;
+      ctx.lineWidth = 1.6;
+      ctx.strokeRect(0.8, 0.8, w - 1.6, h - 1.6);
+      ctx.restore();
+    }
+    const sp = s.safeIn * s.ppi;
+    if (this.guides.safeArea !== false && sp > 0 && sp * 2 < w && sp * 2 < h) {
+      ctx.save();
+      ctx.strokeStyle = G.safe;
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([6, 4]);
+      ctx.strokeRect(sp, sp, w - 2 * sp, h - 2 * sp);
+      ctx.restore();
+    }
+  },
+
+  /** Printer's crop marks at the trim corners, outside the bleed */
+  _drawCropMarks(ox, oy, w, h, gap) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    [[ox, oy, -1, -1], [ox + w, oy, 1, -1], [ox, oy + h, -1, 1], [ox + w, oy + h, 1, 1]].forEach(([x, y, dx, dy]) => {
+      ctx.moveTo(x + dx * gap, y); ctx.lineTo(x + dx * (gap + 9), y);
+      ctx.moveTo(x, y + dy * gap); ctx.lineTo(x, y + dy * (gap + 9));
+    });
+    ctx.stroke();
+    ctx.restore();
+  },
+
+  /**
+   * Dimension line on the pasteboard: arrows, extension lines to the artboard, label in the middle.
+   * parts: label parts, most important first — dropped from the end when the side is too short.
+   */
+  _dimLine(x, y, len, parts, vertical, extTo) {
+    const ctx = this.ctx;
+    ctx.save();
+    if (vertical) { ctx.translate(x, y + len); ctx.rotate(-Math.PI / 2); }
+    else ctx.translate(x, y);
+    ctx.strokeStyle = '#475569';
+    ctx.fillStyle = '#475569';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    ctx.moveTo(0, -5); ctx.lineTo(0, extTo);
+    ctx.moveTo(len, -5); ctx.lineTo(len, extTo);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
+    [[0, 1], [len, -1]].forEach(([px, d]) => {
+      ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px + d * 6, -3); ctx.lineTo(px + d * 6, 3); ctx.closePath(); ctx.fill();
+    });
+    ctx.font = '600 10.5px Inter, sans-serif';
+    let t = '';
+    for (let n = parts.length; n >= 1; n--) {
+      const c = parts.slice(0, n).filter(Boolean).join('  ·  ');
+      if (ctx.measureText(c).width + 16 <= len) { t = c; break; }
+    }
+    if (t) {
+      const lw = ctx.measureText(t).width + 12;
+      ctx.fillStyle = this.GUIDE.board;
+      ctx.fillRect(len / 2 - lw / 2, -8, lw, 16);
+      ctx.fillStyle = '#0f172a';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(t, len / 2, 0.5);
+    }
+    ctx.restore();
+  },
+
+  /** Finished-size dimension lines (top: width, left: height) and the caption under the artboard */
+  _drawSheetDims(ox, oy, w, h, s, pad) {
+    const fmt = v => +(+v).toFixed(3);
+    const ft = v => +(v / 12).toFixed(2);
+    const big = Math.max(s.W, s.H) >= 24;
+    if (this.guides.dims !== false) {
+      const yTop = Math.round(pad.t / 2) - 6, xLeft = Math.round(pad.l / 2) - 6;
+      this._dimLine(ox, yTop, w, [`${fmt(s.W)}" W${big ? ` (${ft(s.W)} ft)` : ''}`, 'finished size'], false, oy - yTop - 2);
+      this._dimLine(xLeft, oy, h, [`${fmt(s.H)}" H${big ? ` (${ft(s.H)} ft)` : ''}`, 'finished size'], true, ox - xLeft - 2);
+    }
+    const CW = this.canvas.width, CH = this.canvas.height;
+    if (pad.b >= 20 && !(this.currentRotation || this.previewOrderTurned) && CW > 420) {
+      const ctx = this.ctx;
+      ctx.save();
+      ctx.font = '600 10px Inter, sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      const parts = [s.rect ? 'PRINT TEMPLATE' : 'PRODUCT TEMPLATE', `trim ${fmt(s.W)}" × ${fmt(s.H)}"`];
+      if (s.bleedPx) parts.push(`bleed ${fmt(s.bleedIn)}"`);
+      if (s.rect && s.safeIn) parts.push(`safe ${fmt(s.safeIn)}"`);
+      ctx.fillText(parts.join(' · '), CW - pad.r, CH - Math.max(12, pad.b / 2 - 4));
+      ctx.restore();
+    }
+  },
+
+  /** Legend card for the print sheet: bleed / trim / safe cards with the values, then the template's own notes */
+  _sheetLegend(s, labels) {
+    const fmt = v => +(+v).toFixed(3);
+    const pick = re => labels.find(l => re.test(l.text));
+    const strip = t => t.replace(this.INFO_LABEL, '').replace(/^[\s️:]+/, '').trim();
+    const extra = l => { const m = l && l.text.match(/\(([^)]+)\)|·\s*(.+)$/); return m ? ' · ' + (m[1] || m[2]).trim() : ''; };
+    const cards = [];
+    if (s.rect) {
+      const tr = pick(/^\s*✂/), sf = pick(/^\s*🛡/), bl = pick(/^\s*📐/);
+      if (s.bleedIn > 0) cards.push({ key: 'bleed', title: 'Bleed area', value: `${fmt(s.bleedIn)}" on all sides`,
+        desc: 'Extend background colours and photos to here — trimmed off after printing.' + extra(bl) + (s.bleedEnlarged ? ' (Drawn wider so it shows at this zoom.)' : '') });
+      cards.push({ key: 'trim', title: 'Trim line (final size)', value: `${+(+s.W).toFixed(2)}" × ${+(+s.H).toFixed(2)}"`,
+        desc: 'The finished size of the printed piece — where the product is cut.' + extra(tr).replace(/Standard 8\.5" × 11"/, '').replace(/ · $/, '') });
+      if (s.safeIn > 0) cards.push({ key: 'safe', title: 'Safe area', value: `${fmt(s.safeIn)}" inside the trim`,
+        desc: 'Keep all important text, logos and elements inside this line.' + extra(sf) });
+    } else {
+      // shaped products: the template's own wording, with the SOP / catalog values where they exist
+      const tr = pick(/^\s*✂/), sf = pick(/^\s*🛡/), bl = pick(/^\s*📐/);
+      const after = l => { const t = strip(l.text); return t.includes(':') ? t.slice(t.indexOf(':') + 1).trim() : t; };
+      const shape = tr ? strip(tr.text).split(':')[0].trim() : '';
+      cards.push({ key: 'trim', title: 'Cut line (final shape)', value: `${+(+s.W).toFixed(2)}" × ${+(+s.H).toFixed(2)}"`,
+        desc: (shape ? shape.charAt(0) + shape.slice(1).toLowerCase() + ' — ' : '') + 'the finished shape of the product, where it is cut or sewn.' });
+      if (s.safeIn > 0 || sf) cards.push({ key: 'safe', title: 'Safe area', value: s.safeIn > 0 ? `${fmt(s.safeIn)}" inside the cut line` : after(sf),
+        desc: 'Keep all important text, logos and elements inside this line.' });
+      if (s.bleedIn > 0 || bl) cards.push({ key: 'bleed', title: 'Bleed', value: s.bleedIn > 0 ? `${fmt(s.bleedIn)}" past the cut line` : after(bl),
+        desc: 'Extend backgrounds past the cut line — trimmed off after printing.' });
+    }
+    // everything else the template states (hems, sleeves, hardware, stock) — kept, just not over the artwork
+    const core = /^\s*(✂|🛡|📐)/u;
+    const notes = labels.filter(l => !core.test(l.text)).map(l => ({ text: strip(l.text), color: l.color }));
+    if (this.currentRotation || this.previewOrderTurned) notes.push({ text: 'Preview turned — order unchanged', color: '#b45309' });
+    return {
+      title: s.rect ? 'Print Template Guide' : 'Product Template Guide',
+      product: s.name, source: null, warn: null, cards, notes,
+      tip: s.rect ? 'Set up the file with bleed before designing: backgrounds to the bleed edge, text and logos inside the safe area.' : ''
+    };
   },
 
   /**
@@ -1702,9 +1959,12 @@ const CanvasInspector = {
     const ppiX = w / printW;
     const ppiY = h / printH;
 
-    const safeMarginIn = parseFloat(spec.safeArea) || 1.25;
-    const safePxX = Math.max(12, safeMarginIn * ppiX);
-    const safePxY = Math.max(12, safeMarginIn * ppiY);
+    // Safe margin: the SOP value (same one the Safe Area check measures with), else the catalog value
+    const sopSafe = (typeof SopRules !== 'undefined' && SopRules.safeArea)
+      ? SopRules.safeArea(spec, (typeof appState !== 'undefined' ? appState.parsedFilename : null)).inches : null;
+    const safeMarginIn = sopSafe > 0 ? sopSafe : (parseFloat(spec.safeArea) || 1.25);
+    const safePxX = Math.max(4, safeMarginIn * ppiX);
+    const safePxY = Math.max(4, safeMarginIn * ppiY);
 
     if (tType === 'desk-flags-blade') {
       this._drawDeskBladeTemplate(w, h, printW, printH, safePxX, safePxY);
@@ -2055,17 +2315,7 @@ const CanvasInspector = {
     // 2. Sleeve Grommets / Clips (Strictly on sleeve, NOT on perimeter)
     if (this.guides.grommets) {
       ctx.save();
-      const drawSleeveEyelet = (gy) => {
-        const gx = sleeveW / 2;
-        ctx.beginPath();
-        ctx.arc(gx, gy, 7, 0, Math.PI * 2);
-        ctx.fillStyle = '#f59e0b';
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(gx, gy, 3, 0, Math.PI * 2);
-        ctx.fillStyle = '#0f172a';
-        ctx.fill();
-      };
+      const drawSleeveEyelet = (gy) => this.drawGrommetMark(ctx, sleeveW / 2, gy, 14);
 
       // Top and Bottom Sleeve Eyelets
       drawSleeveEyelet(18);
@@ -2180,16 +2430,9 @@ const CanvasInspector = {
       traceRoundedRect(ctx, 6, 6, w - 12, h - 12, r - 3);
       ctx.stroke();
 
-      // Pill badge at bottom to avoid collision with green dashed safe line
-      const labelText = '🧲 30-MIL HEAVY-DUTY VEHICLE MAGNETIC SUBSTRATE (Wind-Resistant)';
-      ctx.font = 'bold 9.5px Inter, sans-serif';
-      const textMetrics = ctx.measureText(labelText);
-      const bgW = textMetrics.width + 12;
-      const badgeY = h - 16;
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-      ctx.fillRect(14, badgeY - 11, bgW, 15);
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillText(labelText, 20, badgeY);
+      // Substrate note: listed in the legend under the canvas (never written over the artwork)
+      ctx.fillStyle = '#334155';
+      ctx.fillText('🧲 30-MIL HEAVY-DUTY VEHICLE MAGNETIC SUBSTRATE (Wind-Resistant)', 20, h - 16);
       ctx.restore();
     }
 
@@ -2288,14 +2531,7 @@ const CanvasInspector = {
     if (this.guides.grommets) {
       ctx.save();
       const drawEyelet = (gx, gy, label) => {
-        ctx.beginPath();
-        ctx.arc(gx, gy, 8, 0, Math.PI * 2);
-        ctx.fillStyle = '#d97706';
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(gx, gy, 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = '#0f172a';
-        ctx.fill();
+        this.drawGrommetMark(ctx, gx, gy, 16);
 
         ctx.fillStyle = '#b45309';
         ctx.font = 'bold 8.5px Inter, sans-serif';
@@ -3519,16 +3755,7 @@ const CanvasInspector = {
       const grommetInsetPx = Math.min(safeX * 0.7, 18);
       const grommetRadius = 6;
 
-      const drawGrommet = (gx, gy) => {
-        ctx.beginPath();
-        ctx.arc(gx, gy, grommetRadius, 0, Math.PI * 2);
-        ctx.fillStyle = '#d97706';
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(gx, gy, grommetRadius * 0.45, 0, Math.PI * 2);
-        ctx.fillStyle = '#0f172a';
-        ctx.fill();
-      };
+      const drawGrommet = (gx, gy) => this.drawGrommetMark(ctx, gx, gy, grommetRadius * 2);
 
       if (dims.grommetType === 'Left Side Grommets (Flags)') {
         // Left side grommets
@@ -3803,16 +4030,7 @@ const CanvasInspector = {
       const grommetInsetPx = Math.min(safeX * 0.7, 18);
       const grommetRadius = 6.5;
 
-      const drawGrommet = (gx, gy) => {
-        ctx.beginPath();
-        ctx.arc(gx, gy, grommetRadius, 0, Math.PI * 2);
-        ctx.fillStyle = '#d97706';
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(gx, gy, grommetRadius * 0.45, 0, Math.PI * 2);
-        ctx.fillStyle = '#0f172a';
-        ctx.fill();
-      };
+      const drawGrommet = (gx, gy) => this.drawGrommetMark(ctx, gx, gy, grommetRadius * 2);
 
       drawGrommet(grommetInsetPx, grommetInsetPx);
       drawGrommet(w - grommetInsetPx, grommetInsetPx);

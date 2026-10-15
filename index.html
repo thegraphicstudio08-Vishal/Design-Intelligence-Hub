@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261014a">
+  <link rel="stylesheet" href="css/style.css?v=20261015b">
 </head>
 <body>
 
@@ -406,7 +406,7 @@
         <div class="page-header-actions" id="actions-proof" style="display:none;">
           <button class="btn btn-outline btn-sm" onclick="setSubnav(document.querySelectorAll('.subnav-item')[0], 'precheck')">← Back to Pre-Check</button>
           <button class="btn btn-outline btn-sm" id="proof-print-btn" onclick="ProofStudio.print()" disabled>🖨 Print / Export PDF</button>
-          <button class="btn btn-orange btn-sm" id="proof-share-btn" onclick="alert('Consolidated proof link generated and copied to clipboard!')" disabled>Send Proof to Customer</button>
+          <button class="btn btn-orange btn-sm web-proof-btn" id="proof-share-btn" onclick="ProofStudio.downloadWebProof()" title="One self-contained web page with the same layout as the PDF — attach it or upload it (e-mail, Google Drive, CRM) to share with the customer" disabled>⬇ Web Proof (.html)</button>
         </div>
       </div>
 
@@ -470,6 +470,9 @@
               </button>
               <button onclick="ProofStudio.print()" class="btn btn-orange" style="font-size:12px; padding:7px 18px; background:#4739d2; border-color:#4739d2; display:inline-flex; align-items:center; gap:6px;">
                 <span>🖨️</span> <span>Export / Print Proof PDF</span>
+              </button>
+              <button onclick="ProofStudio.downloadWebProof()" class="btn btn-orange web-proof-btn" style="font-size:12px; padding:7px 18px; display:inline-flex; align-items:center; gap:6px;" title="One self-contained web page with the same layout as the PDF. The customer can drag the print preview across the whole product. Attach it or upload it (e-mail, Google Drive, CRM) to share.">
+                <span>🌐</span> <span>Download Web Proof (.html)</span>
               </button>
             </div>
           </div>
@@ -594,12 +597,13 @@
   <script src="js/template_registry.js"></script>
   <script src="js/file_analyzer.js?v=20261009c"></script>
   <script src="js/artwork_text_check.js?v=20261009b"></script>
-  <script src="js/agentic_ai_inspector.js?v=20261014a"></script>
+  <script src="js/agentic_ai_inspector.js?v=20261015a"></script>
   <script src="js/color_check.js?v=20261014b"></script>
-  <script src="js/precheck_engine.js?v=20261014a"></script>
+  <script src="js/safe_zone_check.js?v=20261015a"></script>
+  <script src="js/precheck_engine.js?v=20261015a"></script>
   <script src="js/previous_orders.js"></script>
-  <script src="js/canvas_inspector.js?v=20261010b"></script>
-  <script src="js/proof_studio.js?v=20261014b"></script>
+  <script src="js/canvas_inspector.js?v=20261015b"></script>
+  <script src="js/proof_studio.js?v=20261015b"></script>
   <script src="js/app.js?v=20261014a"></script>
 </body>
 </html>

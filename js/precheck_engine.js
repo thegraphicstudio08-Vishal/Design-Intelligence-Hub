@@ -372,13 +372,17 @@ const PrecheckEngine = {
     });
 
     // ──────────────────────────────────────────────────────────────────────────
-    // CHECKPOINT 6: Safe Area Verification
+    // CHECKPOINT 6: Safe Area — text (OCR) and logos measured against the safe zone (SafeZoneCheck); updated
+    // when the text reading finishes. Shaped products / unreadable files stay a look by eye.
     // ──────────────────────────────────────────────────────────────────────────
-    checks.push({
+    checks.push((typeof SafeZoneCheck !== 'undefined')
+      ? SafeZoneCheck.check({ analysis, spec, dimensions: { widthIn: printW, heightIn: printH } })
+      : {
       id: 'safeArea',
       name: 'Safe Area Margins',
       icon: '🛡️',
       status: 'WARNING',
+      manual: true,
       found: `${spec.safeArea} guide boundary`,
       required: `${spec.safeArea} inner safe zone`,
       detail: `SOP standard for ${spec.name} requires all logos, text, and critical graphics to remain at least ${spec.safeArea} inside the trim line to prevent being cut or grommeted.${sop?.safeArea ? ` Source: ${sop.safeArea.source}.` : ''}`,
@@ -471,7 +475,7 @@ const PrecheckEngine = {
    *  · something the tool cannot decide alone — a look by eye (safe area, bleed, font size), a reading still
    *    running, a reminder, the proof guide — → "Confirm by eye": listed separately, never scored
    */
-  MANUAL_ALWAYS: ['safeArea', 'bleed', 'fontSizes', 'proofPlan'],
+  MANUAL_ALWAYS: ['bleed', 'fontSizes', 'proofPlan'],
 
   settle(check) {
     if (this.MANUAL_ALWAYS.includes(check.id)) check.status = 'INFO';

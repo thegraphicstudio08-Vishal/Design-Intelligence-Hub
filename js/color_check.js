@@ -674,19 +674,66 @@ const ColorCheck = {
 
   /** The artwork as it prints (Photoshop's CMYK view), composited on the white material — JPEG data URL */
   _printPreview(img) {
-    const sc = Math.min(1, this.PREVIEW_PX / Math.max(img.naturalWidth, img.naturalHeight));
-    const w = Math.max(1, Math.round(img.naturalWidth * sc)), h = Math.max(1, Math.round(img.naturalHeight * sc));
+    return this._convertImage(img, this.PREVIEW_PX, 'image/jpeg');
+  },
+
+  /**
+   * Any picture in its printed colours (sRGB → SWOP v2 → screen, as Photoshop shows a CMYK document), composited on
+   * the white material. Colours are looked up once per 64-level bucket, so even a large file converts in a moment.
+   */
+  _convertImage(img, maxPx, type) {
+    const W0 = img.naturalWidth || img.width, H0 = img.naturalHeight || img.height;
+    const sc = Math.min(1, maxPx / Math.max(W0, H0));
+    const w = Math.max(1, Math.round(W0 * sc)), h = Math.max(1, Math.round(H0 * sc));
     const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
     const ctx = cv.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(img, 0, 0, w, h);
     const id = ctx.getImageData(0, 0, w, h), d = id.data;
+    const cache = new Int32Array(262144).fill(-1);
+    const rep = c => c >= 252 ? 255 : c <= 3 ? 0 : (c & 252) + 1.5;   // paper white and black stay exact
     for (let o = 0; o < d.length; o += 4) {
       const a = d[o + 3] / 255;
-      const q = this.toPrint(d[o], d[o + 1], d[o + 2]);
-      d[o] = q[0] * a + 255 * (1 - a); d[o + 1] = q[1] * a + 255 * (1 - a); d[o + 2] = q[2] * a + 255 * (1 - a); d[o + 3] = 255;
+      const key = ((d[o] >> 2) << 12) | ((d[o + 1] >> 2) << 6) | (d[o + 2] >> 2);
+      let v = cache[key];
+      if (v < 0) {
+        const q = this.toPrint(rep(d[o]), rep(d[o + 1]), rep(d[o + 2]));
+        v = cache[key] = (Math.round(q[0]) << 16) | (Math.round(q[1]) << 8) | Math.round(q[2]);
+      }
+      d[o] = ((v >> 16) & 255) * a + 255 * (1 - a);
+      d[o + 1] = ((v >> 8) & 255) * a + 255 * (1 - a);
+      d[o + 2] = (v & 255) * a + 255 * (1 - a);
+      d[o + 3] = 255;
     }
     ctx.putImageData(id, 0, 0);
-    try { return cv.toDataURL('image/jpeg', 0.9); } catch (e) { return null; }
+    const t = type || (w * h <= 2500000 ? 'image/png' : 'image/jpeg');   // small (low-res) files stay crisp
+    try { return cv.toDataURL(t, 0.92); } catch (e) { return null; }
+  },
+
+  PRINT_VERSION_PX: 6000,   // longest side of the full-resolution print-colour copy (print preview screenshot)
+  _pv: null,                // { src, url } — last full-resolution print-colour copy
+  _pvBusy: null,
+
+  /**
+   * The artwork in its printed (CMYK) colours at full resolution, for the print preview screenshot (Proof 03) and
+   * the web proof. Returns the cached data URL, or null while it is being made (onReady is called when done).
+   */
+  printVersion(src, onReady) {
+    if (!src) return null;
+    if (this._pv && this._pv.src === src) return this._pv.url;
+    if (this._pvBusy === src) return null;
+    this._pvBusy = src;
+    const img = new Image();
+    img.onload = () => setTimeout(() => {
+      if (this._pvBusy !== src) return;
+      let url = null;
+      try { url = this._convertImage(img, this.PRINT_VERSION_PX); } catch (e) { console.warn('Print colours could not be made:', e); }
+      this._pvBusy = null;
+      this._pv = { src, url };
+      if (url && onReady) onReady();
+    }, 20);
+    img.onerror = () => { if (this._pvBusy === src) { this._pvBusy = null; this._pv = { src, url: null }; } };
+    img.src = src;
+    return null;
   },
 
   /**

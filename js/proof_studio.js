@@ -290,9 +290,12 @@ const ProofStudio = {
       ctx.fillText('POLE POCKET', 0, 0);
       ctx.restore();
     });
+    // custom grommet positions: the BannerBuzz CMYK grommet mark (CMYK Grommet.svg)
+    const mark = typeof CanvasInspector !== 'undefined' && CanvasInspector.drawGrommetMark;
     if (g) {
       const rad = Math.max(10, 0.7 * k);
       g.points.forEach(([x, y]) => {
+        if (mark) { CanvasInspector.drawGrommetMark(ctx, fx + x * k, fy + y * k, rad * 2); return; }
         ctx.beginPath(); ctx.arc(fx + x * k, fy + y * k, rad, 0, Math.PI * 2);
         ctx.fillStyle = '#f1f5f9'; ctx.fill(); ctx.lineWidth = Math.max(3, rad * 0.35); ctx.strokeStyle = '#dc2626'; ctx.stroke();
       });
@@ -301,7 +304,7 @@ const ProofStudio = {
     try { url = cv.toDataURL('image/jpeg', 0.92); } catch (e) { return null; }
     const where = { corners: 'on the 4 corners', 'top-corners': 'on the top corners', top: 'along the top edge', left: 'along the left edge' };
     const note = [pockets.length ? `Pole pocket on the ${pockets.join(' & ')} (shown in blue)` : '',
-      g ? `${g.kind.replace(/^Metal /, '')} ${where[g.where] || ''} (red circles)` : ''].filter(Boolean).join(' · ');
+      g ? `${g.kind.replace(/^Metal /, '')} ${where[g.where] || ''} (${mark ? 'grommet marks' : 'red circles'})` : ''].filter(Boolean).join(' · ');
     this._hlCache = { key, url, note };
     return this._hlCache;
   },
@@ -1014,6 +1017,11 @@ const ProofStudio = {
       // Tall items (flags, roll-ups, vertical banners): default focus on the upper third (face / main logo)
       cropY = (cropScaleInfo.h > cropScaleInfo.w * 1.2) ? 34 : 50;
     }
+    // Print preview screenshot in the printed colours (CMYK, U.S. Web Coated SWOP v2 — as Photoshop's CMYK mode
+    // shows it), at full resolution so low-resolution pixels still show; the RGB file while the copy is being made
+    const printColourSrc = plan.showPrintPreview && !hasCustomCrop && typeof ColorCheck !== 'undefined' && ColorCheck.printVersion
+      ? ColorCheck.printVersion(realArtSrc, rerender) : null;
+    const cropSrc = printColourSrc || realArtSrc;
     const reticleW = Math.max(8, Math.min(100, Math.round((750 / cropImg.w) * 100)));
     const reticleH = Math.max(8, Math.min(100, Math.round((240 / cropImg.h) * 100)));
     const isMockupView = !plan.showPrintPreview;
@@ -1022,8 +1030,8 @@ const ProofStudio = {
     const hl = overallCustom ? null : this._finishingHighlight(artworkSrc, spec, analysis, printW, printH, rerender);
     const artworkProofSrc = hl ? hl.url : artworkSrc;
     const pickArea = plan.showPrintPreview && !hasCustomCrop && !hl && !overallCustom;
-    this._lastRender = { artworkSrc: realArtSrc, artworkProofSrc, cropImg, cropX, cropY, showPrintPreview: plan.showPrintPreview,
-      baseName: this._proofBaseName(analysis), orderNum: finalOrderNum || 'Proof03' };
+    this._lastRender = { artworkSrc: cropSrc, artworkProofSrc, cropImg, cropX, cropY, showPrintPreview: plan.showPrintPreview,
+      printColours: !!printColourSrc, baseName: this._proofBaseName(analysis), orderNum: finalOrderNum || 'Proof03' };
 
     // ── Proof sheet building blocks ──
     const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -1141,9 +1149,13 @@ const ProofStudio = {
         `<div id="proof-crop-viewport" style="border:2px dashed ${plan.resConcern ? '#dc2626' : '#cbd5e1'}; border-radius:4px; height:240px; overflow:hidden; position:relative; background:#f8fafc; display:flex; align-items:center; justify-content:center; cursor:${!hasCustomCrop ? 'grab' : 'default'}; user-select:none;">
             ${hasCustomCrop ? `<img src="${this.slots.crop.dataUrl}" alt="Print preview screenshot" class="proof-zoom-img" style="max-width:100%; max-height:100%; object-fit:contain;" />` : `
               <div style="position:relative; width:100%; height:100%; overflow:hidden; pointer-events:none;">
-                <img id="proof-crop-img" src="${realArtSrc}" alt="Print preview screenshot" class="proof-zoom-img" style="position:absolute; width:${cropImg.w}px; height:${cropImg.h}px; max-width:none !important; max-height:none !important; left:calc(50% - ${Math.round(cropImg.w * (cropX / 100))}px); top:calc(50% - ${Math.round(cropImg.h * (cropY / 100))}px); transition:left 0.12s ease, top 0.12s ease; display:block;" />
+                <img id="proof-crop-img" src="${cropSrc}" alt="Print preview screenshot" class="proof-zoom-img" style="position:absolute; width:${cropImg.w}px; height:${cropImg.h}px; max-width:none !important; max-height:none !important; left:calc(50% - ${Math.round(cropImg.w * (cropX / 100))}px); top:calc(50% - ${Math.round(cropImg.h * (cropY / 100))}px); transition:left 0.12s ease, top 0.12s ease; display:block;" />
               </div>
-              <div style="position:absolute; top:8px; left:10px; background:rgba(229,231,235,0.95); color:#dc2626; font-size:11px; font-weight:800; padding:3px 10px; border-radius:3px; pointer-events:none;">Print preview screenshot</div>
+              <div style="position:absolute; top:8px; left:10px; display:flex; gap:6px; pointer-events:none;">
+                <span style="background:rgba(229,231,235,0.95); color:#dc2626; font-size:11px; font-weight:800; padding:3px 10px; border-radius:3px;">Print preview screenshot</span>
+                ${printColourSrc ? `<span style="background:rgba(14,34,70,0.9); color:#ffffff; font-size:10px; font-weight:800; padding:3px 8px; border-radius:3px; letter-spacing:0.03em;">CMYK PRINT COLOURS</span>`
+                  : `<span class="no-print" style="background:rgba(255,255,255,0.9); color:#64748b; font-size:10px; font-weight:700; padding:3px 8px; border-radius:3px;">converting to print colours…</span>`}
+              </div>
               <div class="no-print" style="position:absolute; bottom:8px; right:10px; background:rgba(15,23,42,0.88); color:#ffffff; font-size:10px; font-weight:700; padding:4px 12px; border-radius:4px; pointer-events:none;">🔍 ${cropScaleInfo.modeText} · ✋ drag to pan</div>`}
           </div>`));
     }
@@ -1335,6 +1347,200 @@ const ProofStudio = {
     this.fitForPrint(true);
     window.print();
     this.fitForPrint(false);
+  },
+
+  // ── Web proof (.html) ──────────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Web proof: one self-contained .html page with the same layout as the PDF proof, to share by e-mail, Google Drive,
+   * the CRM… — no server needed. The print preview screenshot can be dragged across the whole product at print size
+   * (with an overview map), pictures open larger on click, and the page prints / saves as a one-page PDF.
+   */
+  async downloadWebProof() {
+    if (!document.getElementById('printable-proof-sheet')) { alert('Create the proof first (Proof Studio).'); return; }
+    const btns = [...document.querySelectorAll('.web-proof-btn')];
+    btns.forEach(b => { b.disabled = true; b.dataset.label = b.innerHTML; b.innerHTML = 'Preparing web proof…'; });
+    try {
+      // the print preview screenshot in print colours first — it may still be converting
+      const st = this._lastRender || {};
+      if (st.showPrintPreview && !this.slots.crop?.dataUrl && !st.printColours && typeof ColorCheck !== 'undefined') {
+        const t0 = Date.now();
+        while (!(this._lastRender && this._lastRender.printColours) && Date.now() - t0 < 15000) await new Promise(r => setTimeout(r, 250));
+      }
+      const html = await this._buildWebProof();
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${String((this._lastRender && this._lastRender.orderNum) || 'proof').replace(/[^\w.-]+/g, '_')}_web_proof.html`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    } catch (e) {
+      console.warn('Web proof failed:', e);
+      alert('The web proof could not be made: ' + (e && e.message ? e.message : e));
+    } finally {
+      btns.forEach(b => { b.disabled = false; if (b.dataset.label) b.innerHTML = b.dataset.label; });
+    }
+  },
+
+  /** Any image source → data URL (relative asset files are read and embedded) */
+  async _toDataUrl(src) {
+    if (!src || src.startsWith('data:')) return src;
+    const blob = await (await fetch(src)).blob();
+    return await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); });
+  },
+
+  /** Pictures shown small on the proof are embedded at a sensible size (vector SVGs as they are) */
+  async _shrinkForWeb(src, maxPx) {
+    if (!src || /^data:image\/svg/i.test(src)) return src;
+    const img = await new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+    if (!img || !img.naturalWidth) return this._toDataUrl(src).catch(() => src);
+    const k = Math.min(1, maxPx / Math.max(img.naturalWidth, img.naturalHeight));
+    if (k === 1 && src.startsWith('data:') && src.length < 600000) return src;
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(img.naturalWidth * k)); cv.height = Math.max(1, Math.round(img.naturalHeight * k));
+    const ctx = cv.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    let alpha = false;
+    try {
+      const d = ctx.getImageData(0, 0, cv.width, cv.height).data;
+      for (let i = 3; i < d.length; i += 4 * 7) if (d[i] < 250) { alpha = true; break; }
+      return cv.toDataURL(alpha ? 'image/png' : 'image/jpeg', 0.9);
+    } catch (e) { return this._toDataUrl(src).catch(() => src); }
+  },
+
+  async _buildWebProof() {
+    const sheet = document.getElementById('printable-proof-sheet');
+    const st = this._lastRender || {};
+    const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const clone = sheet.cloneNode(true);
+    clone.classList.remove('print-fit');
+    ['width', 'max-width', 'zoom'].forEach(p => clone.style.removeProperty(p));
+    clone.style.maxWidth = '860px';            // the PDF's design width
+    clone.style.margin = '0 auto';
+    // designer-only parts and the tool's code stay in the tool
+    clone.querySelectorAll('.no-print').forEach(n => n.remove());
+    clone.querySelectorAll('*').forEach(n => {
+      [...n.attributes].forEach(a => { if (/^on/i.test(a.name)) n.removeAttribute(a.name); });
+      if (n.style && (n.style.cursor === 'crosshair' || n.style.cursor === 'pointer')) n.style.cursor = '';
+    });
+    // approval: the customer replies to the message the proof came with
+    const apr = [...clone.querySelectorAll('div')].find(d => d.textContent.trim() === 'Customer Approval');
+    if (apr && apr.parentElement) {
+      apr.parentElement.insertAdjacentHTML('beforeend', '<div style="margin-top:8px; font-size:11px; font-weight:700; color:#0e2246;">To approve, reply to the message this proof came with: “Approved”, or tell us what to change.</div>');
+    }
+    // print preview screenshot: drag across the whole product at print size, with an overview map
+    const vp = clone.querySelector('#proof-crop-viewport');
+    const cropImg = clone.querySelector('#proof-crop-img');
+    let mapSrc = '';
+    if (vp && cropImg && st.cropImg) {
+      const cx = this.options.cropX != null ? this.options.cropX : st.cropX, cy = this.options.cropY != null ? this.options.cropY : st.cropY;
+      Object.assign(vp.dataset, { w: Math.round(st.cropImg.w), h: Math.round(st.cropImg.h), x: cx, y: cy });
+      vp.insertAdjacentHTML('beforeend', '<div class="wp-hint wp-screen">✋ Drag to look around your whole product at print size</div>');
+      cropImg.setAttribute('src', await this._toDataUrl(cropImg.getAttribute('src')));
+      mapSrc = await this._shrinkForWeb(cropImg.getAttribute('src'), 700);
+      vp.insertAdjacentHTML('afterend', `
+        <div class="wp-map wp-screen">
+          <div class="wp-map-frame"><img src="${mapSrc}" alt="Your whole product"><i class="wp-reticle"></i></div>
+          <div class="wp-map-txt"><b>Your whole product</b>The box shows the part you see above at print size. Drag the picture above, or click / drag here, to check every area before you approve.</div>
+        </div>`);
+    }
+    for (const im of [...clone.querySelectorAll('img')]) {
+      if (im === cropImg || im.closest('.wp-map')) continue;
+      im.setAttribute('src', await this._shrinkForWeb(im.getAttribute('src'), 1600));
+    }
+    const order = st.orderNum || '';
+    const script = `
+(function () {
+  var fit = document.getElementById('wp-fit'), sheet = document.getElementById('printable-proof-sheet');
+  function screenFit() { fit.style.zoom = Math.min(1, (window.innerWidth - 24) / 860); }
+  function zoomK() { return parseFloat(fit.style.zoom) || 1; }
+  window.addEventListener('resize', screenFit); screenFit();
+  window.addEventListener('beforeprint', function () { fit.style.zoom = 1; var k = Math.min(748 / 860, 985 / sheet.scrollHeight); fit.style.zoom = k; });
+  window.addEventListener('afterprint', screenFit);
+  var vp = document.getElementById('proof-crop-viewport'), img = document.getElementById('proof-crop-img');
+  if (vp && img && vp.dataset.w) {
+    var W = +vp.dataset.w, H = +vp.dataset.h, x = +vp.dataset.x, y = +vp.dataset.y, drag = null;
+    var ret = document.querySelector('.wp-reticle'), map = document.querySelector('.wp-map-frame');
+    function place(nx, ny) {
+      x = Math.max(0, Math.min(100, nx)); y = Math.max(0, Math.min(100, ny));
+      img.style.transition = 'none';
+      img.style.left = 'calc(50% - ' + Math.round(W * x / 100) + 'px)';
+      img.style.top = 'calc(50% - ' + Math.round(H * y / 100) + 'px)';
+      if (ret) {
+        ret.style.width = Math.min(100, vp.clientWidth / W * 100) + '%'; ret.style.height = Math.min(100, vp.clientHeight / H * 100) + '%';
+        ret.style.left = x + '%'; ret.style.top = y + '%';
+      }
+    }
+    function capture(el, e) { try { el.setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone */ } }
+    vp.addEventListener('pointerdown', function (e) { drag = { sx: e.clientX, sy: e.clientY, x: x, y: y }; capture(vp, e); vp.classList.add('dragging'); e.preventDefault(); });
+    vp.addEventListener('pointermove', function (e) { if (!drag) return; var k = zoomK(); place(drag.x - (e.clientX - drag.sx) / k / W * 100, drag.y - (e.clientY - drag.sy) / k / H * 100); });
+    ['pointerup', 'pointercancel'].forEach(function (t) { vp.addEventListener(t, function () { drag = null; vp.classList.remove('dragging'); }); });
+    if (map) {
+      var md = false;
+      function mp(e) { var r = map.getBoundingClientRect(); place((e.clientX - r.left) / r.width * 100, (e.clientY - r.top) / r.height * 100); }
+      map.addEventListener('pointerdown', function (e) { md = true; capture(map, e); mp(e); e.preventDefault(); });
+      map.addEventListener('pointermove', function (e) { if (md) mp(e); });
+      map.addEventListener('pointerup', function () { md = false; });
+    }
+    place(x, y);
+  }
+  var lb = document.getElementById('wp-lightbox');
+  document.querySelectorAll('#printable-proof-sheet img').forEach(function (im) {
+    if (im.id === 'proof-crop-img' || (im.closest && im.closest('.wp-map'))) return;
+    im.style.cursor = 'zoom-in';
+    im.addEventListener('click', function () { lb.querySelector('img').src = im.src; lb.style.display = 'flex'; });
+  });
+  lb.addEventListener('click', function () { lb.style.display = 'none'; });
+})();`;
+    return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artwork Proof${order ? ' · Order ' + esc(order) : ''} · BannerBuzz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #eef2f7; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #111c38; }
+  *, *::before, *::after { box-sizing: border-box; }
+  .wp-bar { position: sticky; top: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 18px; background: #0e2246; color: #ffffff; font-size: 13px; }
+  .wp-bar b { font-weight: 800; }
+  .wp-bar button { background: #ff5f1f; color: #ffffff; border: 0; border-radius: 6px; padding: 8px 14px; font: 800 12.5px 'Inter', sans-serif; cursor: pointer; }
+  .wp-stage { padding: 22px 12px 40px; }
+  @media (max-width: 600px) {
+    .wp-bar { font-size: 11.5px; padding: 8px 12px; }
+    .wp-bar button { padding: 6px 10px; font-size: 11px; white-space: nowrap; }
+    .wp-stage { padding: 12px 8px 28px; }
+  }
+  #printable-proof-sheet { box-shadow: 0 10px 30px rgba(17, 28, 56, 0.12); }
+  #proof-crop-viewport { cursor: grab; touch-action: none; }
+  #proof-crop-viewport.dragging { cursor: grabbing; }
+  .wp-hint { position: absolute; bottom: 8px; right: 10px; background: rgba(15, 23, 42, 0.88); color: #ffffff; font-size: 10.5px; font-weight: 700; padding: 4px 12px; border-radius: 4px; pointer-events: none; }
+  .wp-map { display: flex; gap: 14px; align-items: center; margin-top: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; }
+  .wp-map-frame { position: relative; flex-shrink: 0; line-height: 0; cursor: crosshair; touch-action: none; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2); }
+  .wp-map-frame img { display: block; max-height: 150px; max-width: 360px; user-select: none; -webkit-user-drag: none; }
+  .wp-reticle { position: absolute; transform: translate(-50%, -50%); border: 2px solid #dc2626; background: rgba(220, 38, 38, 0.14); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.85); pointer-events: none; }
+  .wp-map-txt { font-size: 11px; color: #475569; line-height: 1.45; }
+  .wp-map-txt b { display: block; font-size: 12px; color: #0e2246; margin-bottom: 2px; }
+  .wp-lightbox { position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.86); cursor: zoom-out; }
+  .wp-lightbox img { max-width: 94vw; max-height: 92vh; background: #ffffff; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+  @media print {
+    @page { size: letter; margin: 0.35in; }
+    html, body { background: #ffffff; }
+    .wp-bar, .wp-screen, .wp-lightbox { display: none !important; }
+    .wp-stage { padding: 0; }
+    #printable-proof-sheet { box-shadow: none; border: 0 !important; width: 860px !important; max-width: none !important; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="wp-bar"><div>BannerBuzz · <b>Artwork proof</b>${order ? ' · Order ' + esc(order) : ''}</div><button type="button" onclick="window.print()">Print / Save as PDF</button></div>
+<div class="wp-stage"><div id="wp-fit">${clone.outerHTML}</div></div>
+<div class="wp-lightbox" id="wp-lightbox"><img alt=""></div>
+<script>${script}</script>
+</body>
+</html>`;
   }
 };
 
