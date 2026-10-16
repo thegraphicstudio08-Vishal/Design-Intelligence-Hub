@@ -9,9 +9,9 @@
 "stated": null,
 "id": "backpack-flags-blade-double-side-586e48",
 "src": "Custom Flags\\Backpack Flags\\Backpack Flags - Blade_(Double Side).psdt",
-"img": "assets/qnap/backpack-flags-blade-double-side-586e48.jpg",
-"mask": "assets/qnap/backpack-flags-blade-double-side-586e48.m.png",
-"outline": "assets/qnap/backpack-flags-blade-double-side-586e48.o.json",
+"img": "assets/tpl/flags-01/backpack-flags-blade-double-side-586e48.jpg",
+"mask": "assets/tpl/flags-01/backpack-flags-blade-double-side-586e48.m.png",
+"outline": "assets/tpl/flags-01/backpack-flags-blade-double-side-586e48.o.json",
 "fullIn": [
 41.88,
 49.03
@@ -40,7 +40,34 @@
 "areas": {
 "bleed": 0.072
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+6.032,
+8.874,
+19.567,
+47.51
+],
+"frontSafe": [
+6.032,
+8.874,
+19.567,
+47.51
+],
+"logoBoxes": [
+[
+6.032,
+8.874,
+19.567,
+47.51
+],
+[
+22.313,
+8.874,
+35.848,
+47.51
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -52,9 +79,9 @@
 "stated": null,
 "id": "backpack-flags-blade-single-side-d03a08",
 "src": "Custom Flags\\Backpack Flags\\Backpack Flags - Blade_(Single Side).psdt",
-"img": "assets/qnap/backpack-flags-blade-single-side-d03a08.jpg",
-"mask": "assets/qnap/backpack-flags-blade-single-side-d03a08.m.png",
-"outline": "assets/qnap/backpack-flags-blade-single-side-d03a08.o.json",
+"img": "assets/tpl/flags-01/backpack-flags-blade-single-side-d03a08.jpg",
+"mask": "assets/tpl/flags-01/backpack-flags-blade-single-side-d03a08.m.png",
+"outline": "assets/tpl/flags-01/backpack-flags-blade-single-side-d03a08.o.json",
 "fullIn": [
 21.09,
 49.02
@@ -85,16 +112,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-6.008,
-8.906,
-19.576,
-47.512
+5.984,
+8.922,
+19.57,
+47.5
 ],
 "frontSafe": [
-6.008,
-8.906,
-19.576,
-47.512
+5.984,
+8.922,
+19.57,
+47.5
+],
+"logoBoxes": [
+[
+5.984,
+8.922,
+19.57,
+47.5
+]
 ],
 "logoArea": "safe area"
 },
@@ -108,9 +143,9 @@
 "stated": null,
 "id": "backpack-flags-rectangle-double-side-2b870b",
 "src": "Custom Flags\\Backpack Flags\\Backpack Flags - Rectangle_(Double Side).psdt",
-"img": "assets/qnap/backpack-flags-rectangle-double-side-2b870b.jpg",
-"mask": "assets/qnap/backpack-flags-rectangle-double-side-2b870b.m.png",
-"outline": "assets/qnap/backpack-flags-rectangle-double-side-2b870b.o.json",
+"img": "assets/tpl/flags-01/backpack-flags-rectangle-double-side-2b870b.jpg",
+"mask": "assets/tpl/flags-01/backpack-flags-rectangle-double-side-2b870b.m.png",
+"outline": "assets/tpl/flags-01/backpack-flags-rectangle-double-side-2b870b.o.json",
 "fullIn": [
 35.41,
 32.5
@@ -139,7 +174,34 @@
 "areas": {
 "bleed": 0.089
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+1.487,
+1.487,
+16.218,
+30.978
+],
+"frontSafe": [
+1.487,
+1.487,
+16.218,
+30.978
+],
+"logoBoxes": [
+[
+1.487,
+1.487,
+16.218,
+30.978
+],
+[
+19.192,
+1.487,
+33.887,
+30.978
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -151,9 +213,9 @@
 "stated": null,
 "id": "backpack-flags-rectangle-single-side-796a6e",
 "src": "Custom Flags\\Backpack Flags\\Backpack Flags - Rectangle_(Single Side).psdt",
-"img": "assets/qnap/backpack-flags-rectangle-single-side-796a6e.jpg",
-"mask": "assets/qnap/backpack-flags-rectangle-single-side-796a6e.m.png",
-"outline": "assets/qnap/backpack-flags-rectangle-single-side-796a6e.o.json",
+"img": "assets/tpl/flags-01/backpack-flags-rectangle-single-side-796a6e.jpg",
+"mask": "assets/tpl/flags-01/backpack-flags-rectangle-single-side-796a6e.m.png",
+"outline": "assets/tpl/flags-01/backpack-flags-rectangle-single-side-796a6e.o.json",
 "fullIn": [
 17.74,
 32.5
@@ -184,61 +246,26 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-1.503,
-1.489,
-16.206,
-30.993
+1.495,
+1.495,
+16.245,
+31.005
 ],
 "frontSafe": [
-1.503,
-1.489,
-16.206,
-30.993
+1.495,
+1.495,
+16.245,
+31.005
+],
+"logoBoxes": [
+[
+1.495,
+1.495,
+16.245,
+31.005
+]
 ],
 "logoArea": "safe area"
-},
-{
-"group": "Custom Flags",
-"product": "Backpack Flags",
-"path": "Backpack Flags",
-"name": "Backpack Flags - Teardrop_(Double Side)",
-"panel": "Backpack Flags Teardrop Double Side",
-"sides": "double",
-"stated": null,
-"id": "backpack-flags-teardrop-double-side-44552d",
-"src": "Custom Flags\\Backpack Flags\\Backpack Flags - Teardrop_(Double Side).psdt",
-"img": "assets/qnap/backpack-flags-teardrop-double-side-44552d.jpg",
-"mask": "assets/qnap/backpack-flags-teardrop-double-side-44552d.m.png",
-"outline": "assets/qnap/backpack-flags-teardrop-double-side-44552d.o.json",
-"fullIn": [
-20.5,
-50.82
-],
-"visIn": [
-0.508,
-0.508,
-19.932,
-49.808
-],
-"safeIn": [
-1.017,
-1.016,
-19.487,
-49.808
-],
-"prodIn": [
-0.0,
-0.0,
-20.504,
-50.824
-],
-"kind": "layers",
-"source": "qnap",
-"layout": true,
-"areas": {
-"bleed": 0.113
-},
-"layersFrom": "cut line on the page"
 },
 {
 "group": "Custom Flags",
@@ -250,9 +277,9 @@
 "stated": null,
 "id": "backpack-flags-teardrop-single-side-6bfb12",
 "src": "Custom Flags\\Backpack Flags\\Backpack Flags - Teardrop_(Single Side).psdt",
-"img": "assets/qnap/backpack-flags-teardrop-single-side-6bfb12.jpg",
-"mask": "assets/qnap/backpack-flags-teardrop-single-side-6bfb12.m.png",
-"outline": "assets/qnap/backpack-flags-teardrop-single-side-6bfb12.o.json",
+"img": "assets/tpl/flags-01/backpack-flags-teardrop-single-side-6bfb12.jpg",
+"mask": "assets/tpl/flags-01/backpack-flags-teardrop-single-side-6bfb12.m.png",
+"outline": "assets/tpl/flags-01/backpack-flags-teardrop-single-side-6bfb12.o.json",
 "fullIn": [
 21.47,
 41.56
@@ -283,16 +310,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-5.455,
-4.641,
-14.182,
-17.611
+5.44,
+4.655,
+14.203,
+17.58
 ],
 "frontSafe": [
-5.455,
-4.641,
-14.182,
-17.611
+5.44,
+4.655,
+14.203,
+17.58
+],
+"logoBoxes": [
+[
+5.44,
+4.655,
+14.203,
+17.58
+]
 ],
 "logoArea": "safe area"
 },
@@ -306,9 +341,9 @@
 "stated": null,
 "id": "backpack-flags-u-shape-double-side-d0e63b",
 "src": "Custom Flags\\Backpack Flags\\Backpack Flags - U Shape_(Double Side).psdt",
-"img": "assets/qnap/backpack-flags-u-shape-double-side-d0e63b.jpg",
-"mask": "assets/qnap/backpack-flags-u-shape-double-side-d0e63b.m.png",
-"outline": "assets/qnap/backpack-flags-u-shape-double-side-d0e63b.o.json",
+"img": "assets/tpl/flags-01/backpack-flags-u-shape-double-side-d0e63b.jpg",
+"mask": "assets/tpl/flags-01/backpack-flags-u-shape-double-side-d0e63b.m.png",
+"outline": "assets/tpl/flags-01/backpack-flags-u-shape-double-side-d0e63b.o.json",
 "fullIn": [
 41.46,
 42.46
@@ -337,7 +372,34 @@
 "areas": {
 "bleed": 0.081
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+3.993,
+5.477,
+14.91,
+32.864
+],
+"frontSafe": [
+3.993,
+5.477,
+14.91,
+32.864
+],
+"logoBoxes": [
+[
+3.993,
+5.477,
+14.91,
+32.864
+],
+[
+26.337,
+5.477,
+37.467,
+32.822
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -349,9 +411,9 @@
 "stated": null,
 "id": "backpack-flags-u-shape-single-side-236293",
 "src": "Custom Flags\\Backpack Flags\\Backpack Flags - U Shape_(Single Side).psdt",
-"img": "assets/qnap/backpack-flags-u-shape-single-side-236293.jpg",
-"mask": "assets/qnap/backpack-flags-u-shape-single-side-236293.m.png",
-"outline": "assets/qnap/backpack-flags-u-shape-single-side-236293.o.json",
+"img": "assets/tpl/flags-01/backpack-flags-u-shape-single-side-236293.jpg",
+"mask": "assets/tpl/flags-01/backpack-flags-u-shape-single-side-236293.m.png",
+"outline": "assets/tpl/flags-01/backpack-flags-u-shape-single-side-236293.o.json",
 "fullIn": [
 20.89,
 42.46
@@ -382,16 +444,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-4.015,
-5.45,
-15.016,
-32.839
+3.991,
+5.477,
+15.116,
+32.822
 ],
 "frontSafe": [
-4.015,
-5.45,
-15.016,
-32.839
+3.991,
+5.477,
+15.116,
+32.822
+],
+"logoBoxes": [
+[
+3.991,
+5.477,
+15.116,
+32.822
+]
 ],
 "logoArea": "safe area"
 },
@@ -409,9 +479,9 @@
 ],
 "id": "blade-flag-1-5-x-5-5-ft-18-x-66-in-d-e06b1e",
 "src": "Custom Flags\\Blade Flags\\Blade Flag 1.5 x 5.5 Ft (18 x 66 In) Double Sided.psdt",
-"img": "assets/qnap/blade-flag-1-5-x-5-5-ft-18-x-66-in-d-e06b1e.jpg",
-"mask": "assets/qnap/blade-flag-1-5-x-5-5-ft-18-x-66-in-d-e06b1e.m.png",
-"outline": "assets/qnap/blade-flag-1-5-x-5-5-ft-18-x-66-in-d-e06b1e.o.json",
+"img": "assets/tpl/flags-01/blade-flag-1-5-x-5-5-ft-18-x-66-in-d-e06b1e.jpg",
+"mask": "assets/tpl/flags-01/blade-flag-1-5-x-5-5-ft-18-x-66-in-d-e06b1e.m.png",
+"outline": "assets/tpl/flags-01/blade-flag-1-5-x-5-5-ft-18-x-66-in-d-e06b1e.o.json",
 "fullIn": [
 44.0,
 70.0
@@ -440,7 +510,34 @@
 "areas": {
 "bleed": 0.128
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+6.576,
+8.05,
+15.459,
+60.13
+],
+"frontSafe": [
+6.576,
+8.05,
+15.459,
+60.13
+],
+"logoBoxes": [
+[
+6.576,
+8.05,
+15.459,
+60.13
+],
+[
+28.541,
+8.05,
+37.424,
+60.13
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -456,9 +553,9 @@
 ],
 "id": "blade-flag-1-5-x-5-5-ft-18-x-66-in-s-a5a85c",
 "src": "Custom Flags\\Blade Flags\\Blade Flag 1.5 x 5.5 Ft (18 x 66 In) Single Sided.psdt",
-"img": "assets/qnap/blade-flag-1-5-x-5-5-ft-18-x-66-in-s-a5a85c.jpg",
-"mask": "assets/qnap/blade-flag-1-5-x-5-5-ft-18-x-66-in-s-a5a85c.m.png",
-"outline": "assets/qnap/blade-flag-1-5-x-5-5-ft-18-x-66-in-s-a5a85c.o.json",
+"img": "assets/tpl/flags-01/blade-flag-1-5-x-5-5-ft-18-x-66-in-s-a5a85c.jpg",
+"mask": "assets/tpl/flags-01/blade-flag-1-5-x-5-5-ft-18-x-66-in-s-a5a85c.m.png",
+"outline": "assets/tpl/flags-01/blade-flag-1-5-x-5-5-ft-18-x-66-in-s-a5a85c.o.json",
 "fullIn": [
 22.0,
 70.0
@@ -489,16 +586,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-6.594,
+6.586,
 8.05,
-15.406,
-60.113
+15.414,
+60.13
 ],
 "frontSafe": [
-6.594,
+6.586,
 8.05,
-15.406,
-60.113
+15.414,
+60.13
+],
+"logoBoxes": [
+[
+6.586,
+8.05,
+15.414,
+60.13
+]
 ],
 "logoArea": "safe area"
 },
@@ -516,9 +621,9 @@
 ],
 "id": "blade-flag-2-x-11-5-ft-24-x-138-in-d-655722",
 "src": "Custom Flags\\Blade Flags\\Blade Flag 2 x 11.5 Ft (24 x 138 In) Double sided.psdt",
-"img": "assets/qnap/blade-flag-2-x-11-5-ft-24-x-138-in-d-655722.jpg",
-"mask": "assets/qnap/blade-flag-2-x-11-5-ft-24-x-138-in-d-655722.m.png",
-"outline": "assets/qnap/blade-flag-2-x-11-5-ft-24-x-138-in-d-655722.o.json",
+"img": "assets/tpl/flags-01/blade-flag-2-x-11-5-ft-24-x-138-in-d-655722.jpg",
+"mask": "assets/tpl/flags-01/blade-flag-2-x-11-5-ft-24-x-138-in-d-655722.m.png",
+"outline": "assets/tpl/flags-01/blade-flag-2-x-11-5-ft-24-x-138-in-d-655722.o.json",
 "fullIn": [
 60.01,
 141.01
@@ -547,7 +652,34 @@
 "areas": {
 "bleed": 0.086
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+8.19,
+15.229,
+21.462,
+131.421
+],
+"frontSafe": [
+8.19,
+15.229,
+21.462,
+131.421
+],
+"logoBoxes": [
+[
+8.19,
+15.229,
+21.462,
+131.421
+],
+[
+38.548,
+15.229,
+51.82,
+131.421
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -563,9 +695,9 @@
 ],
 "id": "blade-flag-2-x-11-5-ft-24-x-138-in-s-2efbcc",
 "src": "Custom Flags\\Blade Flags\\Blade Flag 2 x 11.5 Ft (24 x 138 In) Single sided.psdt",
-"img": "assets/qnap/blade-flag-2-x-11-5-ft-24-x-138-in-s-2efbcc.jpg",
-"mask": "assets/qnap/blade-flag-2-x-11-5-ft-24-x-138-in-s-2efbcc.m.png",
-"outline": "assets/qnap/blade-flag-2-x-11-5-ft-24-x-138-in-s-2efbcc.o.json",
+"img": "assets/tpl/flags-01/blade-flag-2-x-11-5-ft-24-x-138-in-s-2efbcc.jpg",
+"mask": "assets/tpl/flags-01/blade-flag-2-x-11-5-ft-24-x-138-in-s-2efbcc.m.png",
+"outline": "assets/tpl/flags-01/blade-flag-2-x-11-5-ft-24-x-138-in-s-2efbcc.o.json",
 "fullIn": [
 30.0,
 141.0
@@ -596,16 +728,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-8.395,
-15.51,
-21.546,
-131.424
+8.169,
+15.369,
+21.549,
+131.412
 ],
 "frontSafe": [
-8.395,
-15.51,
-21.546,
-131.424
+8.169,
+15.369,
+21.549,
+131.412
+],
+"logoBoxes": [
+[
+8.169,
+15.369,
+21.549,
+131.412
+]
 ],
 "logoArea": "safe area"
 },
@@ -623,9 +763,9 @@
 ],
 "id": "blade-flag-2-x-7-5-ft-24-x-90-in-dou-1a9ff3",
 "src": "Custom Flags\\Blade Flags\\Blade Flag 2 x 7.5 Ft (24 x 90 In) Double Sided.psdt",
-"img": "assets/qnap/blade-flag-2-x-7-5-ft-24-x-90-in-dou-1a9ff3.jpg",
-"mask": "assets/qnap/blade-flag-2-x-7-5-ft-24-x-90-in-dou-1a9ff3.m.png",
-"outline": "assets/qnap/blade-flag-2-x-7-5-ft-24-x-90-in-dou-1a9ff3.o.json",
+"img": "assets/tpl/flags-01/blade-flag-2-x-7-5-ft-24-x-90-in-dou-1a9ff3.jpg",
+"mask": "assets/tpl/flags-01/blade-flag-2-x-7-5-ft-24-x-90-in-dou-1a9ff3.m.png",
+"outline": "assets/tpl/flags-01/blade-flag-2-x-7-5-ft-24-x-90-in-dou-1a9ff3.o.json",
 "fullIn": [
 54.0,
 95.0
@@ -654,7 +794,34 @@
 "areas": {
 "bleed": 0.102
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+7.606,
+11.21,
+19.204,
+85.025
+],
+"frontSafe": [
+7.606,
+11.21,
+19.204,
+85.025
+],
+"logoBoxes": [
+[
+7.606,
+11.21,
+19.204,
+85.025
+],
+[
+34.796,
+11.21,
+46.394,
+85.025
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -670,9 +837,9 @@
 ],
 "id": "blade-flag-2-x-7-5-ft-24-x-90-in-sin-f10cd0",
 "src": "Custom Flags\\Blade Flags\\Blade Flag 2 x 7.5 Ft (24 x 90 In) Single Sided.psdt",
-"img": "assets/qnap/blade-flag-2-x-7-5-ft-24-x-90-in-sin-f10cd0.jpg",
-"mask": "assets/qnap/blade-flag-2-x-7-5-ft-24-x-90-in-sin-f10cd0.m.png",
-"outline": "assets/qnap/blade-flag-2-x-7-5-ft-24-x-90-in-sin-f10cd0.o.json",
+"img": "assets/tpl/flags-01/blade-flag-2-x-7-5-ft-24-x-90-in-sin-f10cd0.jpg",
+"mask": "assets/tpl/flags-01/blade-flag-2-x-7-5-ft-24-x-90-in-sin-f10cd0.m.png",
+"outline": "assets/tpl/flags-01/blade-flag-2-x-7-5-ft-24-x-90-in-sin-f10cd0.o.json",
 "fullIn": [
 27.0,
 95.0
@@ -703,16 +870,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-7.799,
-11.242,
-19.161,
-85.065
+7.606,
+11.21,
+19.204,
+85.025
 ],
 "frontSafe": [
-7.799,
-11.242,
-19.161,
-85.065
+7.606,
+11.21,
+19.204,
+85.025
+],
+"logoBoxes": [
+[
+7.606,
+11.21,
+19.204,
+85.025
+]
 ],
 "logoArea": "safe area"
 },
@@ -730,9 +905,9 @@
 ],
 "id": "blade-flag-2-x-9-5-ft-24-x-114-in-do-12c20d",
 "src": "Custom Flags\\Blade Flags\\Blade Flag 2 x 9.5 Ft (24 x 114 In) Double Sided.psdt",
-"img": "assets/qnap/blade-flag-2-x-9-5-ft-24-x-114-in-do-12c20d.jpg",
-"mask": "assets/qnap/blade-flag-2-x-9-5-ft-24-x-114-in-do-12c20d.m.png",
-"outline": "assets/qnap/blade-flag-2-x-9-5-ft-24-x-114-in-do-12c20d.o.json",
+"img": "assets/tpl/flags-01/blade-flag-2-x-9-5-ft-24-x-114-in-do-12c20d.jpg",
+"mask": "assets/tpl/flags-01/blade-flag-2-x-9-5-ft-24-x-114-in-do-12c20d.m.png",
+"outline": "assets/tpl/flags-01/blade-flag-2-x-9-5-ft-24-x-114-in-do-12c20d.o.json",
 "fullIn": [
 54.0,
 119.0
@@ -761,7 +936,34 @@
 "areas": {
 "bleed": 0.096
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+7.731,
+14.994,
+19.269,
+108.885
+],
+"frontSafe": [
+7.731,
+14.994,
+19.269,
+108.885
+],
+"logoBoxes": [
+[
+7.731,
+14.994,
+19.269,
+108.885
+],
+[
+34.731,
+14.994,
+46.269,
+108.885
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -777,9 +979,9 @@
 ],
 "id": "blade-flag-2-x-9-5-ft-24-x-114-in-si-236a65",
 "src": "Custom Flags\\Blade Flags\\Blade Flag 2 x 9.5 Ft (24 x 114 In) Single Sided.psdt",
-"img": "assets/qnap/blade-flag-2-x-9-5-ft-24-x-114-in-si-236a65.jpg",
-"mask": "assets/qnap/blade-flag-2-x-9-5-ft-24-x-114-in-si-236a65.m.png",
-"outline": "assets/qnap/blade-flag-2-x-9-5-ft-24-x-114-in-si-236a65.o.json",
+"img": "assets/tpl/flags-01/blade-flag-2-x-9-5-ft-24-x-114-in-si-236a65.jpg",
+"mask": "assets/tpl/flags-01/blade-flag-2-x-9-5-ft-24-x-114-in-si-236a65.m.png",
+"outline": "assets/tpl/flags-01/blade-flag-2-x-9-5-ft-24-x-114-in-si-236a65.o.json",
 "fullIn": [
 27.0,
 119.0
@@ -810,16 +1012,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-7.629,
-15.024,
-19.272,
-108.786
+7.731,
+14.875,
+19.269,
+108.885
 ],
 "frontSafe": [
-7.629,
-15.024,
-19.272,
-108.786
+7.731,
+14.875,
+19.269,
+108.885
+],
+"logoBoxes": [
+[
+7.731,
+14.875,
+19.269,
+108.885
+]
 ],
 "logoArea": "safe area"
 },
@@ -837,9 +1047,9 @@
 ],
 "id": "blade-flag-2-50-x-15-5-ft-30-x-186-d-f4045f",
 "src": "Custom Flags\\Blade Flags\\Blade Flag 2.50 x 15.5 Ft (30 x 186) Double Sided.psdt",
-"img": "assets/qnap/blade-flag-2-50-x-15-5-ft-30-x-186-d-f4045f.jpg",
-"mask": "assets/qnap/blade-flag-2-50-x-15-5-ft-30-x-186-d-f4045f.m.png",
-"outline": "assets/qnap/blade-flag-2-50-x-15-5-ft-30-x-186-d-f4045f.o.json",
+"img": "assets/tpl/flags-01/blade-flag-2-50-x-15-5-ft-30-x-186-d-f4045f.jpg",
+"mask": "assets/tpl/flags-01/blade-flag-2-50-x-15-5-ft-30-x-186-d-f4045f.m.png",
+"outline": "assets/tpl/flags-01/blade-flag-2-50-x-15-5-ft-30-x-186-d-f4045f.o.json",
 "fullIn": [
 66.0,
 188.0
@@ -868,7 +1078,34 @@
 "areas": {
 "bleed": 0.074
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+9.026,
+22.56,
+23.88,
+178.412
+],
+"frontSafe": [
+9.026,
+22.56,
+23.88,
+178.412
+],
+"logoBoxes": [
+[
+9.026,
+22.56,
+23.88,
+178.412
+],
+[
+42.12,
+22.56,
+56.974,
+178.412
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -884,9 +1121,9 @@
 ],
 "id": "blade-flag-2-50-x-15-5-ft-30-x-186-s-7951d0",
 "src": "Custom Flags\\Blade Flags\\Blade Flag 2.50 x 15.5 Ft (30 x 186) Single Sided.psdt",
-"img": "assets/qnap/blade-flag-2-50-x-15-5-ft-30-x-186-s-7951d0.jpg",
-"mask": "assets/qnap/blade-flag-2-50-x-15-5-ft-30-x-186-s-7951d0.m.png",
-"outline": "assets/qnap/blade-flag-2-50-x-15-5-ft-30-x-186-s-7951d0.o.json",
+"img": "assets/tpl/flags-01/blade-flag-2-50-x-15-5-ft-30-x-186-s-7951d0.jpg",
+"mask": "assets/tpl/flags-01/blade-flag-2-50-x-15-5-ft-30-x-186-s-7951d0.m.png",
+"outline": "assets/tpl/flags-01/blade-flag-2-50-x-15-5-ft-30-x-186-s-7951d0.o.json",
 "fullIn": [
 33.0,
 188.0
@@ -917,16 +1154,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-9.093,
-22.638,
-23.829,
-178.365
+9.051,
+22.748,
+23.949,
+178.412
 ],
 "frontSafe": [
-9.093,
-22.638,
-23.829,
-178.365
+9.051,
+22.748,
+23.949,
+178.412
+],
+"logoBoxes": [
+[
+9.051,
+22.748,
+23.949,
+178.412
+]
 ],
 "logoArea": "safe area"
 },
@@ -944,9 +1189,9 @@
 ],
 "id": "body-flag-3-x-2-ft-10bf92",
 "src": "Custom Flags\\Body Flag\\Body Flag_3 x 2 Ft.psdt",
-"img": "assets/qnap/body-flag-3-x-2-ft-10bf92.jpg",
-"mask": "assets/qnap/body-flag-3-x-2-ft-10bf92.m.png",
-"outline": "assets/qnap/body-flag-3-x-2-ft-10bf92.o.json",
+"img": "assets/tpl/flags-01/body-flag-3-x-2-ft-10bf92.jpg",
+"mask": "assets/tpl/flags-01/body-flag-3-x-2-ft-10bf92.m.png",
+"outline": "assets/tpl/flags-01/body-flag-3-x-2-ft-10bf92.o.json",
 "fullIn": [
 36.52,
 32.06
@@ -975,7 +1220,28 @@
 "areas": {
 "bleed": 0.004
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+1.023,
+8.581,
+35.461,
+31.038
+],
+"frontSafe": [
+1.023,
+8.581,
+35.461,
+31.038
+],
+"logoBoxes": [
+[
+1.023,
+8.581,
+35.461,
+31.038
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -991,9 +1257,9 @@
 ],
 "id": "body-flag-5-x-3-ft-bfea9e",
 "src": "Custom Flags\\Body Flag\\Body Flag_5 x 3 Ft.psdt",
-"img": "assets/qnap/body-flag-5-x-3-ft-bfea9e.jpg",
-"mask": "assets/qnap/body-flag-5-x-3-ft-bfea9e.m.png",
-"outline": "assets/qnap/body-flag-5-x-3-ft-bfea9e.o.json",
+"img": "assets/tpl/flags-01/body-flag-5-x-3-ft-bfea9e.jpg",
+"mask": "assets/tpl/flags-01/body-flag-5-x-3-ft-bfea9e.m.png",
+"outline": "assets/tpl/flags-01/body-flag-5-x-3-ft-bfea9e.o.json",
 "fullIn": [
 60.52,
 49.1
@@ -1022,7 +1288,28 @@
 "areas": {
 "bleed": 0.004
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+1.089,
+13.622,
+59.431,
+48.071
+],
+"frontSafe": [
+1.089,
+13.622,
+59.431,
+48.071
+],
+"logoBoxes": [
+[
+1.089,
+13.622,
+59.431,
+48.071
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -1038,9 +1325,9 @@
 ],
 "id": "burgee-flags-1-5x1-ft-double-fold-f7b017",
 "src": "Custom Flags\\Burgee Flags\\Burgee Flags_1.5x1 Ft_Double Fold.psdt",
-"img": "assets/qnap/burgee-flags-1-5x1-ft-double-fold-f7b017.jpg",
-"mask": "assets/qnap/burgee-flags-1-5x1-ft-double-fold-f7b017.m.png",
-"outline": "assets/qnap/burgee-flags-1-5x1-ft-double-fold-f7b017.o.json",
+"img": "assets/tpl/flags-01/burgee-flags-1-5x1-ft-double-fold-f7b017.jpg",
+"mask": "assets/tpl/flags-01/burgee-flags-1-5x1-ft-double-fold-f7b017.m.png",
+"outline": "assets/tpl/flags-01/burgee-flags-1-5x1-ft-double-fold-f7b017.o.json",
 "fullIn": [
 40.57,
 13.3
@@ -1069,7 +1356,34 @@
 "areas": {
 "bleed": 0.195
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+1.014,
+4.339,
+12.78,
+8.921
+],
+"frontSafe": [
+1.014,
+4.339,
+12.78,
+8.921
+],
+"logoBoxes": [
+[
+1.014,
+4.339,
+12.78,
+8.921
+],
+[
+27.79,
+4.339,
+39.556,
+8.921
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -1085,9 +1399,9 @@
 ],
 "id": "burgee-flags-1-5x1-ft-single-fold-797a43",
 "src": "Custom Flags\\Burgee Flags\\Burgee Flags_1.5x1 Ft_Single Fold.psdt",
-"img": "assets/qnap/burgee-flags-1-5x1-ft-single-fold-797a43.jpg",
-"mask": "assets/qnap/burgee-flags-1-5x1-ft-single-fold-797a43.m.png",
-"outline": "assets/qnap/burgee-flags-1-5x1-ft-single-fold-797a43.o.json",
+"img": "assets/tpl/flags-01/burgee-flags-1-5x1-ft-single-fold-797a43.jpg",
+"mask": "assets/tpl/flags-01/burgee-flags-1-5x1-ft-single-fold-797a43.m.png",
+"outline": "assets/tpl/flags-01/burgee-flags-1-5x1-ft-single-fold-797a43.o.json",
 "fullIn": [
 20.3,
 13.3
@@ -1119,15 +1433,23 @@
 "layersFrom": "clipping mask layer",
 "front": [
 1.015,
-4.347,
-12.786,
-8.948
+4.345,
+12.789,
+8.955
 ],
 "frontSafe": [
 1.015,
-4.347,
-12.786,
-8.948
+4.345,
+12.789,
+8.955
+],
+"logoBoxes": [
+[
+1.015,
+4.345,
+12.789,
+8.955
+]
 ],
 "logoArea": "safe area"
 },
@@ -1145,9 +1467,9 @@
 ],
 "id": "burgee-flags-10x6-ft-double-fold-ac4430",
 "src": "Custom Flags\\Burgee Flags\\Burgee Flags_10x6 Ft_Double Fold.psdt",
-"img": "assets/qnap/burgee-flags-10x6-ft-double-fold-ac4430.jpg",
-"mask": "assets/qnap/burgee-flags-10x6-ft-double-fold-ac4430.m.png",
-"outline": "assets/qnap/burgee-flags-10x6-ft-double-fold-ac4430.o.json",
+"img": "assets/tpl/flags-01/burgee-flags-10x6-ft-double-fold-ac4430.jpg",
+"mask": "assets/tpl/flags-01/burgee-flags-10x6-ft-double-fold-ac4430.m.png",
+"outline": "assets/tpl/flags-01/burgee-flags-10x6-ft-double-fold-ac4430.o.json",
 "fullIn": [
 244.93,
 73.25
@@ -1176,7 +1498,34 @@
 "areas": {
 "bleed": 0.072
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+3.919,
+23.028,
+81.562,
+50.222
+],
+"frontSafe": [
+3.919,
+23.028,
+81.562,
+50.222
+],
+"logoBoxes": [
+[
+3.919,
+23.028,
+81.562,
+50.222
+],
+[
+163.368,
+23.028,
+241.011,
+50.222
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -1192,9 +1541,9 @@
 ],
 "id": "burgee-flags-10x6-ft-single-fold-fe96e8",
 "src": "Custom Flags\\Burgee Flags\\Burgee Flags_10x6 Ft_Single Fold.psdt",
-"img": "assets/qnap/burgee-flags-10x6-ft-single-fold-fe96e8.jpg",
-"mask": "assets/qnap/burgee-flags-10x6-ft-single-fold-fe96e8.m.png",
-"outline": "assets/qnap/burgee-flags-10x6-ft-single-fold-fe96e8.o.json",
+"img": "assets/tpl/flags-01/burgee-flags-10x6-ft-single-fold-fe96e8.jpg",
+"mask": "assets/tpl/flags-01/burgee-flags-10x6-ft-single-fold-fe96e8.m.png",
+"outline": "assets/tpl/flags-01/burgee-flags-10x6-ft-single-fold-fe96e8.o.json",
 "fullIn": [
 122.46,
 73.25
@@ -1223,7 +1572,28 @@
 "areas": {
 "bleed": 0.034
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+3.551,
+22.783,
+82.538,
+50.467
+],
+"frontSafe": [
+3.551,
+22.783,
+82.538,
+50.467
+],
+"logoBoxes": [
+[
+3.551,
+22.783,
+82.538,
+50.467
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -1239,9 +1609,9 @@
 ],
 "id": "burgee-flags-3x2-ft-double-fold-9ac42b",
 "src": "Custom Flags\\Burgee Flags\\Burgee Flags_3x2 Ft_Double Fold.psdt",
-"img": "assets/qnap/burgee-flags-3x2-ft-double-fold-9ac42b.jpg",
-"mask": "assets/qnap/burgee-flags-3x2-ft-double-fold-9ac42b.m.png",
-"outline": "assets/qnap/burgee-flags-3x2-ft-double-fold-9ac42b.o.json",
+"img": "assets/tpl/flags-01/burgee-flags-3x2-ft-double-fold-9ac42b.jpg",
+"mask": "assets/tpl/flags-01/burgee-flags-3x2-ft-double-fold-9ac42b.m.png",
+"outline": "assets/tpl/flags-01/burgee-flags-3x2-ft-double-fold-9ac42b.o.json",
 "fullIn": [
 76.39,
 25.29
@@ -1270,7 +1640,34 @@
 "areas": {
 "bleed": 0.105
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+2.444,
+8.405,
+22.764,
+12.454
+],
+"frontSafe": [
+2.444,
+8.405,
+22.764,
+12.454
+],
+"logoBoxes": [
+[
+2.444,
+8.405,
+22.764,
+12.454
+],
+[
+53.626,
+8.405,
+73.869,
+12.454
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -1286,9 +1683,9 @@
 ],
 "id": "burgee-flags-3x2-ft-single-fold-132218",
 "src": "Custom Flags\\Burgee Flags\\Burgee Flags_3x2 Ft_Single Fold.psdt",
-"img": "assets/qnap/burgee-flags-3x2-ft-single-fold-132218.jpg",
-"mask": "assets/qnap/burgee-flags-3x2-ft-single-fold-132218.m.png",
-"outline": "assets/qnap/burgee-flags-3x2-ft-single-fold-132218.o.json",
+"img": "assets/tpl/flags-01/burgee-flags-3x2-ft-single-fold-132218.jpg",
+"mask": "assets/tpl/flags-01/burgee-flags-3x2-ft-single-fold-132218.m.png",
+"outline": "assets/tpl/flags-01/burgee-flags-3x2-ft-single-fold-132218.o.json",
 "fullIn": [
 38.28,
 25.29
@@ -1319,16 +1716,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-2.504,
-8.44,
-22.713,
-12.413
+2.488,
+8.43,
+22.738,
+12.415
 ],
 "frontSafe": [
-2.504,
-8.44,
-22.713,
-12.413
+2.488,
+8.43,
+22.738,
+12.415
+],
+"logoBoxes": [
+[
+2.488,
+8.43,
+22.738,
+12.415
+]
 ],
 "logoArea": "safe area"
 },
@@ -1346,9 +1751,9 @@
 ],
 "id": "burgee-flags-5x3-ft-double-fold-1a10d4",
 "src": "Custom Flags\\Burgee Flags\\Burgee Flags_5x3 Ft_Double Fold.psdt",
-"img": "assets/qnap/burgee-flags-5x3-ft-double-fold-1a10d4.jpg",
-"mask": "assets/qnap/burgee-flags-5x3-ft-double-fold-1a10d4.m.png",
-"outline": "assets/qnap/burgee-flags-5x3-ft-double-fold-1a10d4.o.json",
+"img": "assets/tpl/flags-01/burgee-flags-5x3-ft-double-fold-1a10d4.jpg",
+"mask": "assets/tpl/flags-01/burgee-flags-5x3-ft-double-fold-1a10d4.m.png",
+"outline": "assets/tpl/flags-01/burgee-flags-5x3-ft-double-fold-1a10d4.o.json",
 "fullIn": [
 124.89,
 37.26
@@ -1377,7 +1782,34 @@
 "areas": {
 "bleed": 0.072
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+3.497,
+12.253,
+37.467,
+18.38
+],
+"frontSafe": [
+3.497,
+12.253,
+37.467,
+18.38
+],
+"logoBoxes": [
+[
+3.497,
+12.253,
+37.467,
+18.38
+],
+[
+87.423,
+12.253,
+121.393,
+18.38
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -1393,9 +1825,9 @@
 ],
 "id": "burgee-flags-5x3-ft-single-fold-b1d13f",
 "src": "Custom Flags\\Burgee Flags\\Burgee Flags_5x3 Ft_Single Fold.psdt",
-"img": "assets/qnap/burgee-flags-5x3-ft-single-fold-b1d13f.jpg",
-"mask": "assets/qnap/burgee-flags-5x3-ft-single-fold-b1d13f.m.png",
-"outline": "assets/qnap/burgee-flags-5x3-ft-single-fold-b1d13f.o.json",
+"img": "assets/tpl/flags-01/burgee-flags-5x3-ft-single-fold-b1d13f.jpg",
+"mask": "assets/tpl/flags-01/burgee-flags-5x3-ft-single-fold-b1d13f.m.png",
+"outline": "assets/tpl/flags-01/burgee-flags-5x3-ft-single-fold-b1d13f.o.json",
 "fullIn": [
 62.46,
 37.26
@@ -1424,7 +1856,28 @@
 "areas": {
 "bleed": 0.068
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+3.498,
+12.316,
+37.538,
+18.317
+],
+"frontSafe": [
+3.498,
+12.316,
+37.538,
+18.317
+],
+"logoBoxes": [
+[
+3.498,
+12.316,
+37.538,
+18.317
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -1440,9 +1893,9 @@
 ],
 "id": "burgee-flags-6-5-x-5-inch-single-fol-8e00ee",
 "src": "Custom Flags\\Burgee Flags\\Burgee Flags_6.5 x 5 Inch_Single Fold.psdt",
-"img": "assets/qnap/burgee-flags-6-5-x-5-inch-single-fol-8e00ee.jpg",
-"mask": "assets/qnap/burgee-flags-6-5-x-5-inch-single-fol-8e00ee.m.png",
-"outline": "assets/qnap/burgee-flags-6-5-x-5-inch-single-fol-8e00ee.o.json",
+"img": "assets/tpl/flags-01/burgee-flags-6-5-x-5-inch-single-fol-8e00ee.jpg",
+"mask": "assets/tpl/flags-01/burgee-flags-6-5-x-5-inch-single-fol-8e00ee.m.png",
+"outline": "assets/tpl/flags-01/burgee-flags-6-5-x-5-inch-single-fol-8e00ee.o.json",
 "fullIn": [
 9.52,
 6.01
@@ -1473,16 +1926,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-1.003,
-2.221,
-4.679,
-2.931
+1.0,
+2.216,
+4.684,
+2.929
 ],
 "frontSafe": [
-1.003,
-2.221,
-4.679,
-2.931
+1.0,
+2.216,
+4.684,
+2.929
+],
+"logoBoxes": [
+[
+1.0,
+2.216,
+4.684,
+2.929
+]
 ],
 "logoArea": "safe area"
 },
@@ -1500,9 +1961,9 @@
 ],
 "id": "burgee-flags-6-5x5-ft-double-fold-36f4b6",
 "src": "Custom Flags\\Burgee Flags\\Burgee Flags_6.5x5 Ft_Double Fold.psdt",
-"img": "assets/qnap/burgee-flags-6-5x5-ft-double-fold-36f4b6.jpg",
-"mask": "assets/qnap/burgee-flags-6-5x5-ft-double-fold-36f4b6.m.png",
-"outline": "assets/qnap/burgee-flags-6-5x5-ft-double-fold-36f4b6.o.json",
+"img": "assets/tpl/flags-01/burgee-flags-6-5x5-ft-double-fold-36f4b6.jpg",
+"mask": "assets/tpl/flags-01/burgee-flags-6-5x5-ft-double-fold-36f4b6.m.png",
+"outline": "assets/tpl/flags-01/burgee-flags-6-5x5-ft-double-fold-36f4b6.o.json",
 "fullIn": [
 160.1,
 61.34
@@ -1531,7 +1992,34 @@
 "areas": {
 "bleed": 0.05
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+3.522,
+31.07,
+52.673,
+42.281
+],
+"frontSafe": [
+3.522,
+31.07,
+52.673,
+42.281
+],
+"logoBoxes": [
+[
+3.522,
+31.07,
+52.673,
+42.281
+],
+[
+107.427,
+31.07,
+156.578,
+42.281
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -1547,9 +2035,9 @@
 ],
 "id": "burgee-flags-6-5x5-ft-single-fold-5f5d4d",
 "src": "Custom Flags\\Burgee Flags\\Burgee Flags_6.5x5 Ft_Single Fold.psdt",
-"img": "assets/qnap/burgee-flags-6-5x5-ft-single-fold-5f5d4d.jpg",
-"mask": "assets/qnap/burgee-flags-6-5x5-ft-single-fold-5f5d4d.m.png",
-"outline": "assets/qnap/burgee-flags-6-5x5-ft-single-fold-5f5d4d.o.json",
+"img": "assets/tpl/flags-01/burgee-flags-6-5x5-ft-single-fold-5f5d4d.jpg",
+"mask": "assets/tpl/flags-01/burgee-flags-6-5x5-ft-single-fold-5f5d4d.m.png",
+"outline": "assets/tpl/flags-01/burgee-flags-6-5x5-ft-single-fold-5f5d4d.o.json",
 "fullIn": [
 80.05,
 61.34
@@ -1580,16 +2068,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-3.502,
-19.147,
-52.665,
-30.155
+3.522,
+19.139,
+52.673,
+30.19
 ],
 "frontSafe": [
-3.502,
-19.147,
-52.665,
-30.155
+3.522,
+19.139,
+52.673,
+30.19
+],
+"logoBoxes": [
+[
+3.522,
+19.139,
+52.673,
+30.19
+]
 ],
 "logoArea": "safe area"
 },
@@ -1607,9 +2103,9 @@
 ],
 "id": "burgee-flags-6x4-ft-double-fold-a4e971",
 "src": "Custom Flags\\Burgee Flags\\Burgee Flags_6x4 Ft_Double Fold.psdt",
-"img": "assets/qnap/burgee-flags-6x4-ft-double-fold-a4e971.jpg",
-"mask": "assets/qnap/burgee-flags-6x4-ft-double-fold-a4e971.m.png",
-"outline": "assets/qnap/burgee-flags-6x4-ft-double-fold-a4e971.o.json",
+"img": "assets/tpl/flags-01/burgee-flags-6x4-ft-double-fold-a4e971.jpg",
+"mask": "assets/tpl/flags-01/burgee-flags-6x4-ft-double-fold-a4e971.m.png",
+"outline": "assets/tpl/flags-01/burgee-flags-6x4-ft-double-fold-a4e971.o.json",
 "fullIn": [
 148.56,
 49.3
@@ -1638,7 +2134,34 @@
 "areas": {
 "bleed": 0.058
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+3.417,
+15.74,
+47.242,
+33.411
+],
+"frontSafe": [
+3.417,
+15.74,
+47.242,
+33.411
+],
+"logoBoxes": [
+[
+3.417,
+15.74,
+47.242,
+33.411
+],
+[
+101.318,
+15.74,
+145.143,
+33.411
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -1654,9 +2177,9 @@
 ],
 "id": "burgee-flags-6x4-ft-single-fold-ac05a5",
 "src": "Custom Flags\\Burgee Flags\\Burgee Flags_6x4 Ft_Single Fold.psdt",
-"img": "assets/qnap/burgee-flags-6x4-ft-single-fold-ac05a5.jpg",
-"mask": "assets/qnap/burgee-flags-6x4-ft-single-fold-ac05a5.m.png",
-"outline": "assets/qnap/burgee-flags-6x4-ft-single-fold-ac05a5.o.json",
+"img": "assets/tpl/flags-01/burgee-flags-6x4-ft-single-fold-ac05a5.jpg",
+"mask": "assets/tpl/flags-01/burgee-flags-6x4-ft-single-fold-ac05a5.m.png",
+"outline": "assets/tpl/flags-01/burgee-flags-6x4-ft-single-fold-ac05a5.o.json",
 "fullIn": [
 74.28,
 49.29
@@ -1685,7 +2208,28 @@
 "areas": {
 "bleed": 0.053
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+3.491,
+15.811,
+47.242,
+24.497
+],
+"frontSafe": [
+3.491,
+15.811,
+47.242,
+24.497
+],
+"logoBoxes": [
+[
+3.491,
+15.811,
+47.242,
+24.497
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -1701,9 +2245,9 @@
 ],
 "id": "burgee-flags-8x5-ft-double-fold-ac7278",
 "src": "Custom Flags\\Burgee Flags\\Burgee Flags_8x5 Ft_Double Fold.psdt",
-"img": "assets/qnap/burgee-flags-8x5-ft-double-fold-ac7278.jpg",
-"mask": "assets/qnap/burgee-flags-8x5-ft-double-fold-ac7278.m.png",
-"outline": "assets/qnap/burgee-flags-8x5-ft-double-fold-ac7278.o.json",
+"img": "assets/tpl/flags-01/burgee-flags-8x5-ft-double-fold-ac7278.jpg",
+"mask": "assets/tpl/flags-01/burgee-flags-8x5-ft-double-fold-ac7278.m.png",
+"outline": "assets/tpl/flags-01/burgee-flags-8x5-ft-double-fold-ac7278.o.json",
 "fullIn": [
 196.85,
 61.29
@@ -1732,7 +2276,34 @@
 "areas": {
 "bleed": 0.047
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+3.543,
+19.313,
+64.96,
+41.977
+],
+"frontSafe": [
+3.543,
+19.313,
+64.96,
+41.977
+],
+"logoBoxes": [
+[
+3.543,
+19.313,
+64.96,
+41.977
+],
+[
+131.89,
+19.313,
+193.307,
+41.977
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -1748,9 +2319,9 @@
 ],
 "id": "burgee-flags-8x5-ft-single-fold-17aa7c",
 "src": "Custom Flags\\Burgee Flags\\Burgee Flags_8x5 Ft_Single Fold.psdt",
-"img": "assets/qnap/burgee-flags-8x5-ft-single-fold-17aa7c.jpg",
-"mask": "assets/qnap/burgee-flags-8x5-ft-single-fold-17aa7c.m.png",
-"outline": "assets/qnap/burgee-flags-8x5-ft-single-fold-17aa7c.o.json",
+"img": "assets/tpl/flags-02/burgee-flags-8x5-ft-single-fold-17aa7c.jpg",
+"mask": "assets/tpl/flags-02/burgee-flags-8x5-ft-single-fold-17aa7c.m.png",
+"outline": "assets/tpl/flags-02/burgee-flags-8x5-ft-single-fold-17aa7c.o.json",
 "fullIn": [
 98.42,
 61.29
@@ -1779,7 +2350,28 @@
 "areas": {
 "bleed": 0.043
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+3.445,
+19.313,
+64.76,
+41.977
+],
+"frontSafe": [
+3.445,
+19.313,
+64.76,
+41.977
+],
+"logoBoxes": [
+[
+3.445,
+19.313,
+64.76,
+41.977
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -1795,9 +2387,9 @@
 ],
 "id": "car-flags-18x12-in-double-sided-f49750",
 "src": "Custom Flags\\Car Flag\\car_flags_18x12_in_double_sided.psdt",
-"img": "assets/qnap/car-flags-18x12-in-double-sided-f49750.jpg",
-"mask": "assets/qnap/car-flags-18x12-in-double-sided-f49750.m.png",
-"outline": "assets/qnap/car-flags-18x12-in-double-sided-f49750.o.json",
+"img": "assets/tpl/flags-02/car-flags-18x12-in-double-sided-f49750.jpg",
+"mask": "assets/tpl/flags-02/car-flags-18x12-in-double-sided-f49750.m.png",
+"outline": "assets/tpl/flags-02/car-flags-18x12-in-double-sided-f49750.o.json",
 "fullIn": [
 37.0,
 13.0
@@ -1826,7 +2418,34 @@
 "areas": {
 "bleed": 0.101
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+0.999,
+1.0,
+18.019,
+12.0
+],
+"frontSafe": [
+0.999,
+1.0,
+18.019,
+12.0
+],
+"logoBoxes": [
+[
+0.999,
+1.0,
+18.019,
+12.0
+],
+[
+18.981,
+1.0,
+36.001,
+12.0
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -1842,9 +2461,9 @@
 ],
 "id": "car-flags-18x12-in-single-sided-71b922",
 "src": "Custom Flags\\Car Flag\\car_flags_18x12_in_single_sided.psdt",
-"img": "assets/qnap/car-flags-18x12-in-single-sided-71b922.jpg",
-"mask": "assets/qnap/car-flags-18x12-in-single-sided-71b922.m.png",
-"outline": "assets/qnap/car-flags-18x12-in-single-sided-71b922.o.json",
+"img": "assets/tpl/flags-02/car-flags-18x12-in-single-sided-71b922.jpg",
+"mask": "assets/tpl/flags-02/car-flags-18x12-in-single-sided-71b922.m.png",
+"outline": "assets/tpl/flags-02/car-flags-18x12-in-single-sided-71b922.o.json",
 "fullIn": [
 21.5,
 14.0
@@ -1873,7 +2492,28 @@
 "areas": {
 "bleed": 0.283
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+2.988,
+1.505,
+19.995,
+12.495
+],
+"frontSafe": [
+2.988,
+1.505,
+19.995,
+12.495
+],
+"logoBoxes": [
+[
+2.988,
+1.505,
+19.995,
+12.495
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -1885,9 +2525,9 @@
 "stated": null,
 "id": "clip-blade-flag-double-sided-80ab22",
 "src": "Custom Flags\\Clip Flag\\Clip Blade Flag Double Sided.psdt",
-"img": "assets/qnap/clip-blade-flag-double-sided-80ab22.jpg",
-"mask": "assets/qnap/clip-blade-flag-double-sided-80ab22.m.png",
-"outline": "assets/qnap/clip-blade-flag-double-sided-80ab22.o.json",
+"img": "assets/tpl/flags-02/clip-blade-flag-double-sided-80ab22.jpg",
+"mask": "assets/tpl/flags-02/clip-blade-flag-double-sided-80ab22.m.png",
+"outline": "assets/tpl/flags-02/clip-blade-flag-double-sided-80ab22.o.json",
 "fullIn": [
 24.45,
 29.21
@@ -1916,7 +2556,34 @@
 "areas": {
 "bleed": 0.157
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+4.294,
+5.784,
+8.968,
+24.244
+],
+"frontSafe": [
+4.294,
+5.784,
+8.968,
+24.244
+],
+"logoBoxes": [
+[
+4.294,
+5.784,
+8.968,
+24.244
+],
+[
+15.482,
+5.784,
+20.156,
+24.244
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -1928,9 +2595,9 @@
 "stated": null,
 "id": "clip-blade-flag-single-sided-4bc034",
 "src": "Custom Flags\\Clip Flag\\Clip Blade Flag Single Sided.psdt",
-"img": "assets/qnap/clip-blade-flag-single-sided-4bc034.jpg",
-"mask": "assets/qnap/clip-blade-flag-single-sided-4bc034.m.png",
-"outline": "assets/qnap/clip-blade-flag-single-sided-4bc034.o.json",
+"img": "assets/tpl/flags-02/clip-blade-flag-single-sided-4bc034.jpg",
+"mask": "assets/tpl/flags-02/clip-blade-flag-single-sided-4bc034.m.png",
+"outline": "assets/tpl/flags-02/clip-blade-flag-single-sided-4bc034.o.json",
 "fullIn": [
 13.22,
 29.22
@@ -1961,16 +2628,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-4.311,
-5.77,
+4.299,
+5.786,
 8.95,
-24.237
+24.253
 ],
 "frontSafe": [
-4.311,
-5.77,
+4.299,
+5.786,
 8.95,
-24.237
+24.253
+],
+"logoBoxes": [
+[
+4.299,
+5.786,
+8.95,
+24.253
+]
 ],
 "logoArea": "safe area"
 },
@@ -1984,9 +2659,9 @@
 "stated": null,
 "id": "clip-rectangle-flag-double-sided-8585c0",
 "src": "Custom Flags\\Clip Flag\\Clip Rectangle Flag Double Sided.psdt",
-"img": "assets/qnap/clip-rectangle-flag-double-sided-8585c0.jpg",
-"mask": "assets/qnap/clip-rectangle-flag-double-sided-8585c0.m.png",
-"outline": "assets/qnap/clip-rectangle-flag-double-sided-8585c0.o.json",
+"img": "assets/tpl/flags-02/clip-rectangle-flag-double-sided-8585c0.jpg",
+"mask": "assets/tpl/flags-02/clip-rectangle-flag-double-sided-8585c0.m.png",
+"outline": "assets/tpl/flags-02/clip-rectangle-flag-double-sided-8585c0.o.json",
 "fullIn": [
 19.0,
 22.0
@@ -2015,7 +2690,34 @@
 "areas": {
 "bleed": 0.145
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+0.99,
+0.99,
+8.488,
+21.01
+],
+"frontSafe": [
+0.99,
+0.99,
+8.488,
+21.01
+],
+"logoBoxes": [
+[
+0.99,
+0.99,
+8.488,
+21.01
+],
+[
+10.512,
+0.99,
+18.01,
+21.01
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -2027,9 +2729,9 @@
 "stated": null,
 "id": "clip-rectangle-flag-single-sided-a77fe5",
 "src": "Custom Flags\\Clip Flag\\Clip Rectangle Flag Single Sided.psdt",
-"img": "assets/qnap/clip-rectangle-flag-single-sided-a77fe5.jpg",
-"mask": "assets/qnap/clip-rectangle-flag-single-sided-a77fe5.m.png",
-"outline": "assets/qnap/clip-rectangle-flag-single-sided-a77fe5.o.json",
+"img": "assets/tpl/flags-02/clip-rectangle-flag-single-sided-a77fe5.jpg",
+"mask": "assets/tpl/flags-02/clip-rectangle-flag-single-sided-a77fe5.m.png",
+"outline": "assets/tpl/flags-02/clip-rectangle-flag-single-sided-a77fe5.o.json",
 "fullIn": [
 10.0,
 22.0
@@ -2058,50 +2760,28 @@
 "areas": {
 "bleed": 0.208
 },
-"layersFrom": "cut line on the page"
-},
-{
-"group": "Custom Flags",
-"product": "Clip Flag",
-"path": "Clip Flag",
-"name": "Clip Teardrop Flag Double Sided",
-"panel": "Clip Teardrop Flag Double Sided",
-"sides": "double",
-"stated": null,
-"id": "clip-teardrop-flag-double-sided-f7b4b5",
-"src": "Custom Flags\\Clip Flag\\Clip Teardrop Flag Double Sided.psdt",
-"img": "assets/qnap/clip-teardrop-flag-double-sided-f7b4b5.jpg",
-"mask": "assets/qnap/clip-teardrop-flag-double-sided-f7b4b5.m.png",
-"outline": "assets/qnap/clip-teardrop-flag-double-sided-f7b4b5.o.json",
-"fullIn": [
-14.27,
-35.58
+"layersFrom": "cut line on the page",
+"front": [
+1.253,
+1.254,
+8.747,
+20.746
 ],
-"visIn": [
-1.008,
-1.008,
-13.16,
-34.057
+"frontSafe": [
+1.253,
+1.254,
+8.747,
+20.746
 ],
-"safeIn": [
-1.497,
-1.512,
-12.731,
-34.057
+"logoBoxes": [
+[
+1.253,
+1.254,
+8.747,
+20.746
+]
 ],
-"prodIn": [
-0.0,
-0.015,
-14.242,
-35.569
-],
-"kind": "layers",
-"source": "qnap",
-"layout": true,
-"areas": {
-"bleed": 0.315
-},
-"layersFrom": "cut line on the page"
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -2113,9 +2793,9 @@
 "stated": null,
 "id": "clip-teardrop-flag-single-sided-09fa55",
 "src": "Custom Flags\\Clip Flag\\Clip Teardrop Flag Single Sided.psdt",
-"img": "assets/qnap/clip-teardrop-flag-single-sided-09fa55.jpg",
-"mask": "assets/qnap/clip-teardrop-flag-single-sided-09fa55.m.png",
-"outline": "assets/qnap/clip-teardrop-flag-single-sided-09fa55.o.json",
+"img": "assets/tpl/flags-02/clip-teardrop-flag-single-sided-09fa55.jpg",
+"mask": "assets/tpl/flags-02/clip-teardrop-flag-single-sided-09fa55.m.png",
+"outline": "assets/tpl/flags-02/clip-teardrop-flag-single-sided-09fa55.o.json",
 "fullIn": [
 14.26,
 28.38
@@ -2146,16 +2826,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-5.24,
-2.827,
-8.362,
-11.685
+5.227,
+2.838,
+8.351,
+11.693
 ],
 "frontSafe": [
-5.24,
-2.827,
-8.362,
-11.685
+5.227,
+2.838,
+8.351,
+11.693
+],
+"logoBoxes": [
+[
+5.227,
+2.838,
+8.351,
+11.693
+]
 ],
 "logoArea": "safe area"
 },
@@ -2173,9 +2861,9 @@
 ],
 "id": "concave-flag-1-94-x-6-8-ft-double-si-d4a00f",
 "src": "Custom Flags\\Concave Flags\\Concave Flag 1.94 x 6.8 Ft_Double Sided.psdt",
-"img": "assets/qnap/concave-flag-1-94-x-6-8-ft-double-si-d4a00f.jpg",
-"mask": "assets/qnap/concave-flag-1-94-x-6-8-ft-double-si-d4a00f.m.png",
-"outline": "assets/qnap/concave-flag-1-94-x-6-8-ft-double-si-d4a00f.o.json",
+"img": "assets/tpl/flags-02/concave-flag-1-94-x-6-8-ft-double-si-d4a00f.jpg",
+"mask": "assets/tpl/flags-02/concave-flag-1-94-x-6-8-ft-double-si-d4a00f.m.png",
+"outline": "assets/tpl/flags-02/concave-flag-1-94-x-6-8-ft-double-si-d4a00f.o.json",
 "fullIn": [
 54.02,
 86.02
@@ -2204,7 +2892,34 @@
 "areas": {
 "bleed": 0.114
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+7.57,
+6.279,
+19.096,
+66.235
+],
+"frontSafe": [
+7.57,
+6.279,
+19.096,
+66.235
+],
+"logoBoxes": [
+[
+7.57,
+6.279,
+19.096,
+66.235
+],
+[
+34.924,
+6.279,
+46.45,
+66.235
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -2220,9 +2935,9 @@
 ],
 "id": "concave-flag-1-94-x-6-8-ft-single-si-9d24a3",
 "src": "Custom Flags\\Concave Flags\\Concave Flag 1.94 x 6.8 Ft_Single Sided.psdt",
-"img": "assets/qnap/concave-flag-1-94-x-6-8-ft-single-si-9d24a3.jpg",
-"mask": "assets/qnap/concave-flag-1-94-x-6-8-ft-single-si-9d24a3.m.png",
-"outline": "assets/qnap/concave-flag-1-94-x-6-8-ft-single-si-9d24a3.o.json",
+"img": "assets/tpl/flags-02/concave-flag-1-94-x-6-8-ft-single-si-9d24a3.jpg",
+"mask": "assets/tpl/flags-02/concave-flag-1-94-x-6-8-ft-single-si-9d24a3.m.png",
+"outline": "assets/tpl/flags-02/concave-flag-1-94-x-6-8-ft-single-si-9d24a3.o.json",
 "fullIn": [
 25.34,
 84.0
@@ -2253,16 +2968,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-7.034,
-5.355,
-18.267,
-65.24
+7.048,
+5.376,
+18.292,
+65.268
 ],
 "frontSafe": [
-7.034,
-5.355,
-18.267,
-65.24
+7.048,
+5.376,
+18.292,
+65.268
+],
+"logoBoxes": [
+[
+7.048,
+5.376,
+18.292,
+65.268
+]
 ],
 "logoArea": "safe area"
 },
@@ -2280,9 +3003,9 @@
 ],
 "id": "concave-flag-2-03-x-8-91-ft-double-s-c46c6f",
 "src": "Custom Flags\\Concave Flags\\Concave Flag 2.03 x 8.91 Ft_Double Sided.psdt",
-"img": "assets/qnap/concave-flag-2-03-x-8-91-ft-double-s-c46c6f.jpg",
-"mask": "assets/qnap/concave-flag-2-03-x-8-91-ft-double-s-c46c6f.m.png",
-"outline": "assets/qnap/concave-flag-2-03-x-8-91-ft-double-s-c46c6f.o.json",
+"img": "assets/tpl/flags-02/concave-flag-2-03-x-8-91-ft-double-s-c46c6f.jpg",
+"mask": "assets/tpl/flags-02/concave-flag-2-03-x-8-91-ft-double-s-c46c6f.m.png",
+"outline": "assets/tpl/flags-02/concave-flag-2-03-x-8-91-ft-double-s-c46c6f.o.json",
 "fullIn": [
 56.02,
 112.02
@@ -2311,7 +3034,34 @@
 "areas": {
 "bleed": 0.108
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+8.067,
+13.218,
+19.943,
+82.783
+],
+"frontSafe": [
+8.067,
+13.218,
+19.943,
+82.783
+],
+"logoBoxes": [
+[
+8.067,
+13.218,
+19.943,
+82.783
+],
+[
+36.077,
+13.33,
+47.953,
+82.783
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -2327,9 +3077,9 @@
 ],
 "id": "concave-flag-2-03-x-8-91-ft-single-s-16ea13",
 "src": "Custom Flags\\Concave Flags\\Concave Flag 2.03 x 8.91 Ft_Single Sided.psdt",
-"img": "assets/qnap/concave-flag-2-03-x-8-91-ft-single-s-16ea13.jpg",
-"mask": "assets/qnap/concave-flag-2-03-x-8-91-ft-single-s-16ea13.m.png",
-"outline": "assets/qnap/concave-flag-2-03-x-8-91-ft-single-s-16ea13.o.json",
+"img": "assets/tpl/flags-02/concave-flag-2-03-x-8-91-ft-single-s-16ea13.jpg",
+"mask": "assets/tpl/flags-02/concave-flag-2-03-x-8-91-ft-single-s-16ea13.m.png",
+"outline": "assets/tpl/flags-02/concave-flag-2-03-x-8-91-ft-single-s-16ea13.o.json",
 "fullIn": [
 26.41,
 108.5
@@ -2360,16 +3110,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-7.326,
-11.482,
-19.082,
-81.056
+7.282,
+11.501,
+19.128,
+81.05
 ],
 "frontSafe": [
-7.326,
-11.482,
-19.082,
-81.056
+7.282,
+11.501,
+19.128,
+81.05
+],
+"logoBoxes": [
+[
+7.282,
+11.501,
+19.128,
+81.05
+]
 ],
 "logoArea": "safe area"
 },
@@ -2387,9 +3145,9 @@
 ],
 "id": "concave-flag-2-67-x-11-86-ft-double-313918",
 "src": "Custom Flags\\Concave Flags\\Concave Flag 2.67 x 11.86 Ft_Double Sided.psdt",
-"img": "assets/qnap/concave-flag-2-67-x-11-86-ft-double-313918.jpg",
-"mask": "assets/qnap/concave-flag-2-67-x-11-86-ft-double-313918.m.png",
-"outline": "assets/qnap/concave-flag-2-67-x-11-86-ft-double-313918.o.json",
+"img": "assets/tpl/flags-02/concave-flag-2-67-x-11-86-ft-double-313918.jpg",
+"mask": "assets/tpl/flags-02/concave-flag-2-67-x-11-86-ft-double-313918.m.png",
+"outline": "assets/tpl/flags-02/concave-flag-2-67-x-11-86-ft-double-313918.o.json",
 "fullIn": [
 70.01,
 145.51
@@ -2418,7 +3176,34 @@
 "areas": {
 "bleed": 0.083
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+9.606,
+18.48,
+25.326,
+115.971
+],
+"frontSafe": [
+9.606,
+18.48,
+25.326,
+115.971
+],
+"logoBoxes": [
+[
+9.606,
+18.48,
+25.326,
+115.971
+],
+[
+44.684,
+18.48,
+60.404,
+115.971
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -2434,9 +3219,9 @@
 ],
 "id": "concave-flag-2-67-x-11-86-ft-single-b4ba4f",
 "src": "Custom Flags\\Concave Flags\\Concave Flag 2.67 x 11.86 Ft_Single Sided.psdt",
-"img": "assets/qnap/concave-flag-2-67-x-11-86-ft-single-b4ba4f.jpg",
-"mask": "assets/qnap/concave-flag-2-67-x-11-86-ft-single-b4ba4f.m.png",
-"outline": "assets/qnap/concave-flag-2-67-x-11-86-ft-single-b4ba4f.o.json",
+"img": "assets/tpl/flags-02/concave-flag-2-67-x-11-86-ft-single-b4ba4f.jpg",
+"mask": "assets/tpl/flags-02/concave-flag-2-67-x-11-86-ft-single-b4ba4f.m.png",
+"outline": "assets/tpl/flags-02/concave-flag-2-67-x-11-86-ft-single-b4ba4f.o.json",
 "fullIn": [
 34.12,
 144.46
@@ -2467,16 +3252,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-9.148,
-17.997,
-24.856,
-115.386
+9.108,
+18.058,
+24.867,
+115.424
 ],
 "frontSafe": [
-9.148,
-17.997,
-24.856,
-115.386
+9.108,
+18.058,
+24.867,
+115.424
+],
+"logoBoxes": [
+[
+9.108,
+18.058,
+24.867,
+115.424
+]
 ],
 "logoArea": "safe area"
 },
@@ -2494,9 +3287,9 @@
 ],
 "id": "concave-flag-2-9-x-15-5-ft-double-si-61d234",
 "src": "Custom Flags\\Concave Flags\\Concave Flag_2.9 x 15.5 Ft_Double Sided.psdt",
-"img": "assets/qnap/concave-flag-2-9-x-15-5-ft-double-si-61d234.jpg",
-"mask": "assets/qnap/concave-flag-2-9-x-15-5-ft-double-si-61d234.m.png",
-"outline": "assets/qnap/concave-flag-2-9-x-15-5-ft-double-si-61d234.o.json",
+"img": "assets/tpl/flags-02/concave-flag-2-9-x-15-5-ft-double-si-61d234.jpg",
+"mask": "assets/tpl/flags-02/concave-flag-2-9-x-15-5-ft-double-si-61d234.m.png",
+"outline": "assets/tpl/flags-02/concave-flag-2-9-x-15-5-ft-double-si-61d234.o.json",
 "fullIn": [
 76.01,
 189.01
@@ -2525,7 +3318,34 @@
 "areas": {
 "bleed": 0.072
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+10.399,
+20.224,
+27.606,
+159.335
+],
+"frontSafe": [
+10.399,
+20.224,
+27.606,
+159.335
+],
+"logoBoxes": [
+[
+10.399,
+20.224,
+27.606,
+159.335
+],
+[
+48.404,
+20.224,
+65.611,
+159.335
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -2541,9 +3361,9 @@
 ],
 "id": "concave-flag-2-9-x-15-5-ft-single-si-1a01b4",
 "src": "Custom Flags\\Concave Flags\\Concave Flag_2.9 x 15.5 Ft_Single Sided.psdt",
-"img": "assets/qnap/concave-flag-2-9-x-15-5-ft-single-si-1a01b4.jpg",
-"mask": "assets/qnap/concave-flag-2-9-x-15-5-ft-single-si-1a01b4.m.png",
-"outline": "assets/qnap/concave-flag-2-9-x-15-5-ft-single-si-1a01b4.o.json",
+"img": "assets/tpl/flags-02/concave-flag-2-9-x-15-5-ft-single-si-1a01b4.jpg",
+"mask": "assets/tpl/flags-02/concave-flag-2-9-x-15-5-ft-single-si-1a01b4.m.png",
+"outline": "assets/tpl/flags-02/concave-flag-2-9-x-15-5-ft-single-si-1a01b4.o.json",
 "fullIn": [
 37.0,
 187.44
@@ -2574,16 +3394,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-9.914,
-19.369,
-27.008,
-158.703
+9.904,
+19.306,
+27.096,
+158.762
 ],
 "frontSafe": [
-9.914,
-19.369,
-27.008,
-158.703
+9.904,
+19.306,
+27.096,
+158.762
+],
+"logoBoxes": [
+[
+9.904,
+19.306,
+27.096,
+158.762
+]
 ],
 "logoArea": "safe area"
 },
@@ -2597,9 +3425,9 @@
 "stated": null,
 "id": "desktop-blade-flag-df-695d6e",
 "src": "Custom Flags\\Desk Flags\\Desktop Blade Flag DF.psdt",
-"img": "assets/qnap/desktop-blade-flag-df-695d6e.jpg",
-"mask": "assets/qnap/desktop-blade-flag-df-695d6e.m.png",
-"outline": "assets/qnap/desktop-blade-flag-df-695d6e.o.json",
+"img": "assets/tpl/flags-02/desktop-blade-flag-df-695d6e.jpg",
+"mask": "assets/tpl/flags-02/desktop-blade-flag-df-695d6e.m.png",
+"outline": "assets/tpl/flags-02/desktop-blade-flag-df-695d6e.o.json",
 "fullIn": [
 14.38,
 19.21
@@ -2630,16 +3458,30 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-2.841,
-2.945,
-11.542,
-18.318
+2.573,
+3.246,
+6.124,
+18.326
 ],
 "frontSafe": [
-2.841,
-2.945,
-11.542,
-18.318
+2.573,
+3.246,
+6.124,
+18.326
+],
+"logoBoxes": [
+[
+2.573,
+3.246,
+6.124,
+18.326
+],
+[
+8.256,
+3.246,
+11.807,
+18.326
+]
 ],
 "logoArea": "safe area"
 },
@@ -2653,9 +3495,9 @@
 "stated": null,
 "id": "desktop-blade-flag-sf-6fff89",
 "src": "Custom Flags\\Desk Flags\\Desktop Blade Flag SF.psdt",
-"img": "assets/qnap/desktop-blade-flag-sf-6fff89.jpg",
-"mask": "assets/qnap/desktop-blade-flag-sf-6fff89.m.png",
-"outline": "assets/qnap/desktop-blade-flag-sf-6fff89.o.json",
+"img": "assets/tpl/flags-02/desktop-blade-flag-sf-6fff89.jpg",
+"mask": "assets/tpl/flags-02/desktop-blade-flag-sf-6fff89.m.png",
+"outline": "assets/tpl/flags-02/desktop-blade-flag-sf-6fff89.o.json",
 "fullIn": [
 7.5,
 19.7
@@ -2684,50 +3526,28 @@
 "areas": {
 "bleed": 0.344
 },
-"layersFrom": "template outline"
-},
-{
-"group": "Custom Flags",
-"product": "Desk Flags",
-"path": "Desk Flags",
-"name": "Desktop Teardrop Flag DF",
-"panel": "Desktop Teardrop Flag DF",
-"sides": "",
-"stated": null,
-"id": "desktop-teardrop-flag-df-6f7752",
-"src": "Custom Flags\\Desk Flags\\Desktop Teardrop Flag DF.psdt",
-"img": "assets/qnap/desktop-teardrop-flag-df-6f7752.jpg",
-"mask": "assets/qnap/desktop-teardrop-flag-df-6f7752.m.png",
-"outline": "assets/qnap/desktop-teardrop-flag-df-6f7752.o.json",
-"fullIn": [
-8.87,
-25.46
+"layersFrom": "template outline",
+"front": [
+2.539,
+3.25,
+6.004,
+18.321
 ],
-"visIn": [
-1.506,
-1.485,
-8.262,
-23.564
+"frontSafe": [
+2.539,
+3.25,
+6.004,
+18.321
 ],
-"safeIn": [
-1.898,
-1.878,
-8.008,
-23.564
+"logoBoxes": [
+[
+2.539,
+3.25,
+6.004,
+18.321
+]
 ],
-"prodIn": [
-0.0,
-0.0,
-8.856,
-25.453
-],
-"kind": "layers",
-"source": "qnap",
-"layout": true,
-"areas": {
-"bleed": 0.488
-},
-"layersFrom": "cut line on the page"
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -2739,9 +3559,9 @@
 "stated": null,
 "id": "desktop-teardrop-flag-sf-6da2db",
 "src": "Custom Flags\\Desk Flags\\Desktop Teardrop Flag SF.psdt",
-"img": "assets/qnap/desktop-teardrop-flag-sf-6da2db.jpg",
-"mask": "assets/qnap/desktop-teardrop-flag-sf-6da2db.m.png",
-"outline": "assets/qnap/desktop-teardrop-flag-sf-6da2db.o.json",
+"img": "assets/tpl/flags-02/desktop-teardrop-flag-sf-6da2db.jpg",
+"mask": "assets/tpl/flags-02/desktop-teardrop-flag-sf-6da2db.m.png",
+"outline": "assets/tpl/flags-02/desktop-teardrop-flag-sf-6da2db.o.json",
 "fullIn": [
 9.34,
 21.63
@@ -2772,16 +3592,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-4.334,
-2.371,
-5.145,
-8.131
+4.302,
+2.379,
+5.146,
+8.133
 ],
 "frontSafe": [
-4.334,
-2.371,
-5.145,
-8.131
+4.302,
+2.379,
+5.146,
+8.133
+],
+"logoBoxes": [
+[
+4.302,
+2.379,
+5.146,
+8.133
+]
 ],
 "logoArea": "safe area"
 },
@@ -2799,9 +3627,9 @@
 ],
 "id": "1-5-x-5-5-ft-feather-flags-single-si-97502b",
 "src": "Custom Flags\\Feather Flag\\1.5 x 5.5 Ft_.Feather Flags_Single Sided.psdt",
-"img": "assets/qnap/1-5-x-5-5-ft-feather-flags-single-si-97502b.jpg",
-"mask": "assets/qnap/1-5-x-5-5-ft-feather-flags-single-si-97502b.m.png",
-"outline": "assets/qnap/1-5-x-5-5-ft-feather-flags-single-si-97502b.o.json",
+"img": "assets/tpl/flags-02/1-5-x-5-5-ft-feather-flags-single-si-97502b.jpg",
+"mask": "assets/tpl/flags-02/1-5-x-5-5-ft-feather-flags-single-si-97502b.m.png",
+"outline": "assets/tpl/flags-02/1-5-x-5-5-ft-feather-flags-single-si-97502b.o.json",
 "fullIn": [
 21.0,
 69.57
@@ -2832,16 +3660,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-6.12,
-7.595,
-14.88,
-60.118
+6.119,
+7.583,
+14.881,
+60.178
 ],
 "frontSafe": [
-6.12,
-7.595,
-14.88,
-60.118
+6.119,
+7.583,
+14.881,
+60.178
+],
+"logoBoxes": [
+[
+6.119,
+7.583,
+14.881,
+60.178
+]
 ],
 "logoArea": "safe area"
 },
@@ -2859,9 +3695,9 @@
 ],
 "id": "1-5-x-5-5-ft-feather-flags-double-si-a9b8d3",
 "src": "Custom Flags\\Feather Flag\\1.5 x 5.5 Ft_Feather Flags_Double Sided.psdt",
-"img": "assets/qnap/1-5-x-5-5-ft-feather-flags-double-si-a9b8d3.jpg",
-"mask": "assets/qnap/1-5-x-5-5-ft-feather-flags-double-si-a9b8d3.m.png",
-"outline": "assets/qnap/1-5-x-5-5-ft-feather-flags-double-si-a9b8d3.o.json",
+"img": "assets/tpl/flags-02/1-5-x-5-5-ft-feather-flags-double-si-a9b8d3.jpg",
+"mask": "assets/tpl/flags-02/1-5-x-5-5-ft-feather-flags-double-si-a9b8d3.m.png",
+"outline": "assets/tpl/flags-02/1-5-x-5-5-ft-feather-flags-double-si-a9b8d3.o.json",
 "fullIn": [
 42.0,
 69.58
@@ -2890,7 +3726,34 @@
 "areas": {
 "bleed": 0.127
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+6.119,
+7.584,
+14.881,
+60.187
+],
+"frontSafe": [
+6.119,
+7.584,
+14.881,
+60.187
+],
+"logoBoxes": [
+[
+6.119,
+7.584,
+14.881,
+60.187
+],
+[
+27.119,
+7.584,
+35.881,
+60.187
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -2906,9 +3769,9 @@
 ],
 "id": "2-x-11-5-ft-feather-flags-single-sid-259093",
 "src": "Custom Flags\\Feather Flag\\2 x 11.5 Ft_.Feather Flags_Single Sided.psdt",
-"img": "assets/qnap/2-x-11-5-ft-feather-flags-single-sid-259093.jpg",
-"mask": "assets/qnap/2-x-11-5-ft-feather-flags-single-sid-259093.m.png",
-"outline": "assets/qnap/2-x-11-5-ft-feather-flags-single-sid-259093.o.json",
+"img": "assets/tpl/flags-02/2-x-11-5-ft-feather-flags-single-sid-259093.jpg",
+"mask": "assets/tpl/flags-02/2-x-11-5-ft-feather-flags-single-sid-259093.m.png",
+"outline": "assets/tpl/flags-02/2-x-11-5-ft-feather-flags-single-sid-259093.o.json",
 "fullIn": [
 30.0,
 141.24
@@ -2939,16 +3802,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-8.412,
-15.595,
-21.529,
-132.527
+8.491,
+15.536,
+21.509,
+132.624
 ],
 "frontSafe": [
-8.412,
-15.595,
-21.529,
-132.527
+8.491,
+15.536,
+21.509,
+132.624
+],
+"logoBoxes": [
+[
+8.491,
+15.536,
+21.509,
+132.624
+]
 ],
 "logoArea": "safe area"
 },
@@ -2966,9 +3837,9 @@
 ],
 "id": "2-x-11-5-ft-feather-flags-double-sid-d553f3",
 "src": "Custom Flags\\Feather Flag\\2 x 11.5 Ft_Feather Flags_Double Sided.psdt",
-"img": "assets/qnap/2-x-11-5-ft-feather-flags-double-sid-d553f3.jpg",
-"mask": "assets/qnap/2-x-11-5-ft-feather-flags-double-sid-d553f3.m.png",
-"outline": "assets/qnap/2-x-11-5-ft-feather-flags-double-sid-d553f3.o.json",
+"img": "assets/tpl/flags-02/2-x-11-5-ft-feather-flags-double-sid-d553f3.jpg",
+"mask": "assets/tpl/flags-02/2-x-11-5-ft-feather-flags-double-sid-d553f3.m.png",
+"outline": "assets/tpl/flags-02/2-x-11-5-ft-feather-flags-double-sid-d553f3.o.json",
 "fullIn": [
 60.0,
 141.22
@@ -2997,7 +3868,34 @@
 "areas": {
 "bleed": 0.084
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+8.329,
+15.534,
+21.6,
+132.464
+],
+"frontSafe": [
+8.329,
+15.534,
+21.6,
+132.464
+],
+"logoBoxes": [
+[
+8.329,
+15.534,
+21.6,
+132.464
+],
+[
+38.4,
+15.675,
+51.671,
+132.464
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3013,9 +3911,9 @@
 ],
 "id": "2-x-7-5-ft-feather-flags-single-side-eb2c62",
 "src": "Custom Flags\\Feather Flag\\2 x 7.5 Ft_.Feather Flags_Single Sided.psdt",
-"img": "assets/qnap/2-x-7-5-ft-feather-flags-single-side-eb2c62.jpg",
-"mask": "assets/qnap/2-x-7-5-ft-feather-flags-single-side-eb2c62.m.png",
-"outline": "assets/qnap/2-x-7-5-ft-feather-flags-single-side-eb2c62.o.json",
+"img": "assets/tpl/flags-02/2-x-7-5-ft-feather-flags-single-side-eb2c62.jpg",
+"mask": "assets/tpl/flags-02/2-x-7-5-ft-feather-flags-single-side-eb2c62.m.png",
+"outline": "assets/tpl/flags-02/2-x-7-5-ft-feather-flags-single-side-eb2c62.o.json",
 "fullIn": [
 27.0,
 94.51
@@ -3046,16 +3944,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-7.793,
-11.026,
-19.246,
-83.052
+7.741,
+11.058,
+19.259,
+82.98
 ],
 "frontSafe": [
-7.793,
-11.026,
-19.246,
-83.052
+7.741,
+11.058,
+19.259,
+82.98
+],
+"logoBoxes": [
+[
+7.741,
+11.058,
+19.259,
+82.98
+]
 ],
 "logoArea": "safe area"
 },
@@ -3073,9 +3979,9 @@
 ],
 "id": "2-x-7-5-ft-feather-flags-double-side-baa80c",
 "src": "Custom Flags\\Feather Flag\\2 x 7.5 Ft_Feather Flags_Double Sided.psdt",
-"img": "assets/qnap/2-x-7-5-ft-feather-flags-double-side-baa80c.jpg",
-"mask": "assets/qnap/2-x-7-5-ft-feather-flags-double-side-baa80c.m.png",
-"outline": "assets/qnap/2-x-7-5-ft-feather-flags-double-side-baa80c.o.json",
+"img": "assets/tpl/flags-02/2-x-7-5-ft-feather-flags-double-side-baa80c.jpg",
+"mask": "assets/tpl/flags-02/2-x-7-5-ft-feather-flags-double-side-baa80c.m.png",
+"outline": "assets/tpl/flags-02/2-x-7-5-ft-feather-flags-double-side-baa80c.o.json",
 "fullIn": [
 54.0,
 94.51
@@ -3104,7 +4010,34 @@
 "areas": {
 "bleed": 0.1
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+7.755,
+11.058,
+19.292,
+83.074
+],
+"frontSafe": [
+7.755,
+11.058,
+19.292,
+83.074
+],
+"logoBoxes": [
+[
+7.755,
+11.058,
+19.292,
+83.074
+],
+[
+34.708,
+11.058,
+46.245,
+83.169
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3120,9 +4053,9 @@
 ],
 "id": "2-x-9-5-ft-feather-flags-single-side-8d5f95",
 "src": "Custom Flags\\Feather Flag\\2 x 9.5 Ft_.Feather Flags_Single Sided.psdt",
-"img": "assets/qnap/2-x-9-5-ft-feather-flags-single-side-8d5f95.jpg",
-"mask": "assets/qnap/2-x-9-5-ft-feather-flags-single-side-8d5f95.m.png",
-"outline": "assets/qnap/2-x-9-5-ft-feather-flags-single-side-8d5f95.o.json",
+"img": "assets/tpl/flags-02/2-x-9-5-ft-feather-flags-single-side-8d5f95.jpg",
+"mask": "assets/tpl/flags-02/2-x-9-5-ft-feather-flags-single-side-8d5f95.m.png",
+"outline": "assets/tpl/flags-02/2-x-9-5-ft-feather-flags-single-side-8d5f95.o.json",
 "fullIn": [
 27.01,
 118.49
@@ -3153,16 +4086,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-7.754,
-14.91,
-19.26,
-103.182
+7.7,
+14.93,
+19.31,
+103.205
 ],
 "frontSafe": [
-7.754,
-14.91,
-19.26,
-103.182
+7.7,
+14.93,
+19.31,
+103.205
+],
+"logoBoxes": [
+[
+7.7,
+14.93,
+19.31,
+103.205
+]
 ],
 "logoArea": "safe area"
 },
@@ -3180,9 +4121,9 @@
 ],
 "id": "2-x-9-5-ft-feather-flags-double-side-727ffa",
 "src": "Custom Flags\\Feather Flag\\2 x 9.5 Ft_Feather Flags_Double Sided.psdt",
-"img": "assets/qnap/2-x-9-5-ft-feather-flags-double-side-727ffa.jpg",
-"mask": "assets/qnap/2-x-9-5-ft-feather-flags-double-side-727ffa.m.png",
-"outline": "assets/qnap/2-x-9-5-ft-feather-flags-double-side-727ffa.o.json",
+"img": "assets/tpl/flags-02/2-x-9-5-ft-feather-flags-double-side-727ffa.jpg",
+"mask": "assets/tpl/flags-02/2-x-9-5-ft-feather-flags-double-side-727ffa.m.png",
+"outline": "assets/tpl/flags-02/2-x-9-5-ft-feather-flags-double-side-727ffa.o.json",
 "fullIn": [
 54.01,
 118.49
@@ -3211,7 +4152,34 @@
 "areas": {
 "bleed": 0.097
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+7.699,
+14.811,
+19.306,
+103.205
+],
+"frontSafe": [
+7.699,
+14.811,
+19.306,
+103.205
+],
+"logoBoxes": [
+[
+7.699,
+14.811,
+19.306,
+103.205
+],
+[
+34.704,
+14.811,
+46.311,
+103.205
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3227,9 +4195,9 @@
 ],
 "id": "2-5-x-15-5-ft-feather-flags-single-s-1893df",
 "src": "Custom Flags\\Feather Flag\\2.5 x 15.5 Ft_.Feather Flags_Single Sided.psdt",
-"img": "assets/qnap/2-5-x-15-5-ft-feather-flags-single-s-1893df.jpg",
-"mask": "assets/qnap/2-5-x-15-5-ft-feather-flags-single-s-1893df.m.png",
-"outline": "assets/qnap/2-5-x-15-5-ft-feather-flags-single-s-1893df.o.json",
+"img": "assets/tpl/flags-02/2-5-x-15-5-ft-feather-flags-single-s-1893df.jpg",
+"mask": "assets/tpl/flags-02/2-5-x-15-5-ft-feather-flags-single-s-1893df.m.png",
+"outline": "assets/tpl/flags-02/2-5-x-15-5-ft-feather-flags-single-s-1893df.o.json",
 "fullIn": [
 33.01,
 188.07
@@ -3260,16 +4228,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-8.94,
-23.039,
-23.682,
-176.08
+8.866,
+22.945,
+23.767,
+176.034
 ],
 "frontSafe": [
-8.94,
-23.039,
-23.682,
-176.08
+8.866,
+22.945,
+23.767,
+176.034
+],
+"logoBoxes": [
+[
+8.866,
+22.945,
+23.767,
+176.034
+]
 ],
 "logoArea": "safe area"
 },
@@ -3287,9 +4263,9 @@
 ],
 "id": "2-5-x-15-5-ft-feather-flags-double-s-2c8c53",
 "src": "Custom Flags\\Feather Flag\\2.5 x 15.5 Ft_Feather Flags_Double Sided.psdt",
-"img": "assets/qnap/2-5-x-15-5-ft-feather-flags-double-s-2c8c53.jpg",
-"mask": "assets/qnap/2-5-x-15-5-ft-feather-flags-double-s-2c8c53.m.png",
-"outline": "assets/qnap/2-5-x-15-5-ft-feather-flags-double-s-2c8c53.o.json",
+"img": "assets/tpl/flags-02/2-5-x-15-5-ft-feather-flags-double-s-2c8c53.jpg",
+"mask": "assets/tpl/flags-02/2-5-x-15-5-ft-feather-flags-double-s-2c8c53.m.png",
+"outline": "assets/tpl/flags-02/2-5-x-15-5-ft-feather-flags-double-s-2c8c53.o.json",
 "fullIn": [
 66.01,
 188.31
@@ -3318,7 +4294,34 @@
 "areas": {
 "bleed": 0.075
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+8.864,
+23.162,
+23.764,
+176.07
+],
+"frontSafe": [
+8.864,
+23.162,
+23.764,
+176.07
+],
+"logoBoxes": [
+[
+8.864,
+23.162,
+23.764,
+176.07
+],
+[
+41.869,
+23.539,
+57.146,
+175.693
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3334,9 +4337,9 @@
 ],
 "id": "garden-flag-12-x-18-dual-sided-b03a79",
 "src": "Custom Flags\\Garden Flag\\Garden Flag 12 x 18 Dual Sided.psdt",
-"img": "assets/qnap/garden-flag-12-x-18-dual-sided-b03a79.jpg",
-"mask": "assets/qnap/garden-flag-12-x-18-dual-sided-b03a79.m.png",
-"outline": "assets/qnap/garden-flag-12-x-18-dual-sided-b03a79.o.json",
+"img": "assets/tpl/flags-02/garden-flag-12-x-18-dual-sided-b03a79.jpg",
+"mask": "assets/tpl/flags-02/garden-flag-12-x-18-dual-sided-b03a79.m.png",
+"outline": "assets/tpl/flags-02/garden-flag-12-x-18-dual-sided-b03a79.o.json",
 "fullIn": [
 25.0,
 21.5
@@ -3365,7 +4368,34 @@
 "areas": {
 "bleed": 0.23
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+0.85,
+3.375,
+11.65,
+20.675
+],
+"frontSafe": [
+0.85,
+3.375,
+11.65,
+20.675
+],
+"logoBoxes": [
+[
+0.85,
+3.375,
+11.65,
+20.675
+],
+[
+13.35,
+3.35,
+24.15,
+20.65
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3381,9 +4411,9 @@
 ],
 "id": "garden-flag-12-x-18-single-sided-f1687e",
 "src": "Custom Flags\\Garden Flag\\Garden Flag 12 x 18 Single Sided.psdt",
-"img": "assets/qnap/garden-flag-12-x-18-single-sided-f1687e.jpg",
-"mask": "assets/qnap/garden-flag-12-x-18-single-sided-f1687e.m.png",
-"outline": "assets/qnap/garden-flag-12-x-18-single-sided-f1687e.o.json",
+"img": "assets/tpl/flags-02/garden-flag-12-x-18-single-sided-f1687e.jpg",
+"mask": "assets/tpl/flags-02/garden-flag-12-x-18-single-sided-f1687e.m.png",
+"outline": "assets/tpl/flags-02/garden-flag-12-x-18-single-sided-f1687e.o.json",
 "fullIn": [
 14.0,
 22.0
@@ -3412,7 +4442,28 @@
 "areas": {
 "bleed": 0.299
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+1.365,
+3.344,
+12.635,
+20.658
+],
+"frontSafe": [
+1.365,
+3.344,
+12.635,
+20.658
+],
+"logoBoxes": [
+[
+1.365,
+3.344,
+12.635,
+20.658
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3428,9 +4479,9 @@
 ],
 "id": "giant-flag-pole-2-63-x-10-17-ft-doub-544e15",
 "src": "Custom Flags\\Giant Flag Pole\\Giant Flag Pole 2.63 x 10.17 Ft_Double Sided.psdt",
-"img": "assets/qnap/giant-flag-pole-2-63-x-10-17-ft-doub-544e15.jpg",
-"mask": "assets/qnap/giant-flag-pole-2-63-x-10-17-ft-doub-544e15.m.png",
-"outline": "assets/qnap/giant-flag-pole-2-63-x-10-17-ft-doub-544e15.o.json",
+"img": "assets/tpl/flags-02/giant-flag-pole-2-63-x-10-17-ft-doub-544e15.jpg",
+"mask": "assets/tpl/flags-02/giant-flag-pole-2-63-x-10-17-ft-doub-544e15.m.png",
+"outline": "assets/tpl/flags-02/giant-flag-pole-2-63-x-10-17-ft-doub-544e15.o.json",
 "fullIn": [
 64.0,
 121.0
@@ -3459,7 +4510,34 @@
 "areas": {
 "bleed": 0.046
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+3.992,
+3.993,
+29.036,
+117.007
+],
+"frontSafe": [
+3.992,
+3.993,
+29.036,
+117.007
+],
+"logoBoxes": [
+[
+3.992,
+3.993,
+29.036,
+117.007
+],
+[
+34.964,
+3.993,
+60.008,
+117.007
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3475,9 +4553,9 @@
 ],
 "id": "giant-flag-pole-2-63-x-10-17-ft-sing-32fb46",
 "src": "Custom Flags\\Giant Flag Pole\\Giant Flag Pole 2.63 x 10.17 Ft_Single Sided.psdt",
-"img": "assets/qnap/giant-flag-pole-2-63-x-10-17-ft-sing-32fb46.jpg",
-"mask": "assets/qnap/giant-flag-pole-2-63-x-10-17-ft-sing-32fb46.m.png",
-"outline": "assets/qnap/giant-flag-pole-2-63-x-10-17-ft-sing-32fb46.o.json",
+"img": "assets/tpl/flags-02/giant-flag-pole-2-63-x-10-17-ft-sing-32fb46.jpg",
+"mask": "assets/tpl/flags-02/giant-flag-pole-2-63-x-10-17-ft-sing-32fb46.m.png",
+"outline": "assets/tpl/flags-02/giant-flag-pole-2-63-x-10-17-ft-sing-32fb46.o.json",
 "fullIn": [
 35.0,
 123.0
@@ -3506,7 +4584,28 @@
 "areas": {
 "bleed": 0.143
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+5.035,
+5.043,
+30.088,
+117.957
+],
+"frontSafe": [
+5.035,
+5.043,
+30.088,
+117.957
+],
+"logoBoxes": [
+[
+5.035,
+5.043,
+30.088,
+117.957
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3522,9 +4621,9 @@
 ],
 "id": "giant-flag-pole-3-58-x-13-ft-double-cd4eb4",
 "src": "Custom Flags\\Giant Flag Pole\\Giant Flag Pole 3.58 x 13 Ft_Double Sided.psdt",
-"img": "assets/qnap/giant-flag-pole-3-58-x-13-ft-double-cd4eb4.jpg",
-"mask": "assets/qnap/giant-flag-pole-3-58-x-13-ft-double-cd4eb4.m.png",
-"outline": "assets/qnap/giant-flag-pole-3-58-x-13-ft-double-cd4eb4.o.json",
+"img": "assets/tpl/flags-03/giant-flag-pole-3-58-x-13-ft-double-cd4eb4.jpg",
+"mask": "assets/tpl/flags-03/giant-flag-pole-3-58-x-13-ft-double-cd4eb4.m.png",
+"outline": "assets/tpl/flags-03/giant-flag-pole-3-58-x-13-ft-double-cd4eb4.o.json",
 "fullIn": [
 86.0,
 155.0
@@ -3553,7 +4652,34 @@
 "areas": {
 "bleed": 0.037
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+4.029,
+4.03,
+39.978,
+150.97
+],
+"frontSafe": [
+4.029,
+4.03,
+39.978,
+150.97
+],
+"logoBoxes": [
+[
+4.029,
+4.03,
+39.978,
+150.97
+],
+[
+46.022,
+4.03,
+81.971,
+150.97
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3569,9 +4695,9 @@
 ],
 "id": "giant-flag-pole-3-58-x-13-ft-single-6e1fd1",
 "src": "Custom Flags\\Giant Flag Pole\\Giant Flag Pole 3.58 x 13 Ft_Single Sided.psdt",
-"img": "assets/qnap/giant-flag-pole-3-58-x-13-ft-single-6e1fd1.jpg",
-"mask": "assets/qnap/giant-flag-pole-3-58-x-13-ft-single-6e1fd1.m.png",
-"outline": "assets/qnap/giant-flag-pole-3-58-x-13-ft-single-6e1fd1.o.json",
+"img": "assets/tpl/flags-03/giant-flag-pole-3-58-x-13-ft-single-6e1fd1.jpg",
+"mask": "assets/tpl/flags-03/giant-flag-pole-3-58-x-13-ft-single-6e1fd1.m.png",
+"outline": "assets/tpl/flags-03/giant-flag-pole-3-58-x-13-ft-single-6e1fd1.o.json",
 "fullIn": [
 46.0,
 157.0
@@ -3600,7 +4726,28 @@
 "areas": {
 "bleed": 0.108
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+5.024,
+5.024,
+40.976,
+151.976
+],
+"frontSafe": [
+5.024,
+5.024,
+40.976,
+151.976
+],
+"logoBoxes": [
+[
+5.024,
+5.024,
+40.976,
+151.976
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3616,9 +4763,9 @@
 ],
 "id": "giant-flag-pole-4-67-x-18-67-ft-doub-84df59",
 "src": "Custom Flags\\Giant Flag Pole\\Giant Flag Pole 4.67 x 18.67 Ft_Double Sided.psdt",
-"img": "assets/qnap/giant-flag-pole-4-67-x-18-67-ft-doub-84df59.jpg",
-"mask": "assets/qnap/giant-flag-pole-4-67-x-18-67-ft-doub-84df59.m.png",
-"outline": "assets/qnap/giant-flag-pole-4-67-x-18-67-ft-doub-84df59.o.json",
+"img": "assets/tpl/flags-03/giant-flag-pole-4-67-x-18-67-ft-doub-84df59.jpg",
+"mask": "assets/tpl/flags-03/giant-flag-pole-4-67-x-18-67-ft-doub-84df59.m.png",
+"outline": "assets/tpl/flags-03/giant-flag-pole-4-67-x-18-67-ft-doub-84df59.o.json",
 "fullIn": [
 110.0,
 222.0
@@ -3647,7 +4794,34 @@
 "areas": {
 "bleed": 0.029
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+4.0,
+3.996,
+52.0,
+218.004
+],
+"frontSafe": [
+4.0,
+3.996,
+52.0,
+218.004
+],
+"logoBoxes": [
+[
+4.0,
+3.996,
+52.0,
+218.004
+],
+[
+58.0,
+3.996,
+106.0,
+218.004
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3663,9 +4837,9 @@
 ],
 "id": "giant-flag-pole-4-67-x-18-67-ft-sing-3d4949",
 "src": "Custom Flags\\Giant Flag Pole\\Giant Flag Pole 4.67 x 18.67 Ft_Single Sided.psdt",
-"img": "assets/qnap/giant-flag-pole-4-67-x-18-67-ft-sing-3d4949.jpg",
-"mask": "assets/qnap/giant-flag-pole-4-67-x-18-67-ft-sing-3d4949.m.png",
-"outline": "assets/qnap/giant-flag-pole-4-67-x-18-67-ft-sing-3d4949.o.json",
+"img": "assets/tpl/flags-03/giant-flag-pole-4-67-x-18-67-ft-sing-3d4949.jpg",
+"mask": "assets/tpl/flags-03/giant-flag-pole-4-67-x-18-67-ft-sing-3d4949.m.png",
+"outline": "assets/tpl/flags-03/giant-flag-pole-4-67-x-18-67-ft-sing-3d4949.o.json",
 "fullIn": [
 58.0,
 224.0
@@ -3694,7 +4868,28 @@
 "areas": {
 "bleed": 0.09
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+5.151,
+5.152,
+52.849,
+218.848
+],
+"frontSafe": [
+5.151,
+5.152,
+52.849,
+218.848
+],
+"logoBoxes": [
+[
+5.151,
+5.152,
+52.849,
+218.848
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3706,9 +4901,9 @@
 "stated": null,
 "id": "golf-flag-with-grommets-triangle-dou-1aeaf7",
 "src": "Custom Flags\\Golf Flag\\Grommet-Triangle\\Golf Flag With Grommets Triangle Double Sided.psdt",
-"img": "assets/qnap/golf-flag-with-grommets-triangle-dou-1aeaf7.jpg",
-"mask": "assets/qnap/golf-flag-with-grommets-triangle-dou-1aeaf7.m.png",
-"outline": "assets/qnap/golf-flag-with-grommets-triangle-dou-1aeaf7.o.json",
+"img": "assets/tpl/flags-03/golf-flag-with-grommets-triangle-dou-1aeaf7.jpg",
+"mask": "assets/tpl/flags-03/golf-flag-with-grommets-triangle-dou-1aeaf7.m.png",
+"outline": "assets/tpl/flags-03/golf-flag-with-grommets-triangle-dou-1aeaf7.o.json",
 "fullIn": [
 26.0,
 26.0
@@ -3737,7 +4932,34 @@
 "areas": {
 "bleed": 0.37
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+8.762,
+6.448,
+20.748,
+9.256
+],
+"frontSafe": [
+8.762,
+6.448,
+20.748,
+9.256
+],
+"logoBoxes": [
+[
+8.762,
+6.448,
+20.748,
+9.256
+],
+[
+5.252,
+16.744,
+17.238,
+19.552
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3749,9 +4971,9 @@
 "stated": null,
 "id": "golf-flag-with-grommets-triangle-sin-0e63bc",
 "src": "Custom Flags\\Golf Flag\\Grommet-Triangle\\Golf Flag With Grommets Triangle Single Sided.psdt",
-"img": "assets/qnap/golf-flag-with-grommets-triangle-sin-0e63bc.jpg",
-"mask": "assets/qnap/golf-flag-with-grommets-triangle-sin-0e63bc.m.png",
-"outline": "assets/qnap/golf-flag-with-grommets-triangle-sin-0e63bc.o.json",
+"img": "assets/tpl/flags-03/golf-flag-with-grommets-triangle-sin-0e63bc.jpg",
+"mask": "assets/tpl/flags-03/golf-flag-with-grommets-triangle-sin-0e63bc.m.png",
+"outline": "assets/tpl/flags-03/golf-flag-with-grommets-triangle-sin-0e63bc.o.json",
 "fullIn": [
 26.0,
 17.0
@@ -3782,16 +5004,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-5.243,
-7.097,
-17.225,
-9.903
+5.252,
+7.096,
+17.264,
+9.904
 ],
 "frontSafe": [
-5.243,
-7.097,
-17.225,
-9.903
+5.252,
+7.096,
+17.264,
+9.904
+],
+"logoBoxes": [
+[
+5.252,
+7.096,
+17.264,
+9.904
+]
 ],
 "logoArea": "safe area"
 },
@@ -3805,9 +5035,9 @@
 "stated": null,
 "id": "golf-flag-with-tube-double-sided-a78163",
 "src": "Custom Flags\\Golf Flag\\Tube- Rectangle\\Golf Flag With Tube Double Sided.psdt",
-"img": "assets/qnap/golf-flag-with-tube-double-sided-a78163.jpg",
-"mask": "assets/qnap/golf-flag-with-tube-double-sided-a78163.m.png",
-"outline": "assets/qnap/golf-flag-with-tube-double-sided-a78163.o.json",
+"img": "assets/tpl/flags-03/golf-flag-with-tube-double-sided-a78163.jpg",
+"mask": "assets/tpl/flags-03/golf-flag-with-tube-double-sided-a78163.m.png",
+"outline": "assets/tpl/flags-03/golf-flag-with-tube-double-sided-a78163.o.json",
 "fullIn": [
 46.5,
 16.0
@@ -3836,7 +5066,34 @@
 "areas": {
 "bleed": 0.246
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+5.998,
+2.0,
+23.994,
+14.0
+],
+"frontSafe": [
+5.998,
+2.0,
+23.994,
+14.0
+],
+"logoBoxes": [
+[
+5.998,
+2.0,
+23.994,
+14.0
+],
+[
+25.994,
+2.0,
+43.989,
+14.0
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3848,9 +5105,9 @@
 "stated": null,
 "id": "golf-flag-with-tube-single-sided-cc169f",
 "src": "Custom Flags\\Golf Flag\\Tube- Rectangle\\Golf Flag With Tube Single Sided.psdt",
-"img": "assets/qnap/golf-flag-with-tube-single-sided-cc169f.jpg",
-"mask": "assets/qnap/golf-flag-with-tube-single-sided-cc169f.m.png",
-"outline": "assets/qnap/golf-flag-with-tube-single-sided-cc169f.o.json",
+"img": "assets/tpl/flags-03/golf-flag-with-tube-single-sided-cc169f.jpg",
+"mask": "assets/tpl/flags-03/golf-flag-with-tube-single-sided-cc169f.m.png",
+"outline": "assets/tpl/flags-03/golf-flag-with-tube-single-sided-cc169f.o.json",
 "fullIn": [
 26.5,
 16.0
@@ -3879,7 +5136,28 @@
 "areas": {
 "bleed": 0.339
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+6.016,
+1.987,
+24.009,
+14.013
+],
+"frontSafe": [
+6.016,
+1.987,
+24.009,
+14.013
+],
+"logoBoxes": [
+[
+6.016,
+1.987,
+24.009,
+14.013
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3895,9 +5173,9 @@
 ],
 "id": "12-x-8-hand-flag-d5ec51",
 "src": "Custom Flags\\Hand Flag\\12 x 8 Hand Flag.psdt",
-"img": "assets/qnap/12-x-8-hand-flag-d5ec51.jpg",
-"mask": "assets/qnap/12-x-8-hand-flag-d5ec51.m.png",
-"outline": "assets/qnap/12-x-8-hand-flag-d5ec51.o.json",
+"img": "assets/tpl/flags-03/12-x-8-hand-flag-d5ec51.jpg",
+"mask": "assets/tpl/flags-03/12-x-8-hand-flag-d5ec51.m.png",
+"outline": "assets/tpl/flags-03/12-x-8-hand-flag-d5ec51.o.json",
 "fullIn": [
 13.0,
 8.0
@@ -3926,7 +5204,28 @@
 "areas": {
 "bleed": 0.0
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+1.521,
+0.507,
+12.493,
+7.506
+],
+"frontSafe": [
+1.521,
+0.507,
+12.493,
+7.506
+],
+"logoBoxes": [
+[
+1.521,
+0.507,
+12.493,
+7.506
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3942,9 +5241,9 @@
 ],
 "id": "18-x-12-hand-flag-015f0f",
 "src": "Custom Flags\\Hand Flag\\18 x 12 Hand Flag.psdt",
-"img": "assets/qnap/18-x-12-hand-flag-015f0f.jpg",
-"mask": "assets/qnap/18-x-12-hand-flag-015f0f.m.png",
-"outline": "assets/qnap/18-x-12-hand-flag-015f0f.o.json",
+"img": "assets/tpl/flags-03/18-x-12-hand-flag-015f0f.jpg",
+"mask": "assets/tpl/flags-03/18-x-12-hand-flag-015f0f.m.png",
+"outline": "assets/tpl/flags-03/18-x-12-hand-flag-015f0f.o.json",
 "fullIn": [
 19.0,
 12.0
@@ -3973,7 +5272,28 @@
 "areas": {
 "bleed": 0.0
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+1.748,
+0.759,
+18.24,
+11.241
+],
+"frontSafe": [
+1.748,
+0.759,
+18.24,
+11.241
+],
+"logoBoxes": [
+[
+1.748,
+0.759,
+18.24,
+11.241
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -3989,9 +5309,9 @@
 ],
 "id": "36-x-24-hand-flag-6ee7c4",
 "src": "Custom Flags\\Hand Flag\\36 x 24 Hand Flag.psdt",
-"img": "assets/qnap/36-x-24-hand-flag-6ee7c4.jpg",
-"mask": "assets/qnap/36-x-24-hand-flag-6ee7c4.m.png",
-"outline": "assets/qnap/36-x-24-hand-flag-6ee7c4.o.json",
+"img": "assets/tpl/flags-03/36-x-24-hand-flag-6ee7c4.jpg",
+"mask": "assets/tpl/flags-03/36-x-24-hand-flag-6ee7c4.m.png",
+"outline": "assets/tpl/flags-03/36-x-24-hand-flag-6ee7c4.o.json",
 "fullIn": [
 37.0,
 24.0
@@ -4020,7 +5340,28 @@
 "areas": {
 "bleed": 0.0
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+2.553,
+1.553,
+35.446,
+22.521
+],
+"frontSafe": [
+2.553,
+1.553,
+35.446,
+22.521
+],
+"logoBoxes": [
+[
+2.553,
+1.553,
+35.446,
+22.521
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -4036,9 +5377,9 @@
 ],
 "id": "6-x-4-hand-flag-abb101",
 "src": "Custom Flags\\Hand Flag\\6 x 4 Hand Flag.psdt",
-"img": "assets/qnap/6-x-4-hand-flag-abb101.jpg",
-"mask": "assets/qnap/6-x-4-hand-flag-abb101.m.png",
-"outline": "assets/qnap/6-x-4-hand-flag-abb101.o.json",
+"img": "assets/tpl/flags-03/6-x-4-hand-flag-abb101.jpg",
+"mask": "assets/tpl/flags-03/6-x-4-hand-flag-abb101.m.png",
+"outline": "assets/tpl/flags-03/6-x-4-hand-flag-abb101.o.json",
 "fullIn": [
 7.0,
 4.0
@@ -4067,11 +5408,32 @@
 "areas": {
 "bleed": 0.005
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+1.26,
+0.252,
+6.741,
+3.748
+],
+"frontSafe": [
+1.26,
+0.252,
+6.741,
+3.748
+],
+"logoBoxes": [
+[
+1.26,
+0.252,
+6.741,
+3.748
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
-"product": "L FLAG",
+"product": "L Flags",
 "path": "L FLAG",
 "name": "L-Flag 27.5 x 87 Inch_Double Side",
 "panel": "L Flag Double Side",
@@ -4083,9 +5445,9 @@
 ],
 "id": "l-flag-27-5-x-87-inch-double-side-688423",
 "src": "Custom Flags\\L FLAG\\L-Flag 27.5 x 87 Inch_Double Side.psdt",
-"img": "assets/qnap/l-flag-27-5-x-87-inch-double-side-688423.jpg",
-"mask": "assets/qnap/l-flag-27-5-x-87-inch-double-side-688423.m.png",
-"outline": "assets/qnap/l-flag-27-5-x-87-inch-double-side-688423.o.json",
+"img": "assets/tpl/flags-03/l-flag-27-5-x-87-inch-double-side-688423.jpg",
+"mask": "assets/tpl/flags-03/l-flag-27-5-x-87-inch-double-side-688423.m.png",
+"outline": "assets/tpl/flags-03/l-flag-27-5-x-87-inch-double-side-688423.o.json",
 "fullIn": [
 57.0,
 88.0
@@ -4114,11 +5476,38 @@
 "areas": {
 "bleed": 0.044
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+3.167,
+0.968,
+27.532,
+87.032
+],
+"frontSafe": [
+3.167,
+0.968,
+27.532,
+87.032
+],
+"logoBoxes": [
+[
+3.167,
+0.968,
+27.532,
+87.032
+],
+[
+29.468,
+0.968,
+53.833,
+87.032
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
-"product": "L FLAG",
+"product": "L Flags",
 "path": "L FLAG",
 "name": "L-Flag 27.5 x 87 Inch_Single Side",
 "panel": "L Flag Single Side",
@@ -4130,9 +5519,9 @@
 ],
 "id": "l-flag-27-5-x-87-inch-single-side-7a9af8",
 "src": "Custom Flags\\L FLAG\\L-Flag 27.5 x 87 Inch_Single Side.psdt",
-"img": "assets/qnap/l-flag-27-5-x-87-inch-single-side-7a9af8.jpg",
-"mask": "assets/qnap/l-flag-27-5-x-87-inch-single-side-7a9af8.m.png",
-"outline": "assets/qnap/l-flag-27-5-x-87-inch-single-side-7a9af8.o.json",
+"img": "assets/tpl/flags-03/l-flag-27-5-x-87-inch-single-side-7a9af8.jpg",
+"mask": "assets/tpl/flags-03/l-flag-27-5-x-87-inch-single-side-7a9af8.m.png",
+"outline": "assets/tpl/flags-03/l-flag-27-5-x-87-inch-single-side-7a9af8.o.json",
 "fullIn": [
 28.5,
 88.0
@@ -4161,11 +5550,32 @@
 "areas": {
 "bleed": 0.044
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+3.167,
+0.968,
+27.444,
+87.032
+],
+"frontSafe": [
+3.167,
+0.968,
+27.444,
+87.032
+],
+"logoBoxes": [
+[
+3.167,
+0.968,
+27.444,
+87.032
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
-"product": "L FLAG",
+"product": "L Flags",
 "path": "L FLAG",
 "name": "L-Flag 27.5 x128 Inch_Double Side",
 "panel": "L Flag Double Side",
@@ -4177,9 +5587,9 @@
 ],
 "id": "l-flag-27-5-x128-inch-double-side-70cbec",
 "src": "Custom Flags\\L FLAG\\L-Flag 27.5 x128 Inch_Double Side.psdt",
-"img": "assets/qnap/l-flag-27-5-x128-inch-double-side-70cbec.jpg",
-"mask": "assets/qnap/l-flag-27-5-x128-inch-double-side-70cbec.m.png",
-"outline": "assets/qnap/l-flag-27-5-x128-inch-double-side-70cbec.o.json",
+"img": "assets/tpl/flags-03/l-flag-27-5-x128-inch-double-side-70cbec.jpg",
+"mask": "assets/tpl/flags-03/l-flag-27-5-x128-inch-double-side-70cbec.m.png",
+"outline": "assets/tpl/flags-03/l-flag-27-5-x128-inch-double-side-70cbec.o.json",
 "fullIn": [
 57.0,
 129.0
@@ -4208,11 +5618,38 @@
 "areas": {
 "bleed": 0.041
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+3.095,
+1.032,
+27.468,
+127.968
+],
+"frontSafe": [
+3.095,
+1.032,
+27.468,
+127.968
+],
+"logoBoxes": [
+[
+3.095,
+1.032,
+27.468,
+127.968
+],
+[
+29.532,
+1.032,
+53.905,
+127.968
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
-"product": "L FLAG",
+"product": "L Flags",
 "path": "L FLAG",
 "name": "L-Flag 27.5 x128 Inch_Single Side",
 "panel": "L Flag Single Side",
@@ -4224,9 +5661,9 @@
 ],
 "id": "l-flag-27-5-x128-inch-single-side-6f797e",
 "src": "Custom Flags\\L FLAG\\L-Flag 27.5 x128 Inch_Single Side.psdt",
-"img": "assets/qnap/l-flag-27-5-x128-inch-single-side-6f797e.jpg",
-"mask": "assets/qnap/l-flag-27-5-x128-inch-single-side-6f797e.m.png",
-"outline": "assets/qnap/l-flag-27-5-x128-inch-single-side-6f797e.o.json",
+"img": "assets/tpl/flags-03/l-flag-27-5-x128-inch-single-side-6f797e.jpg",
+"mask": "assets/tpl/flags-03/l-flag-27-5-x128-inch-single-side-6f797e.m.png",
+"outline": "assets/tpl/flags-03/l-flag-27-5-x128-inch-single-side-6f797e.o.json",
 "fullIn": [
 28.5,
 129.0
@@ -4255,11 +5692,32 @@
 "areas": {
 "bleed": 0.045
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+3.095,
+1.032,
+27.468,
+127.968
+],
+"frontSafe": [
+3.095,
+1.032,
+27.468,
+127.968
+],
+"logoBoxes": [
+[
+3.095,
+1.032,
+27.468,
+127.968
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
-"product": "L FLAG",
+"product": "L Flags",
 "path": "L FLAG",
 "name": "L-Flag 32.5 x 167 Inch_Double Side",
 "panel": "L Flag Double Side",
@@ -4271,9 +5729,9 @@
 ],
 "id": "l-flag-32-5-x-167-inch-double-side-9542b4",
 "src": "Custom Flags\\L FLAG\\L-Flag 32.5 x 167 Inch_Double Side.psdt",
-"img": "assets/qnap/l-flag-32-5-x-167-inch-double-side-9542b4.jpg",
-"mask": "assets/qnap/l-flag-32-5-x-167-inch-double-side-9542b4.m.png",
-"outline": "assets/qnap/l-flag-32-5-x-167-inch-double-side-9542b4.o.json",
+"img": "assets/tpl/flags-03/l-flag-32-5-x-167-inch-double-side-9542b4.jpg",
+"mask": "assets/tpl/flags-03/l-flag-32-5-x-167-inch-double-side-9542b4.m.png",
+"outline": "assets/tpl/flags-03/l-flag-32-5-x-167-inch-double-side-9542b4.o.json",
 "fullIn": [
 67.0,
 168.0
@@ -4302,11 +5760,38 @@
 "areas": {
 "bleed": 0.036
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+3.19,
+1.008,
+32.409,
+166.992
+],
+"frontSafe": [
+3.19,
+1.008,
+32.409,
+166.992
+],
+"logoBoxes": [
+[
+3.19,
+1.008,
+32.409,
+166.992
+],
+[
+34.591,
+1.008,
+63.81,
+166.992
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
-"product": "L FLAG",
+"product": "L Flags",
 "path": "L FLAG",
 "name": "L-Flag 32.5 x 167 Inch_Single Side",
 "panel": "L Flag Single Side",
@@ -4318,9 +5803,9 @@
 ],
 "id": "l-flag-32-5-x-167-inch-single-side-4c4294",
 "src": "Custom Flags\\L FLAG\\L-Flag 32.5 x 167 Inch_Single Side.psdt",
-"img": "assets/qnap/l-flag-32-5-x-167-inch-single-side-4c4294.jpg",
-"mask": "assets/qnap/l-flag-32-5-x-167-inch-single-side-4c4294.m.png",
-"outline": "assets/qnap/l-flag-32-5-x-167-inch-single-side-4c4294.o.json",
+"img": "assets/tpl/flags-03/l-flag-32-5-x-167-inch-single-side-4c4294.jpg",
+"mask": "assets/tpl/flags-03/l-flag-32-5-x-167-inch-single-side-4c4294.m.png",
+"outline": "assets/tpl/flags-03/l-flag-32-5-x-167-inch-single-side-4c4294.o.json",
 "fullIn": [
 33.5,
 168.0
@@ -4349,7 +5834,28 @@
 "areas": {
 "bleed": 0.038
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+3.182,
+1.008,
+32.495,
+166.992
+],
+"frontSafe": [
+3.182,
+1.008,
+32.495,
+166.992
+],
+"logoBoxes": [
+[
+3.182,
+1.008,
+32.495,
+166.992
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -4361,9 +5867,9 @@
 "stated": null,
 "id": "leaf-banner-flag-10-ft-back-097d2d",
 "src": "Custom Flags\\Leaf Banner Flag\\Leaf Banner Flag_10 Ft_Back.psdt",
-"img": "assets/qnap/leaf-banner-flag-10-ft-back-097d2d.jpg",
-"mask": "assets/qnap/leaf-banner-flag-10-ft-back-097d2d.m.png",
-"outline": "assets/qnap/leaf-banner-flag-10-ft-back-097d2d.o.json",
+"img": "assets/tpl/flags-03/leaf-banner-flag-10-ft-back-097d2d.jpg",
+"mask": "assets/tpl/flags-03/leaf-banner-flag-10-ft-back-097d2d.m.png",
+"outline": "assets/tpl/flags-03/leaf-banner-flag-10-ft-back-097d2d.o.json",
 "fullIn": [
 39.28,
 103.26
@@ -4394,16 +5900,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-7.142,
-21.254,
-32.138,
-69.87
+7.132,
+21.272,
+32.148,
+69.907
 ],
 "frontSafe": [
-7.142,
-21.254,
-32.138,
-69.87
+7.132,
+21.272,
+32.148,
+69.907
+],
+"logoBoxes": [
+[
+7.132,
+21.272,
+32.148,
+69.907
+]
 ],
 "logoArea": "safe area"
 },
@@ -4417,9 +5931,9 @@
 "stated": null,
 "id": "leaf-banner-flag-10-ft-front-3991a6",
 "src": "Custom Flags\\Leaf Banner Flag\\Leaf Banner Flag_10 Ft_Front.psdt",
-"img": "assets/qnap/leaf-banner-flag-10-ft-front-3991a6.jpg",
-"mask": "assets/qnap/leaf-banner-flag-10-ft-front-3991a6.m.png",
-"outline": "assets/qnap/leaf-banner-flag-10-ft-front-3991a6.o.json",
+"img": "assets/tpl/flags-03/leaf-banner-flag-10-ft-front-3991a6.jpg",
+"mask": "assets/tpl/flags-03/leaf-banner-flag-10-ft-front-3991a6.m.png",
+"outline": "assets/tpl/flags-03/leaf-banner-flag-10-ft-front-3991a6.o.json",
 "fullIn": [
 39.28,
 103.26
@@ -4450,22 +5964,30 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-7.142,
-21.254,
-32.138,
-69.87
+7.132,
+21.272,
+32.148,
+69.907
 ],
 "frontSafe": [
-7.142,
-21.254,
-32.138,
-69.87
+7.132,
+21.272,
+32.148,
+69.907
+],
+"logoBoxes": [
+[
+7.132,
+21.272,
+32.148,
+69.907
+]
 ],
 "logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
-"product": "Pin Point Flag",
+"product": "Pinpoint Flags",
 "path": "Pin Point Flag",
 "name": "Pin Point Flag - 43 x 86 Inch",
 "panel": "Pin Point Flag",
@@ -4477,9 +5999,9 @@
 ],
 "id": "pin-point-flag-43-x-86-inch-8d73c4",
 "src": "Custom Flags\\Pin Point Flag\\Pin Point Flag - 43 x 86 Inch.psdt",
-"img": "assets/qnap/pin-point-flag-43-x-86-inch-8d73c4.jpg",
-"mask": "assets/qnap/pin-point-flag-43-x-86-inch-8d73c4.m.png",
-"outline": "assets/qnap/pin-point-flag-43-x-86-inch-8d73c4.o.json",
+"img": "assets/tpl/flags-03/pin-point-flag-43-x-86-inch-8d73c4.jpg",
+"mask": "assets/tpl/flags-03/pin-point-flag-43-x-86-inch-8d73c4.m.png",
+"outline": "assets/tpl/flags-03/pin-point-flag-43-x-86-inch-8d73c4.o.json",
 "fullIn": [
 45.0,
 75.0
@@ -4510,16 +6032,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-7.469,
+7.425,
 9.75,
-37.375,
-42.781
+37.425,
+42.675
 ],
 "frontSafe": [
-7.469,
+7.425,
 9.75,
-37.375,
-42.781
+37.425,
+42.675
+],
+"logoBoxes": [
+[
+7.425,
+9.75,
+37.425,
+42.675
+]
 ],
 "logoArea": "safe area"
 },
@@ -4537,9 +6067,9 @@
 ],
 "id": "1-5-x-5-5-ft-double-sided-dc4348",
 "src": "Custom Flags\\Sail Flag\\1.5 x 5.5 Ft_Double Sided.psdt",
-"img": "assets/qnap/1-5-x-5-5-ft-double-sided-dc4348.jpg",
-"mask": "assets/qnap/1-5-x-5-5-ft-double-sided-dc4348.m.png",
-"outline": "assets/qnap/1-5-x-5-5-ft-double-sided-dc4348.o.json",
+"img": "assets/tpl/flags-03/1-5-x-5-5-ft-double-sided-dc4348.jpg",
+"mask": "assets/tpl/flags-03/1-5-x-5-5-ft-double-sided-dc4348.m.png",
+"outline": "assets/tpl/flags-03/1-5-x-5-5-ft-double-sided-dc4348.o.json",
 "fullIn": [
 41.74,
 68.75
@@ -4568,7 +6098,34 @@
 "areas": {
 "bleed": 0.13
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+1.513,
+12.375,
+14.716,
+67.238
+],
+"frontSafe": [
+1.513,
+12.375,
+14.716,
+67.238
+],
+"logoBoxes": [
+[
+1.513,
+12.375,
+14.716,
+67.238
+],
+[
+27.024,
+12.444,
+40.227,
+67.238
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -4584,9 +6141,9 @@
 ],
 "id": "1-5-x-5-5-ft-single-sided-7451b0",
 "src": "Custom Flags\\Sail Flag\\1.5 x 5.5 Ft_Single Sided.psdt",
-"img": "assets/qnap/1-5-x-5-5-ft-single-sided-7451b0.jpg",
-"mask": "assets/qnap/1-5-x-5-5-ft-single-sided-7451b0.m.png",
-"outline": "assets/qnap/1-5-x-5-5-ft-single-sided-7451b0.o.json",
+"img": "assets/tpl/flags-03/1-5-x-5-5-ft-single-sided-7451b0.jpg",
+"mask": "assets/tpl/flags-03/1-5-x-5-5-ft-single-sided-7451b0.m.png",
+"outline": "assets/tpl/flags-03/1-5-x-5-5-ft-single-sided-7451b0.o.json",
 "fullIn": [
 20.62,
 68.74
@@ -4615,7 +6172,28 @@
 "areas": {
 "bleed": 0.129
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+1.512,
+12.442,
+14.709,
+67.228
+],
+"frontSafe": [
+1.512,
+12.442,
+14.709,
+67.228
+],
+"logoBoxes": [
+[
+1.512,
+12.442,
+14.709,
+67.228
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -4631,9 +6209,9 @@
 ],
 "id": "2-x-11-5-ft-double-sided-5351b8",
 "src": "Custom Flags\\Sail Flag\\2 x 11.5 Ft_Double sided.psdt",
-"img": "assets/qnap/2-x-11-5-ft-double-sided-5351b8.jpg",
-"mask": "assets/qnap/2-x-11-5-ft-double-sided-5351b8.m.png",
-"outline": "assets/qnap/2-x-11-5-ft-double-sided-5351b8.o.json",
+"img": "assets/tpl/flags-03/2-x-11-5-ft-double-sided-5351b8.jpg",
+"mask": "assets/tpl/flags-03/2-x-11-5-ft-double-sided-5351b8.m.png",
+"outline": "assets/tpl/flags-03/2-x-11-5-ft-double-sided-5351b8.o.json",
 "fullIn": [
 58.56,
 140.22
@@ -4662,7 +6240,34 @@
 "areas": {
 "bleed": 0.09
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+1.541,
+24.118,
+21.014,
+138.678
+],
+"frontSafe": [
+1.541,
+24.118,
+21.014,
+138.678
+],
+"logoBoxes": [
+[
+1.541,
+24.118,
+21.014,
+138.678
+],
+[
+37.406,
+24.258,
+57.019,
+138.678
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -4678,9 +6283,9 @@
 ],
 "id": "2-x-11-5-ft-single-sided-f4eedb",
 "src": "Custom Flags\\Sail Flag\\2 x 11.5 Ft_Single sided.psdt",
-"img": "assets/qnap/2-x-11-5-ft-single-sided-f4eedb.jpg",
-"mask": "assets/qnap/2-x-11-5-ft-single-sided-f4eedb.m.png",
-"outline": "assets/qnap/2-x-11-5-ft-single-sided-f4eedb.o.json",
+"img": "assets/tpl/flags-03/2-x-11-5-ft-single-sided-f4eedb.jpg",
+"mask": "assets/tpl/flags-03/2-x-11-5-ft-single-sided-f4eedb.m.png",
+"outline": "assets/tpl/flags-03/2-x-11-5-ft-single-sided-f4eedb.o.json",
 "fullIn": [
 29.06,
 140.22
@@ -4709,7 +6314,28 @@
 "areas": {
 "bleed": 0.089
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+1.544,
+24.118,
+21.058,
+138.678
+],
+"frontSafe": [
+1.544,
+24.118,
+21.058,
+138.678
+],
+"logoBoxes": [
+[
+1.544,
+24.118,
+21.058,
+138.678
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -4725,9 +6351,9 @@
 ],
 "id": "2-x-7-58-ft-double-sided-30a5c4",
 "src": "Custom Flags\\Sail Flag\\2 x 7.58 Ft_Double Sided.psdt",
-"img": "assets/qnap/2-x-7-58-ft-double-sided-30a5c4.jpg",
-"mask": "assets/qnap/2-x-7-58-ft-double-sided-30a5c4.m.png",
-"outline": "assets/qnap/2-x-7-58-ft-double-sided-30a5c4.o.json",
+"img": "assets/tpl/flags-03/2-x-7-58-ft-double-sided-30a5c4.jpg",
+"mask": "assets/tpl/flags-03/2-x-7-58-ft-double-sided-30a5c4.m.png",
+"outline": "assets/tpl/flags-03/2-x-7-58-ft-double-sided-30a5c4.o.json",
 "fullIn": [
 53.03,
 93.11
@@ -4756,7 +6382,34 @@
 "areas": {
 "bleed": 0.102
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+1.489,
+16.48,
+18.793,
+91.527
+],
+"frontSafe": [
+1.489,
+16.48,
+18.793,
+91.527
+],
+"logoBoxes": [
+[
+1.489,
+16.48,
+18.793,
+91.527
+],
+[
+34.144,
+16.574,
+51.448,
+91.527
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -4772,9 +6425,9 @@
 ],
 "id": "2-x-7-58-ft-single-sided-212253",
 "src": "Custom Flags\\Sail Flag\\2 x 7.58 Ft_Single Sided.psdt",
-"img": "assets/qnap/2-x-7-58-ft-single-sided-212253.jpg",
-"mask": "assets/qnap/2-x-7-58-ft-single-sided-212253.m.png",
-"outline": "assets/qnap/2-x-7-58-ft-single-sided-212253.o.json",
+"img": "assets/tpl/flags-03/2-x-7-58-ft-single-sided-212253.jpg",
+"mask": "assets/tpl/flags-03/2-x-7-58-ft-single-sided-212253.m.png",
+"outline": "assets/tpl/flags-03/2-x-7-58-ft-single-sided-212253.o.json",
 "fullIn": [
 26.05,
 93.13
@@ -4803,7 +6456,28 @@
 "areas": {
 "bleed": 0.102
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+1.582,
+16.577,
+18.886,
+91.64
+],
+"frontSafe": [
+1.582,
+16.577,
+18.886,
+91.64
+],
+"logoBoxes": [
+[
+1.582,
+16.577,
+18.886,
+91.64
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -4819,9 +6493,9 @@
 ],
 "id": "2-x-9-5-ft-double-sided-7c9c15",
 "src": "Custom Flags\\Sail Flag\\2 x 9.5 Ft_Double Sided.psdt",
-"img": "assets/qnap/2-x-9-5-ft-double-sided-7c9c15.jpg",
-"mask": "assets/qnap/2-x-9-5-ft-double-sided-7c9c15.m.png",
-"outline": "assets/qnap/2-x-9-5-ft-double-sided-7c9c15.o.json",
+"img": "assets/tpl/flags-03/2-x-9-5-ft-double-sided-7c9c15.jpg",
+"mask": "assets/tpl/flags-03/2-x-9-5-ft-double-sided-7c9c15.m.png",
+"outline": "assets/tpl/flags-03/2-x-9-5-ft-double-sided-7c9c15.o.json",
 "fullIn": [
 52.54,
 117.16
@@ -4850,7 +6524,34 @@
 "areas": {
 "bleed": 0.097
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+1.525,
+20.386,
+18.764,
+115.637
+],
+"frontSafe": [
+1.525,
+20.386,
+18.764,
+115.637
+],
+"logoBoxes": [
+[
+1.525,
+20.386,
+18.764,
+115.637
+],
+[
+33.776,
+20.386,
+51.015,
+115.637
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -4866,9 +6567,9 @@
 ],
 "id": "2-x-9-5-ft-single-sided-cfe066",
 "src": "Custom Flags\\Sail Flag\\2 x 9.5 Ft_Single Sided.psdt",
-"img": "assets/qnap/2-x-9-5-ft-single-sided-cfe066.jpg",
-"mask": "assets/qnap/2-x-9-5-ft-single-sided-cfe066.m.png",
-"outline": "assets/qnap/2-x-9-5-ft-single-sided-cfe066.o.json",
+"img": "assets/tpl/flags-03/2-x-9-5-ft-single-sided-cfe066.jpg",
+"mask": "assets/tpl/flags-03/2-x-9-5-ft-single-sided-cfe066.m.png",
+"outline": "assets/tpl/flags-03/2-x-9-5-ft-single-sided-cfe066.o.json",
 "fullIn": [
 26.03,
 117.16
@@ -4897,7 +6598,28 @@
 "areas": {
 "bleed": 0.097
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+1.524,
+20.269,
+18.76,
+115.637
+],
+"frontSafe": [
+1.524,
+20.269,
+18.76,
+115.637
+],
+"logoBoxes": [
+[
+1.524,
+20.269,
+18.76,
+115.637
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -4913,9 +6635,9 @@
 ],
 "id": "2-5-x-15-5-ft-double-sided-8cf25a",
 "src": "Custom Flags\\Sail Flag\\2.5 x 15.5 Ft_Double SIded.psdt",
-"img": "assets/qnap/2-5-x-15-5-ft-double-sided-8cf25a.jpg",
-"mask": "assets/qnap/2-5-x-15-5-ft-double-sided-8cf25a.m.png",
-"outline": "assets/qnap/2-5-x-15-5-ft-double-sided-8cf25a.o.json",
+"img": "assets/tpl/flags-03/2-5-x-15-5-ft-double-sided-8cf25a.jpg",
+"mask": "assets/tpl/flags-03/2-5-x-15-5-ft-double-sided-8cf25a.m.png",
+"outline": "assets/tpl/flags-03/2-5-x-15-5-ft-double-sided-8cf25a.o.json",
 "fullIn": [
 64.56,
 187.26
@@ -4944,7 +6666,34 @@
 "areas": {
 "bleed": 0.078
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+1.497,
+32.021,
+23.391,
+185.762
+],
+"frontSafe": [
+1.497,
+32.021,
+23.391,
+185.762
+],
+"logoBoxes": [
+[
+1.497,
+32.021,
+23.391,
+185.762
+],
+[
+41.169,
+32.021,
+63.063,
+185.762
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -4960,9 +6709,9 @@
 ],
 "id": "2-5-x-15-5-ft-single-sided-45f6a6",
 "src": "Custom Flags\\Sail Flag\\2.5 x 15.5 Ft_Single SIded.psdt",
-"img": "assets/qnap/2-5-x-15-5-ft-single-sided-45f6a6.jpg",
-"mask": "assets/qnap/2-5-x-15-5-ft-single-sided-45f6a6.m.png",
-"outline": "assets/qnap/2-5-x-15-5-ft-single-sided-45f6a6.o.json",
+"img": "assets/tpl/flags-03/2-5-x-15-5-ft-single-sided-45f6a6.jpg",
+"mask": "assets/tpl/flags-03/2-5-x-15-5-ft-single-sided-45f6a6.m.png",
+"outline": "assets/tpl/flags-03/2-5-x-15-5-ft-single-sided-45f6a6.o.json",
 "fullIn": [
 32.06,
 187.26
@@ -4991,7 +6740,28 @@
 "areas": {
 "bleed": 0.08
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+1.5,
+32.396,
+23.436,
+185.762
+],
+"frontSafe": [
+1.5,
+32.396,
+23.436,
+185.762
+],
+"logoBoxes": [
+[
+1.5,
+32.396,
+23.436,
+185.762
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -5007,9 +6777,9 @@
 ],
 "id": "sharkfin-flag-2-42x6-67-ft-29x80-in-e53a95",
 "src": "Custom Flags\\Shark Fin Flags\\Sharkfin Flag_2.42x6.67 Ft_29x80 In_Double Sided.psdt",
-"img": "assets/qnap/sharkfin-flag-2-42x6-67-ft-29x80-in-e53a95.jpg",
-"mask": "assets/qnap/sharkfin-flag-2-42x6-67-ft-29x80-in-e53a95.m.png",
-"outline": "assets/qnap/sharkfin-flag-2-42x6-67-ft-29x80-in-e53a95.o.json",
+"img": "assets/tpl/flags-03/sharkfin-flag-2-42x6-67-ft-29x80-in-e53a95.jpg",
+"mask": "assets/tpl/flags-03/sharkfin-flag-2-42x6-67-ft-29x80-in-e53a95.m.png",
+"outline": "assets/tpl/flags-03/sharkfin-flag-2-42x6-67-ft-29x80-in-e53a95.o.json",
 "fullIn": [
 60.0,
 82.0
@@ -5038,7 +6808,34 @@
 "areas": {
 "bleed": 0.13
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+11.475,
+37.72,
+27.131,
+68.06
+],
+"frontSafe": [
+11.475,
+37.72,
+27.131,
+68.06
+],
+"logoBoxes": [
+[
+11.475,
+37.72,
+27.131,
+68.06
+],
+[
+32.869,
+37.72,
+48.525,
+68.06
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -5054,9 +6851,9 @@
 ],
 "id": "sharkfin-flag-2-42x6-67-ft-29x80-in-64c19a",
 "src": "Custom Flags\\Shark Fin Flags\\Sharkfin Flag_2.42x6.67 Ft_29x80 In_Single Sided.psdt",
-"img": "assets/qnap/sharkfin-flag-2-42x6-67-ft-29x80-in-64c19a.jpg",
-"mask": "assets/qnap/sharkfin-flag-2-42x6-67-ft-29x80-in-64c19a.m.png",
-"outline": "assets/qnap/sharkfin-flag-2-42x6-67-ft-29x80-in-64c19a.o.json",
+"img": "assets/tpl/flags-03/sharkfin-flag-2-42x6-67-ft-29x80-in-64c19a.jpg",
+"mask": "assets/tpl/flags-03/sharkfin-flag-2-42x6-67-ft-29x80-in-64c19a.m.png",
+"outline": "assets/tpl/flags-03/sharkfin-flag-2-42x6-67-ft-29x80-in-64c19a.o.json",
 "fullIn": [
 30.0,
 82.0
@@ -5087,16 +6884,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-11.515,
-37.686,
-27.13,
-68.026
+11.475,
+37.72,
+27.131,
+68.06
 ],
 "frontSafe": [
-11.515,
-37.686,
-27.13,
-68.026
+11.475,
+37.72,
+27.131,
+68.06
+],
+"logoBoxes": [
+[
+11.475,
+37.72,
+27.131,
+68.06
+]
 ],
 "logoArea": "safe area"
 },
@@ -5114,9 +6919,9 @@
 ],
 "id": "sharkfin-flag-3-x-9-75-ft-36-x-117-i-ce8511",
 "src": "Custom Flags\\Shark Fin Flags\\Sharkfin Flag_3 x 9.75 Ft_36 x 117 in_Double Sided.psdt",
-"img": "assets/qnap/sharkfin-flag-3-x-9-75-ft-36-x-117-i-ce8511.jpg",
-"mask": "assets/qnap/sharkfin-flag-3-x-9-75-ft-36-x-117-i-ce8511.m.png",
-"outline": "assets/qnap/sharkfin-flag-3-x-9-75-ft-36-x-117-i-ce8511.o.json",
+"img": "assets/tpl/flags-04/sharkfin-flag-3-x-9-75-ft-36-x-117-i-ce8511.jpg",
+"mask": "assets/tpl/flags-04/sharkfin-flag-3-x-9-75-ft-36-x-117-i-ce8511.m.png",
+"outline": "assets/tpl/flags-04/sharkfin-flag-3-x-9-75-ft-36-x-117-i-ce8511.o.json",
 "fullIn": [
 82.69,
 120.01
@@ -5145,7 +6950,34 @@
 "areas": {
 "bleed": 0.103
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+17.882,
+60.845,
+36.964,
+105.249
+],
+"frontSafe": [
+17.882,
+60.845,
+36.964,
+105.249
+],
+"logoBoxes": [
+[
+17.882,
+60.845,
+36.964,
+105.249
+],
+[
+45.726,
+60.845,
+64.808,
+105.249
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -5161,9 +6993,9 @@
 ],
 "id": "sharkfin-flag-3-x-9-75-ft-36-x-117-i-1cbc5c",
 "src": "Custom Flags\\Shark Fin Flags\\Sharkfin Flag_3 x 9.75 Ft_36 x 117 in_Single Sided.psdt",
-"img": "assets/qnap/sharkfin-flag-3-x-9-75-ft-36-x-117-i-1cbc5c.jpg",
-"mask": "assets/qnap/sharkfin-flag-3-x-9-75-ft-36-x-117-i-1cbc5c.m.png",
-"outline": "assets/qnap/sharkfin-flag-3-x-9-75-ft-36-x-117-i-1cbc5c.o.json",
+"img": "assets/tpl/flags-04/sharkfin-flag-3-x-9-75-ft-36-x-117-i-1cbc5c.jpg",
+"mask": "assets/tpl/flags-04/sharkfin-flag-3-x-9-75-ft-36-x-117-i-1cbc5c.m.png",
+"outline": "assets/tpl/flags-04/sharkfin-flag-3-x-9-75-ft-36-x-117-i-1cbc5c.o.json",
 "fullIn": [
 41.33,
 119.99
@@ -5194,16 +7026,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-17.843,
-61.193,
-36.985,
-105.188
+17.85,
+60.835,
+37.017,
+105.231
 ],
 "frontSafe": [
-17.843,
-61.193,
-36.985,
-105.188
+17.85,
+60.835,
+37.017,
+105.231
+],
+"logoBoxes": [
+[
+17.85,
+60.835,
+37.017,
+105.231
+]
 ],
 "logoArea": "safe area"
 },
@@ -5221,9 +7061,9 @@
 ],
 "id": "sharkfin-flag-3-67-x-14-67-ft-44-x-1-58aeaf",
 "src": "Custom Flags\\Shark Fin Flags\\Sharkfin Flag_3.67 x 14.67 Ft_44 x 176 in_Double Sided.psdt",
-"img": "assets/qnap/sharkfin-flag-3-67-x-14-67-ft-44-x-1-58aeaf.jpg",
-"mask": "assets/qnap/sharkfin-flag-3-67-x-14-67-ft-44-x-1-58aeaf.m.png",
-"outline": "assets/qnap/sharkfin-flag-3-67-x-14-67-ft-44-x-1-58aeaf.o.json",
+"img": "assets/tpl/flags-04/sharkfin-flag-3-67-x-14-67-ft-44-x-1-58aeaf.jpg",
+"mask": "assets/tpl/flags-04/sharkfin-flag-3-67-x-14-67-ft-44-x-1-58aeaf.m.png",
+"outline": "assets/tpl/flags-04/sharkfin-flag-3-67-x-14-67-ft-44-x-1-58aeaf.o.json",
 "fullIn": [
 92.0,
 180.0
@@ -5252,7 +7092,34 @@
 "areas": {
 "bleed": 0.082
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+15.663,
+107.46,
+42.489,
+157.86
+],
+"frontSafe": [
+15.663,
+107.46,
+42.489,
+157.86
+],
+"logoBoxes": [
+[
+15.663,
+107.46,
+42.489,
+157.86
+],
+[
+49.511,
+107.46,
+76.337,
+157.86
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -5268,9 +7135,9 @@
 ],
 "id": "sharkfin-flag-3-67-x-14-67-ft-44-x-1-aa09d2",
 "src": "Custom Flags\\Shark Fin Flags\\Sharkfin Flag_3.67 x 14.67 Ft_44 x 176 in_Single Sided.psdt",
-"img": "assets/qnap/sharkfin-flag-3-67-x-14-67-ft-44-x-1-aa09d2.jpg",
-"mask": "assets/qnap/sharkfin-flag-3-67-x-14-67-ft-44-x-1-aa09d2.m.png",
-"outline": "assets/qnap/sharkfin-flag-3-67-x-14-67-ft-44-x-1-aa09d2.o.json",
+"img": "assets/tpl/flags-04/sharkfin-flag-3-67-x-14-67-ft-44-x-1-aa09d2.jpg",
+"mask": "assets/tpl/flags-04/sharkfin-flag-3-67-x-14-67-ft-44-x-1-aa09d2.m.png",
+"outline": "assets/tpl/flags-04/sharkfin-flag-3-67-x-14-67-ft-44-x-1-aa09d2.o.json",
 "fullIn": [
 46.0,
 180.0
@@ -5301,16 +7168,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-15.909,
-106.8,
-42.473,
-158.025
+15.875,
+106.74,
+42.392,
+157.86
 ],
 "frontSafe": [
-15.909,
-106.8,
-42.473,
-158.025
+15.875,
+106.74,
+42.392,
+157.86
+],
+"logoBoxes": [
+[
+15.875,
+106.74,
+42.392,
+157.86
+]
 ],
 "logoArea": "safe area"
 },
@@ -5324,9 +7199,9 @@
 "stated": null,
 "id": "spinning-dart-banner-9-ft-2fa4bd",
 "src": "Custom Flags\\Spinning Dart Banner\\Spinning Dart Banner_9 Ft.psdt",
-"img": "assets/qnap/spinning-dart-banner-9-ft-2fa4bd.jpg",
-"mask": "assets/qnap/spinning-dart-banner-9-ft-2fa4bd.m.png",
-"outline": "assets/qnap/spinning-dart-banner-9-ft-2fa4bd.o.json",
+"img": "assets/tpl/flags-04/spinning-dart-banner-9-ft-2fa4bd.jpg",
+"mask": "assets/tpl/flags-04/spinning-dart-banner-9-ft-2fa4bd.m.png",
+"outline": "assets/tpl/flags-04/spinning-dart-banner-9-ft-2fa4bd.o.json",
 "fullIn": [
 130.2,
 69.46
@@ -5355,24 +7230,11 @@
 "areas": {
 "bleed": 0.002
 },
-"layersFrom": "clipping mask layer",
-"front": [
-17.577,
-9.009,
-112.514,
-60.944
-],
-"frontSafe": [
-17.577,
-9.009,
-112.514,
-60.944
-],
-"logoArea": "safe area"
+"layersFrom": "clipping mask layer"
 },
 {
 "group": "Custom Flags",
-"product": "Suction Cup Banner",
+"product": "Suction Cup Flags",
 "path": "Suction Cup Banner",
 "name": "Suction Cup Blade Flag Template DF",
 "panel": "Suction Cup Blade Flag Template DF",
@@ -5380,9 +7242,9 @@
 "stated": null,
 "id": "suction-cup-blade-flag-template-df-eebff4",
 "src": "Custom Flags\\Suction Cup Banner\\Suction Cup Blade Flag Template DF.psdt",
-"img": "assets/qnap/suction-cup-blade-flag-template-df-eebff4.jpg",
-"mask": "assets/qnap/suction-cup-blade-flag-template-df-eebff4.m.png",
-"outline": "assets/qnap/suction-cup-blade-flag-template-df-eebff4.o.json",
+"img": "assets/tpl/flags-04/suction-cup-blade-flag-template-df-eebff4.jpg",
+"mask": "assets/tpl/flags-04/suction-cup-blade-flag-template-df-eebff4.m.png",
+"outline": "assets/tpl/flags-04/suction-cup-blade-flag-template-df-eebff4.o.json",
 "fullIn": [
 24.44,
 29.22
@@ -5413,22 +7275,36 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-4.552,
-5.393,
-19.888,
-25.99
+4.292,
+5.786,
+8.935,
+24.253
 ],
 "frontSafe": [
-4.552,
-5.393,
-19.888,
-25.99
+4.292,
+5.786,
+8.935,
+24.253
+],
+"logoBoxes": [
+[
+4.292,
+5.786,
+8.935,
+24.253
+],
+[
+15.505,
+5.786,
+20.148,
+24.253
+]
 ],
 "logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
-"product": "Suction Cup Banner",
+"product": "Suction Cup Flags",
 "path": "Suction Cup Banner",
 "name": "Suction Cup Blade Flag Template SF",
 "panel": "Suction Cup Blade Flag Template SF",
@@ -5436,9 +7312,9 @@
 "stated": null,
 "id": "suction-cup-blade-flag-template-sf-fe527c",
 "src": "Custom Flags\\Suction Cup Banner\\Suction Cup Blade Flag Template SF.psdt",
-"img": "assets/qnap/suction-cup-blade-flag-template-sf-fe527c.jpg",
-"mask": "assets/qnap/suction-cup-blade-flag-template-sf-fe527c.m.png",
-"outline": "assets/qnap/suction-cup-blade-flag-template-sf-fe527c.o.json",
+"img": "assets/tpl/flags-04/suction-cup-blade-flag-template-sf-fe527c.jpg",
+"mask": "assets/tpl/flags-04/suction-cup-blade-flag-template-sf-fe527c.m.png",
+"outline": "assets/tpl/flags-04/suction-cup-blade-flag-template-sf-fe527c.o.json",
 "fullIn": [
 13.25,
 29.22
@@ -5469,22 +7345,30 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-4.335,
-5.77,
-8.974,
-24.237
+4.329,
+5.786,
+8.98,
+24.253
 ],
 "frontSafe": [
-4.335,
-5.77,
-8.974,
-24.237
+4.329,
+5.786,
+8.98,
+24.253
+],
+"logoBoxes": [
+[
+4.329,
+5.786,
+8.98,
+24.253
+]
 ],
 "logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
-"product": "Suction Cup Banner",
+"product": "Suction Cup Flags",
 "path": "Suction Cup Banner",
 "name": "Suction Cup Rectangle Flag Template DF",
 "panel": "Suction Cup Rectangle Flag Template DF",
@@ -5492,9 +7376,9 @@
 "stated": null,
 "id": "suction-cup-rectangle-flag-template-15afc2",
 "src": "Custom Flags\\Suction Cup Banner\\Suction Cup Rectangle Flag Template DF.psdt",
-"img": "assets/qnap/suction-cup-rectangle-flag-template-15afc2.jpg",
-"mask": "assets/qnap/suction-cup-rectangle-flag-template-15afc2.m.png",
-"outline": "assets/qnap/suction-cup-rectangle-flag-template-15afc2.o.json",
+"img": "assets/tpl/flags-04/suction-cup-rectangle-flag-template-15afc2.jpg",
+"mask": "assets/tpl/flags-04/suction-cup-rectangle-flag-template-15afc2.m.png",
+"outline": "assets/tpl/flags-04/suction-cup-rectangle-flag-template-15afc2.o.json",
 "fullIn": [
 19.0,
 22.0
@@ -5523,11 +7407,38 @@
 "areas": {
 "bleed": 0.145
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+0.99,
+0.99,
+8.488,
+21.01
+],
+"frontSafe": [
+0.99,
+0.99,
+8.488,
+21.01
+],
+"logoBoxes": [
+[
+0.99,
+0.99,
+8.488,
+21.01
+],
+[
+10.512,
+0.99,
+18.01,
+21.01
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
-"product": "Suction Cup Banner",
+"product": "Suction Cup Flags",
 "path": "Suction Cup Banner",
 "name": "Suction Cup Rectangle Flag Template SF",
 "panel": "Suction Cup Rectangle Flag Template SF",
@@ -5535,9 +7446,9 @@
 "stated": null,
 "id": "suction-cup-rectangle-flag-template-49d942",
 "src": "Custom Flags\\Suction Cup Banner\\Suction Cup Rectangle Flag Template SF.psdt",
-"img": "assets/qnap/suction-cup-rectangle-flag-template-49d942.jpg",
-"mask": "assets/qnap/suction-cup-rectangle-flag-template-49d942.m.png",
-"outline": "assets/qnap/suction-cup-rectangle-flag-template-49d942.o.json",
+"img": "assets/tpl/flags-04/suction-cup-rectangle-flag-template-49d942.jpg",
+"mask": "assets/tpl/flags-04/suction-cup-rectangle-flag-template-49d942.m.png",
+"outline": "assets/tpl/flags-04/suction-cup-rectangle-flag-template-49d942.o.json",
 "fullIn": [
 10.0,
 22.0
@@ -5566,54 +7477,32 @@
 "areas": {
 "bleed": 0.208
 },
-"layersFrom": "cut line on the page"
+"layersFrom": "cut line on the page",
+"front": [
+1.253,
+1.254,
+8.747,
+20.746
+],
+"frontSafe": [
+1.253,
+1.254,
+8.747,
+20.746
+],
+"logoBoxes": [
+[
+1.253,
+1.254,
+8.747,
+20.746
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
-"product": "Suction Cup Banner",
-"path": "Suction Cup Banner",
-"name": "Suction Cup Teardrop Flag Template DF",
-"panel": "Suction Cup Teardrop Flag Template DF",
-"sides": "",
-"stated": null,
-"id": "suction-cup-teardrop-flag-template-d-cd8c48",
-"src": "Custom Flags\\Suction Cup Banner\\Suction Cup Teardrop Flag Template DF.psdt",
-"img": "assets/qnap/suction-cup-teardrop-flag-template-d-cd8c48.jpg",
-"mask": "assets/qnap/suction-cup-teardrop-flag-template-d-cd8c48.m.png",
-"outline": "assets/qnap/suction-cup-teardrop-flag-template-d-cd8c48.o.json",
-"fullIn": [
-14.27,
-35.58
-],
-"visIn": [
-1.008,
-1.008,
-13.16,
-34.057
-],
-"safeIn": [
-1.497,
-1.512,
-12.731,
-34.057
-],
-"prodIn": [
-0.0,
-0.015,
-14.242,
-35.569
-],
-"kind": "layers",
-"source": "qnap",
-"layout": true,
-"areas": {
-"bleed": 0.315
-},
-"layersFrom": "cut line on the page"
-},
-{
-"group": "Custom Flags",
-"product": "Suction Cup Banner",
+"product": "Suction Cup Flags",
 "path": "Suction Cup Banner",
 "name": "Suction Cup Teardrop Flag Template SF",
 "panel": "Suction Cup Teardrop Flag Template SF",
@@ -5621,9 +7510,9 @@
 "stated": null,
 "id": "suction-cup-teardrop-flag-template-s-1b8ca1",
 "src": "Custom Flags\\Suction Cup Banner\\Suction Cup Teardrop Flag Template SF.psdt",
-"img": "assets/qnap/suction-cup-teardrop-flag-template-s-1b8ca1.jpg",
-"mask": "assets/qnap/suction-cup-teardrop-flag-template-s-1b8ca1.m.png",
-"outline": "assets/qnap/suction-cup-teardrop-flag-template-s-1b8ca1.o.json",
+"img": "assets/tpl/flags-04/suction-cup-teardrop-flag-template-s-1b8ca1.jpg",
+"mask": "assets/tpl/flags-04/suction-cup-teardrop-flag-template-s-1b8ca1.m.png",
+"outline": "assets/tpl/flags-04/suction-cup-teardrop-flag-template-s-1b8ca1.o.json",
 "fullIn": [
 14.26,
 28.38
@@ -5654,16 +7543,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-5.24,
-2.827,
-8.362,
-11.685
+5.227,
+2.838,
+8.351,
+11.693
 ],
 "frontSafe": [
-5.24,
-2.827,
-8.362,
-11.685
+5.227,
+2.838,
+8.351,
+11.693
+],
+"logoBoxes": [
+[
+5.227,
+2.838,
+8.351,
+11.693
+]
 ],
 "logoArea": "safe area"
 },
@@ -5681,9 +7578,9 @@
 ],
 "id": "swooper-flag-2-13-x-11-50-ft-25-5-x-774490",
 "src": "Custom Flags\\Swooper Flags\\Swooper_Flag_2.13 x 11.50 Ft (25.5 x 138 In)_US_CA.psdt",
-"img": "assets/qnap/swooper-flag-2-13-x-11-50-ft-25-5-x-774490.jpg",
-"mask": "assets/qnap/swooper-flag-2-13-x-11-50-ft-25-5-x-774490.m.png",
-"outline": "assets/qnap/swooper-flag-2-13-x-11-50-ft-25-5-x-774490.o.json",
+"img": "assets/tpl/flags-04/swooper-flag-2-13-x-11-50-ft-25-5-x-774490.jpg",
+"mask": "assets/tpl/flags-04/swooper-flag-2-13-x-11-50-ft-25-5-x-774490.m.png",
+"outline": "assets/tpl/flags-04/swooper-flag-2-13-x-11-50-ft-25-5-x-774490.o.json",
 "fullIn": [
 29.1,
 140.43
@@ -5714,16 +7611,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-8.138,
-9.421,
-20.784,
-132.824
+8.154,
+9.409,
+20.806,
+132.847
 ],
 "frontSafe": [
-8.138,
-9.421,
-20.784,
-132.824
+8.154,
+9.409,
+20.806,
+132.847
+],
+"logoBoxes": [
+[
+8.154,
+9.409,
+20.806,
+132.847
+]
 ],
 "logoArea": "safe area"
 },
@@ -5741,9 +7646,9 @@
 ],
 "id": "2-x-5-ft-teardrop-flags-double-sided-0da021",
 "src": "Custom Flags\\Teardrop Flags\\2 x 5 Ft_Teardrop Flags_Double Sided.psdt",
-"img": "assets/qnap/2-x-5-ft-teardrop-flags-double-sided-0da021.jpg",
-"mask": "assets/qnap/2-x-5-ft-teardrop-flags-double-sided-0da021.m.png",
-"outline": "assets/qnap/2-x-5-ft-teardrop-flags-double-sided-0da021.o.json",
+"img": "assets/tpl/flags-04/2-x-5-ft-teardrop-flags-double-sided-0da021.jpg",
+"mask": "assets/tpl/flags-04/2-x-5-ft-teardrop-flags-double-sided-0da021.m.png",
+"outline": "assets/tpl/flags-04/2-x-5-ft-teardrop-flags-double-sided-0da021.o.json",
 "fullIn": [
 28.02,
 79.8
@@ -5772,7 +7677,34 @@
 "areas": {
 "bleed": 0.154
 },
-"layersFrom": "template outline"
+"layersFrom": "template outline",
+"front": [
+4.391,
+5.187,
+16.125,
+31.601
+],
+"frontSafe": [
+4.391,
+5.187,
+16.125,
+31.601
+],
+"logoBoxes": [
+[
+4.391,
+5.187,
+16.125,
+31.601
+],
+[
+10.138,
+51.79,
+20.676,
+73.177
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -5788,9 +7720,9 @@
 ],
 "id": "2-x-5-ft-teardrop-flags-single-sided-865594",
 "src": "Custom Flags\\Teardrop Flags\\2 x 5 Ft_Teardrop Flags_Single Sided.psdt",
-"img": "assets/qnap/2-x-5-ft-teardrop-flags-single-sided-865594.jpg",
-"mask": "assets/qnap/2-x-5-ft-teardrop-flags-single-sided-865594.m.png",
-"outline": "assets/qnap/2-x-5-ft-teardrop-flags-single-sided-865594.o.json",
+"img": "assets/tpl/flags-04/2-x-5-ft-teardrop-flags-single-sided-865594.jpg",
+"mask": "assets/tpl/flags-04/2-x-5-ft-teardrop-flags-single-sided-865594.m.png",
+"outline": "assets/tpl/flags-04/2-x-5-ft-teardrop-flags-single-sided-865594.o.json",
 "fullIn": [
 29.0,
 63.0
@@ -5821,16 +7753,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-10.708,
+10.717,
 6.93,
-21.127,
-28.376
+21.183,
+28.413
 ],
 "frontSafe": [
-10.708,
+10.717,
 6.93,
-21.127,
-28.376
+21.183,
+28.413
+],
+"logoBoxes": [
+[
+10.717,
+6.93,
+21.183,
+28.413
+]
 ],
 "logoArea": "safe area"
 },
@@ -5848,9 +7788,9 @@
 ],
 "id": "2-5-x-5-5-ft-teardrop-flags-double-s-99e7b9",
 "src": "Custom Flags\\Teardrop Flags\\2.5 x 5.5 Ft_Teardrop Flags_Double Sided.psdt",
-"img": "assets/qnap/2-5-x-5-5-ft-teardrop-flags-double-s-99e7b9.jpg",
-"mask": "assets/qnap/2-5-x-5-5-ft-teardrop-flags-double-s-99e7b9.m.png",
-"outline": "assets/qnap/2-5-x-5-5-ft-teardrop-flags-double-s-99e7b9.o.json",
+"img": "assets/tpl/flags-04/2-5-x-5-5-ft-teardrop-flags-double-s-99e7b9.jpg",
+"mask": "assets/tpl/flags-04/2-5-x-5-5-ft-teardrop-flags-double-s-99e7b9.m.png",
+"outline": "assets/tpl/flags-04/2-5-x-5-5-ft-teardrop-flags-double-s-99e7b9.o.json",
 "fullIn": [
 33.09,
 85.74
@@ -5879,7 +7819,34 @@
 "areas": {
 "bleed": 0.136
 },
-"layersFrom": "template outline"
+"layersFrom": "template outline",
+"front": [
+4.286,
+5.402,
+18.774,
+35.239
+],
+"frontSafe": [
+4.286,
+5.402,
+18.774,
+35.239
+],
+"logoBoxes": [
+[
+4.286,
+5.402,
+18.774,
+35.239
+],
+[
+11.916,
+55.388,
+24.689,
+78.709
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -5895,9 +7862,9 @@
 ],
 "id": "2-5-x-5-5-ft-teardrop-flags-single-s-d3c384",
 "src": "Custom Flags\\Teardrop Flags\\2.5 x 5.5 Ft_Teardrop Flags_Single Sided.psdt",
-"img": "assets/qnap/2-5-x-5-5-ft-teardrop-flags-single-s-d3c384.jpg",
-"mask": "assets/qnap/2-5-x-5-5-ft-teardrop-flags-single-s-d3c384.m.png",
-"outline": "assets/qnap/2-5-x-5-5-ft-teardrop-flags-single-s-d3c384.o.json",
+"img": "assets/tpl/flags-04/2-5-x-5-5-ft-teardrop-flags-single-s-d3c384.jpg",
+"mask": "assets/tpl/flags-04/2-5-x-5-5-ft-teardrop-flags-single-s-d3c384.m.png",
+"outline": "assets/tpl/flags-04/2-5-x-5-5-ft-teardrop-flags-single-s-d3c384.o.json",
 "fullIn": [
 34.0,
 70.0
@@ -5928,16 +7895,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-12.393,
-7.642,
-25.048,
-31.062
+12.383,
+7.7,
+25.115,
+31.08
 ],
 "frontSafe": [
-12.393,
-7.642,
-25.048,
-31.062
+12.383,
+7.7,
+25.115,
+31.08
+],
+"logoBoxes": [
+[
+12.383,
+7.7,
+25.115,
+31.08
+]
 ],
 "logoArea": "safe area"
 },
@@ -5955,9 +7930,9 @@
 ],
 "id": "3-x-7-ft-teardrop-flags-double-sided-93aa32",
 "src": "Custom Flags\\Teardrop Flags\\3 x 7 Ft_Teardrop Flags_Double Sided.psdt",
-"img": "assets/qnap/3-x-7-ft-teardrop-flags-double-sided-93aa32.jpg",
-"mask": "assets/qnap/3-x-7-ft-teardrop-flags-double-sided-93aa32.m.png",
-"outline": "assets/qnap/3-x-7-ft-teardrop-flags-double-sided-93aa32.o.json",
+"img": "assets/tpl/flags-04/3-x-7-ft-teardrop-flags-double-sided-93aa32.jpg",
+"mask": "assets/tpl/flags-04/3-x-7-ft-teardrop-flags-double-sided-93aa32.m.png",
+"outline": "assets/tpl/flags-04/3-x-7-ft-teardrop-flags-double-sided-93aa32.o.json",
 "fullIn": [
 39.02,
 107.63
@@ -5986,7 +7961,34 @@
 "areas": {
 "bleed": 0.099
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+5.39,
+6.565,
+22.636,
+44.128
+],
+"frontSafe": [
+5.39,
+6.565,
+22.636,
+44.128
+],
+"logoBoxes": [
+[
+5.39,
+6.565,
+22.636,
+44.128
+],
+[
+13.905,
+68.776,
+29.211,
+99.02
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -6002,9 +8004,9 @@
 ],
 "id": "3-x-7-ft-teardrop-flags-single-sided-a80711",
 "src": "Custom Flags\\Teardrop Flags\\3 x 7 Ft_Teardrop Flags_Single Sided.psdt",
-"img": "assets/qnap/3-x-7-ft-teardrop-flags-single-sided-a80711.jpg",
-"mask": "assets/qnap/3-x-7-ft-teardrop-flags-single-sided-a80711.m.png",
-"outline": "assets/qnap/3-x-7-ft-teardrop-flags-single-sided-a80711.o.json",
+"img": "assets/tpl/flags-04/3-x-7-ft-teardrop-flags-single-sided-a80711.jpg",
+"mask": "assets/tpl/flags-04/3-x-7-ft-teardrop-flags-single-sided-a80711.m.png",
+"outline": "assets/tpl/flags-04/3-x-7-ft-teardrop-flags-single-sided-a80711.o.json",
 "fullIn": [
 40.0,
 86.0
@@ -6035,16 +8037,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-14.337,
-8.851,
-29.642,
-38.987
+14.28,
+8.858,
+29.677,
+38.958
 ],
 "frontSafe": [
-14.337,
-8.851,
-29.642,
-38.987
+14.28,
+8.858,
+29.677,
+38.958
+],
+"logoBoxes": [
+[
+14.28,
+8.858,
+29.677,
+38.958
+]
 ],
 "logoArea": "safe area"
 },
@@ -6062,9 +8072,9 @@
 ],
 "id": "3-x-7-75-ft-teardrop-flags-double-si-a1780b",
 "src": "Custom Flags\\Teardrop Flags\\3 x 7.75 Ft_Teardrop Flags_Double Sided.psdt",
-"img": "assets/qnap/3-x-7-75-ft-teardrop-flags-double-si-a1780b.jpg",
-"mask": "assets/qnap/3-x-7-75-ft-teardrop-flags-double-si-a1780b.m.png",
-"outline": "assets/qnap/3-x-7-75-ft-teardrop-flags-double-si-a1780b.o.json",
+"img": "assets/tpl/flags-04/3-x-7-75-ft-teardrop-flags-double-si-a1780b.jpg",
+"mask": "assets/tpl/flags-04/3-x-7-75-ft-teardrop-flags-double-si-a1780b.m.png",
+"outline": "assets/tpl/flags-04/3-x-7-75-ft-teardrop-flags-double-si-a1780b.o.json",
 "fullIn": [
 43.14,
 119.72
@@ -6093,7 +8103,34 @@
 "areas": {
 "bleed": 0.102
 },
-"layersFrom": "template outline"
+"layersFrom": "template outline",
+"front": [
+5.872,
+7.183,
+25.045,
+49.444
+],
+"frontSafe": [
+5.872,
+7.183,
+25.045,
+49.444
+],
+"logoBoxes": [
+[
+5.872,
+7.183,
+25.045,
+49.444
+],
+[
+15.099,
+76.621,
+32.475,
+110.142
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -6109,9 +8146,9 @@
 ],
 "id": "3-x-7-75-ft-teardrop-flags-single-si-e15f8a",
 "src": "Custom Flags\\Teardrop Flags\\3 x 7.75 Ft_Teardrop Flags_Single Sided.psdt",
-"img": "assets/qnap/3-x-7-75-ft-teardrop-flags-single-si-e15f8a.jpg",
-"mask": "assets/qnap/3-x-7-75-ft-teardrop-flags-single-si-e15f8a.m.png",
-"outline": "assets/qnap/3-x-7-75-ft-teardrop-flags-single-si-e15f8a.o.json",
+"img": "assets/tpl/flags-04/3-x-7-75-ft-teardrop-flags-single-si-e15f8a.jpg",
+"mask": "assets/tpl/flags-04/3-x-7-75-ft-teardrop-flags-single-si-e15f8a.m.png",
+"outline": "assets/tpl/flags-04/3-x-7-75-ft-teardrop-flags-single-si-e15f8a.o.json",
 "fullIn": [
 44.0,
 97.0
@@ -6142,16 +8179,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-15.596,
-10.225,
-32.768,
-44.014
+15.7,
+10.185,
+32.758,
+44.232
 ],
 "frontSafe": [
-15.596,
-10.225,
-32.768,
-44.014
+15.7,
+10.185,
+32.758,
+44.232
+],
+"logoBoxes": [
+[
+15.7,
+10.185,
+32.758,
+44.232
+]
 ],
 "logoArea": "safe area"
 },
@@ -6169,9 +8214,9 @@
 ],
 "id": "4-5-x-11-6-ft-teardrop-flags-single-be33d0",
 "src": "Custom Flags\\Teardrop Flags\\4.5 x 11.6 Ft_Teardrop Flags_Single Sided.psdt",
-"img": "assets/qnap/4-5-x-11-6-ft-teardrop-flags-single-be33d0.jpg",
-"mask": "assets/qnap/4-5-x-11-6-ft-teardrop-flags-single-be33d0.m.png",
-"outline": "assets/qnap/4-5-x-11-6-ft-teardrop-flags-single-be33d0.o.json",
+"img": "assets/tpl/flags-04/4-5-x-11-6-ft-teardrop-flags-single-be33d0.jpg",
+"mask": "assets/tpl/flags-04/4-5-x-11-6-ft-teardrop-flags-single-be33d0.m.png",
+"outline": "assets/tpl/flags-04/4-5-x-11-6-ft-teardrop-flags-single-be33d0.o.json",
 "fullIn": [
 59.0,
 144.0
@@ -6202,16 +8247,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-20.407,
-14.34,
-44.355,
-65.46
+20.434,
+14.256,
+44.322,
+65.52
 ],
 "frontSafe": [
-20.407,
-14.34,
-44.355,
-65.46
+20.434,
+14.256,
+44.322,
+65.52
+],
+"logoBoxes": [
+[
+20.434,
+14.256,
+44.322,
+65.52
+]
 ],
 "logoArea": "safe area"
 },
@@ -6229,9 +8282,9 @@
 ],
 "id": "triangle-flag-1-5-x-1-ft-double-side-f8bfb8",
 "src": "Custom Flags\\Triangle Flag\\Triangle Flag 1.5 x 1 ft Double Sided.psdt",
-"img": "assets/qnap/triangle-flag-1-5-x-1-ft-double-side-f8bfb8.jpg",
-"mask": "assets/qnap/triangle-flag-1-5-x-1-ft-double-side-f8bfb8.m.png",
-"outline": "assets/qnap/triangle-flag-1-5-x-1-ft-double-side-f8bfb8.o.json",
+"img": "assets/tpl/flags-04/triangle-flag-1-5-x-1-ft-double-side-f8bfb8.jpg",
+"mask": "assets/tpl/flags-04/triangle-flag-1-5-x-1-ft-double-side-f8bfb8.m.png",
+"outline": "assets/tpl/flags-04/triangle-flag-1-5-x-1-ft-double-side-f8bfb8.o.json",
 "fullIn": [
 40.15,
 13.38
@@ -6260,7 +8313,34 @@
 "areas": {
 "bleed": 0.198
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+1.004,
+5.384,
+13.049,
+7.996
+],
+"frontSafe": [
+1.004,
+5.384,
+13.049,
+7.996
+],
+"logoBoxes": [
+[
+1.004,
+5.384,
+13.049,
+7.996
+],
+[
+27.101,
+5.384,
+39.146,
+7.996
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -6276,9 +8356,9 @@
 ],
 "id": "triangle-flag-1-5-x-1-ft-single-side-79a0e0",
 "src": "Custom Flags\\Triangle Flag\\Triangle Flag 1.5 x 1 ft Single Sided.psdt",
-"img": "assets/qnap/triangle-flag-1-5-x-1-ft-single-side-79a0e0.jpg",
-"mask": "assets/qnap/triangle-flag-1-5-x-1-ft-single-side-79a0e0.m.png",
-"outline": "assets/qnap/triangle-flag-1-5-x-1-ft-single-side-79a0e0.o.json",
+"img": "assets/tpl/flags-04/triangle-flag-1-5-x-1-ft-single-side-79a0e0.jpg",
+"mask": "assets/tpl/flags-04/triangle-flag-1-5-x-1-ft-single-side-79a0e0.m.png",
+"outline": "assets/tpl/flags-04/triangle-flag-1-5-x-1-ft-single-side-79a0e0.o.json",
 "fullIn": [
 20.07,
 13.38
@@ -6310,15 +8390,23 @@
 "layersFrom": "clipping mask layer",
 "front": [
 1.004,
-5.362,
-12.914,
-8.022
+5.356,
+12.905,
+8.024
 ],
 "frontSafe": [
 1.004,
-5.362,
-12.914,
-8.022
+5.356,
+12.905,
+8.024
+],
+"logoBoxes": [
+[
+1.004,
+5.356,
+12.905,
+8.024
+]
 ],
 "logoArea": "safe area"
 },
@@ -6336,9 +8424,9 @@
 ],
 "id": "triangle-flag-1x1-ft-double-sided-1a3ca4",
 "src": "Custom Flags\\Triangle Flag\\Triangle Flag 1x1 ft Double Sided.psdt",
-"img": "assets/qnap/triangle-flag-1x1-ft-double-sided-1a3ca4.jpg",
-"mask": "assets/qnap/triangle-flag-1x1-ft-double-sided-1a3ca4.m.png",
-"outline": "assets/qnap/triangle-flag-1x1-ft-double-sided-1a3ca4.o.json",
+"img": "assets/tpl/flags-04/triangle-flag-1x1-ft-double-sided-1a3ca4.jpg",
+"mask": "assets/tpl/flags-04/triangle-flag-1x1-ft-double-sided-1a3ca4.m.png",
+"outline": "assets/tpl/flags-04/triangle-flag-1x1-ft-double-sided-1a3ca4.o.json",
 "fullIn": [
 27.23,
 13.62
@@ -6367,7 +8455,34 @@
 "areas": {
 "bleed": 0.223
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+1.008,
+5.502,
+8.795,
+8.118
+],
+"frontSafe": [
+1.008,
+5.502,
+8.795,
+8.118
+],
+"logoBoxes": [
+[
+1.008,
+5.502,
+8.795,
+8.118
+],
+[
+18.435,
+5.502,
+26.222,
+8.118
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -6383,9 +8498,9 @@
 ],
 "id": "triangle-flag-1x1-ft-single-sided-2d18e3",
 "src": "Custom Flags\\Triangle Flag\\Triangle Flag 1x1 ft Single Sided.psdt",
-"img": "assets/qnap/triangle-flag-1x1-ft-single-sided-2d18e3.jpg",
-"mask": "assets/qnap/triangle-flag-1x1-ft-single-sided-2d18e3.m.png",
-"outline": "assets/qnap/triangle-flag-1x1-ft-single-sided-2d18e3.o.json",
+"img": "assets/tpl/flags-04/triangle-flag-1x1-ft-single-sided-2d18e3.jpg",
+"mask": "assets/tpl/flags-04/triangle-flag-1x1-ft-single-sided-2d18e3.m.png",
+"outline": "assets/tpl/flags-04/triangle-flag-1x1-ft-single-sided-2d18e3.o.json",
 "fullIn": [
 13.62,
 13.62
@@ -6416,16 +8531,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-0.999,
-5.509,
-8.788,
-8.108
+0.994,
+5.502,
+8.785,
+8.118
 ],
 "frontSafe": [
-0.999,
-5.509,
-8.788,
-8.108
+0.994,
+5.502,
+8.785,
+8.118
+],
+"logoBoxes": [
+[
+0.994,
+5.502,
+8.785,
+8.118
+]
 ],
 "logoArea": "safe area"
 },
@@ -6443,9 +8566,9 @@
 ],
 "id": "triangle-flag-4x2-ft-double-sided-1589a6",
 "src": "Custom Flags\\Triangle Flag\\Triangle Flag 4x2 ft Double Sided.psdt",
-"img": "assets/qnap/triangle-flag-4x2-ft-double-sided-1589a6.jpg",
-"mask": "assets/qnap/triangle-flag-4x2-ft-double-sided-1589a6.m.png",
-"outline": "assets/qnap/triangle-flag-4x2-ft-double-sided-1589a6.o.json",
+"img": "assets/tpl/flags-04/triangle-flag-4x2-ft-double-sided-1589a6.jpg",
+"mask": "assets/tpl/flags-04/triangle-flag-4x2-ft-double-sided-1589a6.m.png",
+"outline": "assets/tpl/flags-04/triangle-flag-4x2-ft-double-sided-1589a6.o.json",
 "fullIn": [
 101.12,
 25.28
@@ -6474,7 +8597,34 @@
 "areas": {
 "bleed": 0.101
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+1.517,
+9.91,
+33.673,
+15.37
+],
+"frontSafe": [
+1.517,
+9.91,
+33.673,
+15.37
+],
+"logoBoxes": [
+[
+1.517,
+9.91,
+33.673,
+15.37
+],
+[
+67.447,
+9.91,
+99.603,
+15.37
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -6490,9 +8640,9 @@
 ],
 "id": "triangle-flag-4x2-ft-single-sided-7b0991",
 "src": "Custom Flags\\Triangle Flag\\Triangle Flag 4x2 ft Single Sided.psdt",
-"img": "assets/qnap/triangle-flag-4x2-ft-single-sided-7b0991.jpg",
-"mask": "assets/qnap/triangle-flag-4x2-ft-single-sided-7b0991.m.png",
-"outline": "assets/qnap/triangle-flag-4x2-ft-single-sided-7b0991.o.json",
+"img": "assets/tpl/flags-04/triangle-flag-4x2-ft-single-sided-7b0991.jpg",
+"mask": "assets/tpl/flags-04/triangle-flag-4x2-ft-single-sided-7b0991.m.png",
+"outline": "assets/tpl/flags-04/triangle-flag-4x2-ft-single-sided-7b0991.o.json",
 "fullIn": [
 50.56,
 25.28
@@ -6523,16 +8673,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-1.496,
-9.965,
-33.707,
-15.315
+1.517,
+9.96,
+33.724,
+15.32
 ],
 "frontSafe": [
-1.496,
-9.965,
-33.707,
-15.315
+1.517,
+9.96,
+33.724,
+15.32
+],
+"logoBoxes": [
+[
+1.517,
+9.96,
+33.724,
+15.32
+]
 ],
 "logoArea": "safe area"
 },
@@ -6550,9 +8708,9 @@
 ],
 "id": "triangle-flag-5x3-ft-double-sided-8be399",
 "src": "Custom Flags\\Triangle Flag\\Triangle Flag 5x3 ft Double Sided.psdt",
-"img": "assets/qnap/triangle-flag-5x3-ft-double-sided-8be399.jpg",
-"mask": "assets/qnap/triangle-flag-5x3-ft-double-sided-8be399.m.png",
-"outline": "assets/qnap/triangle-flag-5x3-ft-double-sided-8be399.o.json",
+"img": "assets/tpl/flags-04/triangle-flag-5x3-ft-double-sided-8be399.jpg",
+"mask": "assets/tpl/flags-04/triangle-flag-5x3-ft-double-sided-8be399.m.png",
+"outline": "assets/tpl/flags-04/triangle-flag-5x3-ft-double-sided-8be399.o.json",
 "fullIn": [
 124.48,
 37.34
@@ -6581,7 +8739,34 @@
 "areas": {
 "bleed": 0.074
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+1.494,
+14.438,
+43.07,
+22.902
+],
+"frontSafe": [
+1.494,
+14.438,
+43.07,
+22.902
+],
+"logoBoxes": [
+[
+1.494,
+14.438,
+43.07,
+22.902
+],
+[
+81.41,
+14.438,
+122.986,
+22.902
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -6597,9 +8782,9 @@
 ],
 "id": "triangle-flag-5x3-ft-single-sided-85a5fa",
 "src": "Custom Flags\\Triangle Flag\\Triangle Flag 5x3 ft Single Sided.psdt",
-"img": "assets/qnap/triangle-flag-5x3-ft-single-sided-85a5fa.jpg",
-"mask": "assets/qnap/triangle-flag-5x3-ft-single-sided-85a5fa.m.png",
-"outline": "assets/qnap/triangle-flag-5x3-ft-single-sided-85a5fa.o.json",
+"img": "assets/tpl/flags-04/triangle-flag-5x3-ft-single-sided-85a5fa.jpg",
+"mask": "assets/tpl/flags-04/triangle-flag-5x3-ft-single-sided-85a5fa.m.png",
+"outline": "assets/tpl/flags-04/triangle-flag-5x3-ft-single-sided-85a5fa.o.json",
 "fullIn": [
 62.24,
 37.34
@@ -6630,16 +8815,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-1.504,
-14.497,
-43.153,
-22.847
+1.494,
+14.5,
+43.07,
+22.902
 ],
 "frontSafe": [
-1.504,
-14.497,
-43.153,
-22.847
+1.494,
+14.5,
+43.07,
+22.902
+],
+"logoBoxes": [
+[
+1.494,
+14.5,
+43.07,
+22.902
+]
 ],
 "logoArea": "safe area"
 },
@@ -6657,9 +8850,9 @@
 ],
 "id": "triangle-flag-6x4-ft-double-sided-4ea8d5",
 "src": "Custom Flags\\Triangle Flag\\Triangle Flag 6x4 ft Double Sided.psdt",
-"img": "assets/qnap/triangle-flag-6x4-ft-double-sided-4ea8d5.jpg",
-"mask": "assets/qnap/triangle-flag-6x4-ft-double-sided-4ea8d5.m.png",
-"outline": "assets/qnap/triangle-flag-6x4-ft-double-sided-4ea8d5.o.json",
+"img": "assets/tpl/flags-04/triangle-flag-6x4-ft-double-sided-4ea8d5.jpg",
+"mask": "assets/tpl/flags-04/triangle-flag-6x4-ft-double-sided-4ea8d5.m.png",
+"outline": "assets/tpl/flags-04/triangle-flag-6x4-ft-double-sided-4ea8d5.o.json",
 "fullIn": [
 148.15,
 49.38
@@ -6688,7 +8881,34 @@
 "areas": {
 "bleed": 0.059
 },
-"layersFrom": "clipping mask layer"
+"layersFrom": "clipping mask layer",
+"front": [
+1.482,
+18.981,
+52.445,
+30.399
+],
+"frontSafe": [
+1.482,
+18.981,
+52.445,
+30.399
+],
+"logoBoxes": [
+[
+1.482,
+18.981,
+52.445,
+30.399
+],
+[
+95.705,
+18.981,
+146.668,
+30.399
+]
+],
+"logoArea": "safe area"
 },
 {
 "group": "Custom Flags",
@@ -6704,9 +8924,9 @@
 ],
 "id": "triangle-flag-6x4-ft-single-sided-a3d409",
 "src": "Custom Flags\\Triangle Flag\\Triangle Flag 6x4 ft Single Sided.psdt",
-"img": "assets/qnap/triangle-flag-6x4-ft-single-sided-a3d409.jpg",
-"mask": "assets/qnap/triangle-flag-6x4-ft-single-sided-a3d409.m.png",
-"outline": "assets/qnap/triangle-flag-6x4-ft-single-sided-a3d409.o.json",
+"img": "assets/tpl/flags-04/triangle-flag-6x4-ft-single-sided-a3d409.jpg",
+"mask": "assets/tpl/flags-04/triangle-flag-6x4-ft-single-sided-a3d409.m.png",
+"outline": "assets/tpl/flags-04/triangle-flag-6x4-ft-single-sided-a3d409.o.json",
 "fullIn": [
 74.08,
 49.38
@@ -6737,16 +8957,24 @@
 },
 "layersFrom": "clipping mask layer",
 "front": [
-1.512,
-19.013,
-52.35,
-30.371
+1.482,
+19.026,
+52.449,
+30.354
 ],
 "frontSafe": [
-1.512,
-19.013,
-52.35,
-30.371
+1.482,
+19.026,
+52.449,
+30.354
+],
+"logoBoxes": [
+[
+1.482,
+19.026,
+52.449,
+30.354
+]
 ],
 "logoArea": "safe area"
 }

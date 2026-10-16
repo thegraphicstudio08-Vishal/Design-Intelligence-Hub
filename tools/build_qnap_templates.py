@@ -2,8 +2,8 @@
 
 Reads the official Photoshop templates (.psdt / .psd) and template PDFs of the product groups below, keeps only the
 standard colour-coded templates — red bleed band around the edge, white visible area, lavender safe area — and writes:
-  assets/qnap/<id>.jpg     preview of the template (screen colours, max 1800 px; --previews PX re-renders them)
-  assets/qnap/<id>.m.png   area mask (max 500 px; website templates 1000 px): 0 = outside / bleed, 64 = bleed bars,
+  assets/tpl/<group>-NN/<id>.jpg     preview (max 1800 px; --previews PX re-renders them) · at most 99 files per folder
+  assets/tpl/<group>-NN/<id>.m.png   area mask (max 500 px; website / flags 1000 px): 0 = outside / bleed, 64 = bleed bars,
                            128 = visible area, 255 = safe area
   js/qnap_templates.js     QNAP_TEMPLATES: product, panel, sides, sizes in inches, visible / safe boxes, source path
 
@@ -28,6 +28,69 @@ MAX_MB = 120
 SWOP = r"C:\Program Files (x86)\Common Files\Adobe\Color\Profiles\Recommended\USWebCoatedSWOP.icc"
 PREVIEW_PX, MASK_PX, WORK_PX = 1800, 500, 2000   # preview behind the artwork on the canvas; mask for the safe-area check
 CUST_MASK_PX = 1000                              # website (customer) template masks
+# Template files per group in their own folder (GitHub lists at most 1,000 files per folder); the QNAP Stands & Displays /
+# Table Covers files stay in assets/qnap
+GROUP_DIR = {"Custom Flags": "assets/tpl/flags", "Website templates": "assets/tpl/website",
+             "Production standard templates": "assets/tpl/production"}
+
+
+def asset_dir(repo, group):
+    """→ (folder on disk, path used in the records) where a builder writes a group's new files (finalize then files them
+    into the numbered folders, see layout_assets)"""
+    rel = GROUP_DIR.get(group, "assets/qnap")
+    full = os.path.join(repo, *rel.split("/"))
+    os.makedirs(full, exist_ok=True)
+    return full, rel
+
+
+# Final place of every template's files: assets/tpl/<group>-NN/ with at most 99 files per folder (one GitHub upload of
+# up to 100 files per folder, and no folder near GitHub's 1,000-file listing limit). A template's files stay together;
+# templates keep their folder when others are added — new ones go to the last folder with room, or a new one.
+TPL_ROOT = "assets/tpl"
+FOLDER_FILES = 99
+GROUP_SLUG = {"Stands & Displays": "stands", "Table Covers & Displays": "tables", "Banners": "banners", "Custom Flags": "flags",
+              "Website templates": "website", "Production standard templates": "production"}
+_NUMBERED = re.compile(r"^assets/tpl/([a-z]+)-(\d\d)/")
+
+
+def layout_assets(repo, recs, old):
+    """Move each record's files (img in assets/qnap|tpl, mask, outline) into its numbered folder and fix the paths"""
+    before = {r["id"]: r for r in old}
+    files_of = lambda r: [k for k in ("img", "mask", "outline") if r.get(k, "").startswith(("assets/qnap/", "assets/tpl/"))]
+    count = {}                                   # folder → files in it (templates already placed)
+    plan = []
+    for r in recs:
+        slug = GROUP_SLUG.get(r.get("group"), "other")
+        prev = before.get(r["id"])
+        m = _NUMBERED.match((prev or {}).get("mask", "") or "") or _NUMBERED.match(r.get("mask", "") or "")
+        folder = m.group(0).rstrip("/") if m and m.group(1) == slug else None
+        plan.append((r, slug, folder))
+        if folder:
+            count[folder] = count.get(folder, 0) + len(files_of(r))
+    moved = 0
+    for r, slug, folder in plan:
+        need = len(files_of(r))
+        if not folder:
+            n = 1
+            while True:
+                folder = f"{TPL_ROOT}/{slug}-{n:02d}"
+                if count.get(folder, 0) + need <= FOLDER_FILES:
+                    break
+                n += 1
+            count[folder] = count.get(folder, 0) + need
+        os.makedirs(os.path.join(repo, *folder.split("/")), exist_ok=True)
+        for k in files_of(r):
+            new = folder + "/" + r[k].split("/")[-1]
+            if new == r[k]:
+                continue
+            src, dst = os.path.join(repo, *r[k].split("/")), os.path.join(repo, *new.split("/"))
+            if os.path.isfile(src):
+                os.replace(src, dst); moved += 1
+            r[k] = new
+    big = {f: c for f, c in count.items() if c > FOLDER_FILES}
+    print(f"template files in {len(count)} folders (max {max(count.values()) if count else 0} files per folder), moved {moved}"
+          + (f" — OVER LIMIT: {big}" if big else ""))
+    return recs
 
 
 def to_rgb(im):
@@ -420,7 +483,7 @@ def customer_templates(repo):
     folder = os.path.join(repo, "assets", "templates", "real")
     if not os.path.isdir(folder):
         return out
-    qdir = os.path.join(repo, "assets", "qnap")
+    qdir, qrel = asset_dir(repo, "Website templates")
     for f in sorted(os.listdir(folder)):
         mt = re.match(r"(stretch-table-covers|fitted-table-covers|backpack-flags)-(.+)\.jpg$", f)
         if not mt:
@@ -464,7 +527,7 @@ def customer_templates(repo):
         stated = [length * 12.0, 30.0, "ft"] if length else None
         rec = dict(group="Website templates", product=cfg["product"], path="Customer template (website)", name=name,
                    panel=name, sides=sides, stated=stated, id=tid, src="assets/templates/real/" + f,
-                   img="assets/templates/real/" + f, mask=f"assets/qnap/{tid}.m.png", outline=f"assets/qnap/{tid}.o.json",
+                   img="assets/templates/real/" + f, mask=f"{qrel}/{tid}.m.png", outline=f"{qrel}/{tid}.o.json",
                    fullIn=[round(W, 2), round(H, 2)],
                    visIn=bbox(m >= 128, W, H), safeIn=bbox(m == 255, W, H), prodIn=bbox(m >= 64, W, H), kind=kind, source="customer",
                    safeNote=("SOP %.2g\" inside the cut line (the template has no safe area drawn)" % cfg["safe"]) if how == "sop" else "",
@@ -486,7 +549,7 @@ def production_templates(repo):
     root = os.path.join(repo, "tools", "production_templates")
     if not os.path.isdir(root):
         return out
-    qdir = os.path.join(repo, "assets", "qnap")
+    qdir, qrel = asset_dir(repo, "Production standard templates")
     pdir = os.path.join(repo, "assets", "templates", "production"); os.makedirs(pdir, exist_ok=True)
     for prod in sorted(os.listdir(root)):
         for var in sorted(os.listdir(os.path.join(root, prod))):
@@ -535,7 +598,7 @@ def production_templates(repo):
             rec = dict(group="Production standard templates", product=info["product"], path="Production standard (BannerBuzz)",
                        name=info["name"], panel=info["name"], sides="", stated=[float(st[0]), float(st[1]), "in"] if st else None,
                        id=tid, src=info.get("source", ""), img=f"assets/templates/production/{prod}-{var}.jpg",
-                       mask=f"assets/qnap/{tid}.m.png", outline=f"assets/qnap/{tid}.o.json", fullIn=[round(W, 2), round(H, 2)],
+                       mask=f"{qrel}/{tid}.m.png", outline=f"{qrel}/{tid}.o.json", fullIn=[round(W, 2), round(H, 2)],
                        visIn=bbox(m >= 128, W, H), safeIn=bbox(m == 255, W, H), prodIn=bbox(m >= 64, W, H), kind="production",
                        source="production", safeNote="Blue safe zone of the production template", areas={})
             if front:
@@ -558,6 +621,8 @@ def finalize(repo, recheck=True, customer=True):
     good = []
     for r in flag_recs:                                  # folder names → the product names orders use
         r["product"] = FLAG_PRODUCT.get(r["product"], r["product"])
+        if not os.path.isfile(os.path.join(repo, *r["mask"].split("/"))):
+            dropped.append((r["src"], "files missing")); continue
         flag_logo_boxes(repo, r)
         n, ratio = r.pop("_pieces", (0, 0))
         # a double-sided layout shows both sides whole and alike (some PSDs keep the back as a smart object off the canvas)
@@ -586,7 +651,12 @@ def finalize(repo, recheck=True, customer=True):
         keep.append(r)
     prod = production_templates(repo)
     cust = customer_templates(repo) if customer else old_cust
-    allr = prod + cust + flag_recs + keep
+    allr = layout_assets(repo, prod + cust + flag_recs + keep, recs)
+    json.dump(flag_recs, open(flag_file, "w", encoding="utf-8", newline="\n"), ensure_ascii=False, indent=0)   # their new paths
+    for d in ("assets/qnap",) + tuple(GROUP_DIR.values()):             # staging folders left empty
+        full = os.path.join(repo, *d.split("/"))
+        if os.path.isdir(full) and not os.listdir(full):
+            os.rmdir(full)
     js = ("/**\n * BannerBuzz product templates — generated by tools/build_qnap_templates.py. Do not edit by hand.\n"
           " * source 'production' = production standard (tools/production_templates); 'customer' = website template customers\n"
           " * design on (assets/templates/real); 'qnap' = official template from \\\\192.168.0.250\\qnap\\Template_Mockups.\n"
@@ -783,7 +853,7 @@ def flag_logo_boxes(repo, rec):
 
 
 def flag_job(job):
-    root, rel, qdir = job
+    root, rel, qdir, qrel = job
     try:
         path = os.path.join(root, rel)
         rgb, m, info = layered_template(path)
@@ -800,7 +870,7 @@ def flag_job(job):
         with open(os.path.join(qdir, tid + ".o.json"), "w", encoding="utf-8", newline="\n") as fh:
             json.dump(vector_outlines(m), fh, separators=(",", ":"))
         rec = describe(rel)
-        rec.update(id=tid, src=rel, img=f"assets/qnap/{tid}.jpg", mask=f"assets/qnap/{tid}.m.png", outline=f"assets/qnap/{tid}.o.json",
+        rec.update(id=tid, src=rel, img=f"{qrel}/{tid}.jpg", mask=f"{qrel}/{tid}.m.png", outline=f"{qrel}/{tid}.o.json",
                    fullIn=[round(W, 2), round(H, 2)], visIn=bbox(m >= 128, W, H), safeIn=bbox(m == 255, W, H), prodIn=bbox(m >= 64, W, H),
                    kind="layers", source="qnap", layout=True, areas={"bleed": round(info["bleed"], 3)}, layersFrom=info["how"])
         return rel, rec, "ok (" + info["how"] + ")"                    # logo boxes: flag_logo_boxes (finalize)
@@ -826,11 +896,11 @@ def flags(repo, root, workers=3, only=None):
     files.sort()
     if only:
         files = [f for f in files if any(o.lower() in f.lower() for o in only)]
-    qdir = os.path.join(repo, "assets", "qnap")
+    qdir, qrel = asset_dir(repo, FLAG_GROUP)
     print(f"{len(files)} flag templates", flush=True)
     recs, report = [], []
     with ProcessPoolExecutor(max_workers=workers) as ex:
-        for n, (rel, rec, why) in enumerate(ex.map(flag_job, [(root, f, qdir) for f in files]), 1):
+        for n, (rel, rec, why) in enumerate(ex.map(flag_job, [(root, f, qdir, qrel) for f in files]), 1):
             report.append((rel, why))
             if rec:
                 recs.append(rec)
@@ -848,11 +918,11 @@ def flags(repo, root, workers=3, only=None):
 
 
 def _preview(job):
-    root, rec, out_dir, px, q = job
+    root, rec, repo, px, q = job
     try:
         rgb, _, _ = load(os.path.join(root, rec["src"]), px)
         rgb.thumbnail((px, px), Image.LANCZOS)
-        rgb.save(os.path.join(out_dir, rec["id"] + ".jpg"), quality=q, optimize=True, progressive=True, subsampling=0 if q >= 85 else 2)
+        rgb.save(os.path.join(repo, *rec["img"].split("/")), quality=q, optimize=True, progressive=True, subsampling=0 if q >= 85 else 2)
         return rec["id"], rgb.size
     except Exception as e:
         return rec["id"], f"failed ({type(e).__name__}: {str(e)[:80]})"
@@ -862,12 +932,11 @@ def previews(repo, root, px, q, workers, only=None):
     """Sharper template pictures for the canvas: re-render the previews of the built QNAP templates (masks unchanged)"""
     src = open(os.path.join(repo, "js", "qnap_templates.js"), encoding="utf-8").read()
     recs = json.loads(src.split("const QNAP_TEMPLATES = ", 1)[1].split(";\nif (typeof module", 1)[0])
-    recs = [r for r in recs if r.get("source") != "customer" and (not only or any(o.lower() in r["src"].lower() for o in only))]
-    out_dir = os.path.join(repo, "assets", "qnap")
+    recs = [r for r in recs if r.get("source") == "qnap" and r.get("kind") != "layers" and (not only or any(o.lower() in r["src"].lower() for o in only))]
 
     def done(r):             # already at this size (a stopped run goes on where it was)
         try:
-            with Image.open(os.path.join(out_dir, r["id"] + ".jpg")) as im:
+            with Image.open(os.path.join(repo, *r["img"].split("/"))) as im:
                 return max(im.size) >= px * 0.98
         except Exception:
             return False
@@ -877,7 +946,7 @@ def previews(repo, root, px, q, workers, only=None):
     print(f"{len(recs)} previews at {px} px", flush=True)
     bad = 0
     with ProcessPoolExecutor(max_workers=workers) as ex:
-        futs = [ex.submit(_preview, (root, r, out_dir, px, q)) for r in recs]
+        futs = [ex.submit(_preview, (root, r, repo, px, q)) for r in recs]
         for n, f in enumerate(as_completed(futs), 1):
             tid, res = f.result()
             if isinstance(res, str):
