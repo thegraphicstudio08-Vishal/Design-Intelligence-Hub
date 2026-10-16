@@ -344,6 +344,27 @@ const ArtworkMarkDetector = {
       }
       return false;
     };
+    // Cut off by the edge of the checked area: the mark carries on into the busy area next to it (a thin staff line,
+    // an outline running past a shape), so it is a piece of that artwork, not a free-standing mark
+    const clipped = (c) => {
+      const cb = ((Math.round(c.sy / c.area) / B) | 0) * bw + ((Math.round(c.sx / c.area) / B) | 0);
+      const ref = [bRef[cb * 3], bRef[cb * 3 + 1], bRef[cb * 3 + 2]];
+      for (let y = Math.max(0, c.minY - 1); y <= Math.min(H - 1, c.maxY + 1); y++) {
+        for (let x = Math.max(0, c.minX - 1); x <= Math.min(W - 1, c.maxX + 1); x++) {
+          const i = y * W + x, b = ((y / B) | 0) * bw + ((x / B) | 0);
+          if (label[i] === c.id || (bType[b] === 1 && !busy[b])) continue;
+          let next = false;
+          for (let dy = -1; dy <= 1 && !next; dy++) for (let dx = -1; dx <= 1; dx++) {
+            const xx = x + dx, yy = y + dy;
+            if (xx >= 0 && yy >= 0 && xx < W && yy < H && label[yy * W + xx] === c.id) { next = true; break; }
+          }
+          if (!next) continue;
+          const p = i * 4;
+          if (Math.hypot(data[p] - ref[0], data[p + 1] - ref[1], data[p + 2] - ref[2]) > 30) return true;
+        }
+      }
+      return false;
+    };
     // Mirror symmetry in both directions => a designed shape (star, icon), not a smudge
     const symmetric = (c) => {
       const cw = c.maxX - c.minX + 1, ch = c.maxY - c.minY + 1;
@@ -372,6 +393,7 @@ const ArtworkMarkDetector = {
       else if (cw <= dotMax && ch <= dotMax && c.area >= 2) kind = 'dot';
       else if (cw <= markMax && ch <= markMax) kind = 'mark';
       if (!kind) return;                                          // larger shape = part of the design
+      if (clipped(c)) return drop('runs on into artwork');        // a piece of a line / shape, cut by the checked area
 
       const iso = Math.min(nearestOther(c, isoPx * 3), busyDist(c, isoPx * 3));
       if (iso < isoPx || (kind === 'dot' && iso < isoPx + 2)) return drop('touches artwork'); // i-dot, texture, fragment of a shape
@@ -407,6 +429,28 @@ const ArtworkMarkDetector = {
       }
       raw.push(mark);
     });
+
+    // Splatter: look-alike dots close together beside artwork of their own colour (paint spray, droplets round a
+    // splash) belong to that artwork — a stray dot stands alone
+    const sameInkNear = (m, R) => {
+      let n = 0;
+      const x0 = Math.max(0, m.x - R), x1 = Math.min(W - 1, m.x + m.w + R), y0 = Math.max(0, m.y - R), y1 = Math.min(H - 1, m.y + m.h + R);
+      for (let y = y0; y <= y1; y += 2) for (let x = x0; x <= x1; x += 2) {
+        if (x >= m.x - 2 && x <= m.x + m.w + 2 && y >= m.y - 2 && y <= m.y + m.h + 2) continue;
+        const p = (y * W + x) * 4;
+        if (Math.hypot(data[p] - m.color[0], data[p + 1] - m.color[1], data[p + 2] - m.color[2]) <= 55) n++;
+      }
+      return n;
+    };
+    const colourNear = (a, b) => Math.hypot(a.color[0] - b.color[0], a.color[1] - b.color[1], a.color[2] - b.color[2]) <= 55;
+    const spray = new Set();
+    raw.forEach((m, i) => {
+      if (m.kind !== 'dot') return;
+      const mate = raw.some((o, j) => j !== i && o.kind === 'dot' && Math.hypot(o.cx - m.cx, o.cy - m.cy) <= isoPx * 6 && colourNear(o, m));
+      if (mate && sameInkNear(m, isoPx * 5) >= 25) spray.add(i);
+    });
+    if (this.DEBUG) spray.forEach(i => rejected.push({ x: raw[i].x, y: raw[i].y, w: raw[i].w, h: raw[i].h, why: 'splatter beside artwork' }));
+    for (let i = raw.length - 1; i >= 0; i--) if (spray.has(i)) raw.splice(i, 1);
 
     // Pattern filter: look-alike marks repeated across the design are a design element
     // (4+ dots, 3+ lines in the same direction, 3+ larger marks)

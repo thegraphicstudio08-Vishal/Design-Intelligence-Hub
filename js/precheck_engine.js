@@ -265,12 +265,18 @@ const PrecheckEngine = {
         name: 'Size Transform to Order',
         icon: '📐',
         status: st,
+        lowPpi: t.ppiAtOrder < target,
+        // the real error in plain words (the card shows it first; the pixel maths is in "More details")
+        error: st === 'PASS' ? '' : [
+          t.ppiAtOrder < target ? `Low resolution: ${t.ppiAtOrder} PPI at the ordered size ${printW}" × ${printH}" — SOP needs ${target} PPI (minimum ${minResolution})` : '',
+          actualDiff > 1.5 ? `Artwork proportion differs ${actualDiff}% from the order` : ''
+        ].filter(Boolean).join(' · '),
         found: `${hybridLabel}${analysis.pixelWidth} × ${analysis.pixelHeight} px (${analysis.aspectRatioArtwork}:1) → ${printW}" × ${printH}" = ${t.ppiAtOrder} PPI${t.rotated ? ' (artwork rotated vs order)' : ''}`,
         required: `${reqTol} · Target ${target} PPI (min ${minResolution}) · Canvas ${canvasTxt}`,
         detail: `${fitTxt}${sop?.resolution?.source ? ` ${sop.resolution.source}.` : ''}`,
         action: st === 'PASS' ? '' : [
           t.ppiAtOrder < target
-            ? `Artwork gives ${t.ppiAtOrder} PPI at order size; SOP asks ${target} PPI. Use the "Low Resolution File" status and attach the Print preview screenshot proof (Proof 03) highlighting the low-resolution area — PR-DPO-03.`
+            ? `Use the "Low Resolution File" status and attach the Print preview screenshot proof (Proof 03) highlighting the low-resolution area — PR-DPO-03.`
             : '',
           actualDiff > 1.5 ? (placementAction || 'Confirm with customer: extend background to fill the order size, or crop edge allowance.') : ''
         ].filter(Boolean).join(' ')
@@ -510,9 +516,18 @@ const PrecheckEngine = {
   tally(report) {
     const checks = report.checks || [];
     checks.forEach(c => this.settle(c));
-    const fails = checks.filter(c => c.status === 'FAIL' && !c.isOverridden).length;
-    const passes = checks.filter(c => c.status === 'PASS' || c.isOverridden).length;
-    const manual = checks.filter(c => c.status === 'INFO' && !c.isOverridden).length;
+    // One cause, one issue: a raster file too small for the order fails "Print Suitability" for the same reason as
+    // "Size Transform" — shown once (in the size card), not scored twice; it follows the size card when corrected
+    const size = checks.find(c => c.id === 'sizeTransform'), gfp = checks.find(c => c.id === 'goodForPrint');
+    if (gfp) delete gfp.duplicateOf;
+    if (size && gfp && size.status === 'FAIL' && size.lowPpi && gfp.status === 'FAIL' && !(report.analysis && report.analysis.isVector)) {
+      gfp.duplicateOf = 'sizeTransform';
+      if (size.isOverridden && !gfp.isOverridden) { gfp.isOverridden = true; gfp.overrideReason = size.overrideReason; gfp._followed = true; }
+    }
+    const real = checks.filter(c => !c.duplicateOf);
+    const fails = real.filter(c => c.status === 'FAIL' && !c.isOverridden).length;
+    const passes = real.filter(c => c.status === 'PASS' || c.isOverridden).length;
+    const manual = real.filter(c => c.status === 'INFO' && !c.isOverridden).length;
     let score = Math.max(0, 100 - fails * 20);
     if (report.analysis && report.analysis.isVector) score = Math.min(100, score + 5);
     const overall = fails > 0 ? 'FAIL' : 'PASS';

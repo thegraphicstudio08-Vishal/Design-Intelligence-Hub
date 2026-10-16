@@ -419,18 +419,20 @@ function checkAndApplyAutoOrientation(artW, artH) {
   // The order size is what the customer bought — it is never changed automatically.
   // SOP 1_Banners slide 26: an orientation change is made on admin only after the customer approves
   // a mockup. A mismatch is shown here and judged by the Orientation check of the pre-check report.
-  // Shown right under the ordered size (always visible), not inside the filename banner — that banner is
-  // hidden when the file does not have a BannerBuzz production filename
-  const sizeGroup = document.querySelector('.dim-input-group');
+  // Shown under the upload (always visible), not inside the filename banner — that banner is hidden when the
+  // file does not have a BannerBuzz production filename, and the order details are folded away
   const old = document.getElementById('fn-orient-badge');
-  if (!artW || !artH || !appState.userDims) { if (old) old.remove(); return false; }
+  // only against a real order size (from the file name or typed in), not the empty form's default
+  const wIn = document.getElementById('print-w'), hIn = document.getElementById('print-h');
+  const sizeGiven = !wIn || !hIn || (wIn.value && hIn.value);
+  if (!artW || !artH || !appState.userDims || !sizeGiven) { if (old) old.remove(); return false; }
   const curW = appState.userDims.widthIn || 0;
   const curH = appState.userDims.heightIn || 0;
   const isArtLandscape = artW > artH * 1.05, isArtPortrait = artH > artW * 1.05;
   const isOrderLandscape = curW > curH * 1.05, isOrderPortrait = curH > curW * 1.05;
   const mismatch = (isArtLandscape && isOrderPortrait) || (isArtPortrait && isOrderLandscape);
   if (!mismatch) { if (old) old.remove(); return false; }
-  const host = sizeGroup ? sizeGroup.parentElement : document.getElementById('fn-banner');
+  const host = document.getElementById('fn-orient-host') || (document.querySelector('.dim-input-group') || {}).parentElement;
   if (host) {
     let badge = old;
     if (!badge || badge.parentElement !== host) {
@@ -852,6 +854,9 @@ function removeFile() {
 function updateRunButtonState() {
   const btn = document.getElementById('run-btn');
   if (btn) btn.disabled = !(appState.file && appState.product);
+  // The order details are folded away: they open by themselves when the file name did not give the product
+  const od = document.getElementById('order-details');
+  if (od && appState.file && !appState.product) od.open = true;
 }
 
 function updateBreadcrumbs() {
@@ -1190,14 +1195,14 @@ function renderSummaryCard(report) {
   const plain = html => String(html || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
   const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const short = t => (t.length > 120 ? t.slice(0, 117) + '…' : t);
-  const crit = checks.filter(c => c.status === 'FAIL' && !c.isOverridden);
+  const crit = checks.filter(c => c.status === 'FAIL' && !c.isOverridden && !c.duplicateOf);
   const issuesHtml = crit.length ? `
     <div class="summary-issues">
       <div class="si-head">Fix before proofing</div>
       ${crit.map(c => `
         <button type="button" class="si-item" onclick="focusCheck('${c.id}')">
           <span class="si-icon">${c.icon}</span>
-          <span class="si-text"><strong>${c.name}</strong><span>${esc(short(plain(c.found)))}</span></span>
+          <span class="si-text"><strong>${c.name}</strong><span>${esc(short(plain(c.error || c.found)))}</span></span>
           <span class="si-go">View ›</span>
         </button>`).join('')}
     </div>` : `
@@ -1228,32 +1233,40 @@ function renderSummaryCard(report) {
   `;
 }
 
-/** The check cards, grouped: Critical (fix first) · Passed · Confirm by eye (not scored, folded) */
+/**
+ * The check cards: only the real issues are open on the page — Critical (fix first). "Confirm by eye" and "Passed"
+ * are folded lines that open on a click. A check failing for the same cause as another is shown inside that card.
+ */
 function checksListHtml(report) {
-  const checks = report.checks || [];
+  const checks = (report.checks || []).filter(c => !c.duplicateOf);
   const crit = checks.filter(c => c.status === 'FAIL' && !c.isOverridden);
   const passed = checks.filter(c => c.status === 'PASS' || c.isOverridden);
   const manual = checks.filter(c => c.status === 'INFO' && !c.isOverridden);
-  const group = (cls, title, list, note) => list.length ? `
-    <div class="checks-group ${cls}">
-      <div class="checks-group-head"><span class="cg-dot"></span>${title}<span class="cg-count">${list.length}</span>${note ? `<span class="cg-note">${note}</span>` : ''}</div>
-      ${list.map(renderCheckCard).join('')}
-    </div>` : '';
-  return group('critical', 'Critical', crit, 'fix before proofing')
-    + group('passed', 'Passed', passed, '')
-    + (manual.length ? `
-    <details class="checks-group manual" id="cg-manual-group"${appState.manualGroupOpen ? ' open' : ''} ontoggle="appState.manualGroupOpen = this.open">
-      <summary class="checks-group-head"><span class="cg-dot"></span>Confirm by eye<span class="cg-count">${manual.length}</span><span class="cg-note">not scored — the tool cannot decide these alone</span></summary>
-      ${manual.map(renderCheckCard).join('')}
-    </details>` : '');
+  const card = c => renderCheckCard(c, report);
+  const fold = (id, cls, title, list, note, key) => list.length ? `
+    <details class="checks-group ${cls}" id="cg-${id}"${appState[key] ? ' open' : ''} ontoggle="appState.${key} = this.open">
+      <summary class="checks-group-head"><span class="cg-dot"></span>${title}<span class="cg-count">${list.length}</span><span class="cg-note">${note}</span></summary>
+      ${list.map(card).join('')}
+    </details>` : '';
+  const critical = crit.length ? `
+    <div class="checks-group critical">
+      <div class="checks-group-head"><span class="cg-dot"></span>Critical<span class="cg-count">${crit.length}</span><span class="cg-note">fix before proofing</span></div>
+      ${crit.map(card).join('')}
+    </div>` : `
+    <div class="checks-allclear">✓ No critical issues — nothing to fix before the proof.</div>`;
+  return critical
+    + fold('manual-group', 'manual', 'Confirm by eye', manual, 'not scored — the tool cannot decide these alone', 'manualGroupOpen')
+    + fold('passed-group', 'passed', 'Passed', passed, 'no action needed', 'passedGroupOpen');
 }
 
 function renderChecksList(report) {
   const el = document.getElementById('checks-list');
   if (!el) return;
   const open = [...el.querySelectorAll('.check-card.open')].map(c => c.id);
+  const more = [...el.querySelectorAll('.check-card.more')].map(c => c.id);
   el.innerHTML = checksListHtml(report);
   open.forEach(id => { const c = document.getElementById(id); if (c) c.classList.add('open'); });
+  more.forEach(id => { const c = document.getElementById(id); if (c) c.classList.add('more'); });
 }
 
 /** Jump to a check card (from the summary), open it and flash it */
@@ -1273,40 +1286,70 @@ function focusCheck(id) {
   setTimeout(() => card.classList.remove('flash'), 1600);
 }
 
-function renderCheckCard(c) {
+/**
+ * One check, in three steps so nothing confuses:
+ *  1. closed: the check name and its result (CRITICAL / CONFIRM / PASSED)
+ *  2. opened: only the real error — what is wrong (the items, for the safe zone), how to fix it, the buttons
+ *  3. "More details" inside it: the SOP target, the analysis and the pictures
+ */
+function renderCheckCard(c, report) {
   const st = c.isOverridden ? 'overridden' : ({ PASS: 'pass', FAIL: 'fail', INFO: 'info' }[c.status] || 'info');
   const pillLabel = c.isOverridden ? 'OVERRIDDEN' : ({ PASS: 'PASSED', FAIL: 'CRITICAL', INFO: 'CONFIRM' }[c.status] || c.status);
+  const issue = c.status === 'FAIL' && !c.isOverridden;
+  const manual = c.status === 'INFO' && !c.isOverridden;
+  const same = ((report && report.checks) || []).filter(d => d.duplicateOf === c.id);
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // c.error = the real error in plain words, when the check gives one; the raw measurement then goes to the details
+  const headline = (issue && c.error) || c.found;
+  const detected = issue && c.error ? c.found : '';
+  const hasMore = !!(detected || c.required || c.detail || c.visual || c.isOverridden || (!issue && !manual && c.action));
+
+  // the safe-zone items, one line each, with a jump to the mark on the canvas
+  const sz = c.id === 'safeArea' && c.safeZone && c.safeZone.items && c.safeZone.items.length && typeof SafeZoneCheck !== 'undefined' ? c.safeZone : null;
+  const kind = { text: 'Text', lettering: 'Lettering', object: 'Graphic' };
+  const items = sz ? `
+        <ul class="cc-items">
+          ${sz.items.slice(0, 6).map((it, i) => `
+            <li class="cc-item ${it.kind === 'object' ? 'is-gfx' : ''}"><span class="cc-kind">${kind[it.kind] || 'Graphic'}</span>
+              <span class="cc-item-text">${it.text ? `<strong>${esc(it.text.length > 32 ? it.text.slice(0, 30) + '…' : it.text)}</strong> · ` : ''}${SafeZoneCheck.where(it, sz.g)}</span>
+              <button type="button" class="cc-show" onclick="SafeZoneCheck.show(${i})">Show</button></li>`).join('')}
+          ${sz.items.length + (sz.more || 0) > 6 ? `<li class="cc-item cc-item-more">+ ${sz.items.length + (sz.more || 0) - 6} more marked on the canvas</li>` : ''}
+        </ul>` : '';
 
   return `
     <div class="check-card ${st}" id="cc-${c.id}">
-      <div class="check-header" onclick="toggleCheckCard('${c.id}')">
+      <div class="check-header" onclick="toggleCheckCard('${c.id}')" role="button" tabindex="0" aria-expanded="false"
+           onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleCheckCard('${c.id}'); }">
         <span class="check-icon">${c.icon}</span>
-        <span class="check-name">
-          ${c.name}
-          ${c.isOverridden ? '<span class="override-tag">OVERRIDDEN</span>' : ''}
-        </span>
+        <span class="check-name">${c.name}${c.isOverridden ? '<span class="override-tag">OVERRIDDEN</span>' : ''}</span>
         <span class="check-pill pill-${st}">${pillLabel}</span>
         <span class="check-chevron" id="chev-${c.id}">▾</span>
       </div>
       <div class="check-body" id="cb-${c.id}">
-        ${c.found ? `<div class="check-detail-row"><span class="cdl">Detected:</span><span class="cdv">${c.found}</span></div>` : ''}
-        ${c.required ? `<div class="check-detail-row"><span class="cdl">SOP Target:</span><span class="cdv">${c.required}</span></div>` : ''}
-        <div class="check-detail-row"><span class="cdl">Analysis:</span><span class="cdv detail">${c.detail}</span></div>
-        ${c.action ? `<div class="check-detail-row"><span class="cdl">Action:</span><span class="cdv action">→ ${c.action}</span></div>` : ''}
-        ${c.visual ? `<div class="check-visual">${c.visual}</div>` : ''}
-        ${c.isOverridden ? `<div class="check-detail-row"><span class="cdl">Reason:</span><span class="cdv" style="color:#7048e8;">${c.overrideReason}</span></div>` : ''}
-
-        ${c.status === 'FAIL' && !c.isOverridden ? `
+        ${headline ? `<div class="cc-row cc-wrong"><span class="cc-label">${issue ? 'Error' : manual ? 'Check' : 'Result'}</span><span class="cc-text">${headline}</span></div>` : ''}
+        ${items}
+        ${(issue || manual) && c.action ? `<div class="cc-row cc-fix"><span class="cc-label">${issue ? 'How to fix' : 'What to do'}</span><span class="cc-text">${c.action}</span></div>` : ''}
+        ${same.length ? `<div class="check-same">${same.map(d => `Same cause: <strong>${d.name}</strong> — ${d.found}. Fixing this fixes both.`).join('<br>')}</div>` : ''}
+        ${issue ? `
           <div class="check-actions">
             <button class="cta-btn cta-fixed" onclick="markCheckFixed('${c.id}')">✓ Mark Corrected</button>
             <button class="cta-btn cta-override" onclick="openOverrideModal('${c.id}', '${c.name.replace(/'/g, '')}')">Override with Reason…</button>
-          </div>
-        ` : ''}
-        ${c.status === 'INFO' && !c.isOverridden ? `
+          </div>` : ''}
+        ${manual ? `
           <div class="check-actions">
             <button class="cta-btn cta-fixed" onclick="confirmCheck('${c.id}')">✓ Checked by eye</button>
-          </div>
-        ` : ''}
+          </div>` : ''}
+        ${hasMore ? `
+          <button type="button" class="cc-more" onclick="toggleCheckMore('${c.id}')" aria-expanded="false">
+            <span class="cm-open">More details ▾</span><span class="cm-close">Hide details ▴</span></button>
+          <div class="cc-detail">
+            ${detected ? `<div class="check-detail-row"><span class="cdl">Detected</span><span class="cdv">${detected}</span></div>` : ''}
+            ${c.required ? `<div class="check-detail-row"><span class="cdl">SOP target</span><span class="cdv">${c.required}</span></div>` : ''}
+            ${c.detail ? `<div class="check-detail-row"><span class="cdl">Analysis</span><span class="cdv detail">${c.detail}</span></div>` : ''}
+            ${!issue && !manual && c.action ? `<div class="check-detail-row"><span class="cdl">Action</span><span class="cdv action">→ ${c.action}</span></div>` : ''}
+            ${c.visual ? `<div class="check-visual">${c.visual}</div>` : ''}
+            ${c.isOverridden ? `<div class="check-detail-row"><span class="cdl">Reason</span><span class="cdv" style="color:#7048e8;">${c.overrideReason}</span></div>` : ''}
+          </div>` : ''}
       </div>
     </div>
   `;
@@ -1314,7 +1357,19 @@ function renderCheckCard(c) {
 
 function toggleCheckCard(id) {
   const card = document.getElementById(`cc-${id}`);
-  if (card) card.classList.toggle('open');
+  if (!card) return;
+  card.classList.toggle('open');
+  const head = card.querySelector('.check-header');
+  if (head) head.setAttribute('aria-expanded', card.classList.contains('open') ? 'true' : 'false');
+}
+
+/** The second step inside an opened card: SOP target, analysis, pictures */
+function toggleCheckMore(id) {
+  const card = document.getElementById(`cc-${id}`);
+  if (!card) return;
+  card.classList.toggle('more');
+  const b = card.querySelector('.cc-more');
+  if (b) b.setAttribute('aria-expanded', card.classList.contains('more') ? 'true' : 'false');
 }
 
 function markCheckFixed(id) {

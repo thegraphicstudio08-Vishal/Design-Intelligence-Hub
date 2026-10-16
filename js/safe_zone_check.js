@@ -76,7 +76,7 @@ const SafeZoneCheck = {
     const x1 = x0 + r.w * place.w, y1 = y0 + r.h * place.h;
     const d = { left: x0, top: y0, right: g.W - x1, bottom: g.H - y1 };
     const side = Object.keys(d).reduce((a, s) => d[s] < d[a] ? s : a, 'left');
-    return { dist: Math.max(0, d[side]), side, sides: Object.keys(d).filter(s => d[s] < g.safeIn) };
+    return { dist: Math.max(0, d[side]), side, sides: Object.keys(d).filter(s => d[s] < g.safeIn), d };
   },
 
   /**
@@ -226,31 +226,79 @@ const SafeZoneCheck = {
       if (best > 34 * 34) fg[p] = 1;
     }
 
-    // Connected shapes, then nearby shapes joined (letters into words, parts of a logo)
-    const lab = new Int32Array(n);
-    const comps = [];
-    const stack = [];
-    const edgeTol = Math.max(1, Math.round(Math.min(w, h) * 0.004));
-    for (let i = 0; i < n; i++) {
-      if (!fg[i] || lab[i]) continue;
-      const id = comps.length + 1;
-      let x0 = w, y0 = h, x1 = 0, y1 = 0, cnt = 0;
-      lab[i] = id; stack.push(i);
-      while (stack.length) {
-        const q = stack.pop(), x = q % w, y = (q / w) | 0;
-        cnt++;
-        if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
-        if (x > 0 && fg[q - 1] && !lab[q - 1]) { lab[q - 1] = id; stack.push(q - 1); }
-        if (x < w - 1 && fg[q + 1] && !lab[q + 1]) { lab[q + 1] = id; stack.push(q + 1); }
-        if (y > 0 && fg[q - w] && !lab[q - w]) { lab[q - w] = id; stack.push(q - w); }
-        if (y < h - 1 && fg[q + w] && !lab[q + w]) { lab[q + w] = id; stack.push(q + w); }
+    // Thin straight rules (frame / divider lines) are decoration: taken out first, so a logo standing on a rule is
+    // found as itself — not as one wide shape together with the rule
+    const LONG = Math.max(12, Math.round(0.06 * Math.max(w, h))), THIN = Math.max(2, Math.round(0.005 * Math.max(w, h)));
+    const hrun = new Uint16Array(n), vrun = new Uint16Array(n);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w;) {
+        if (!fg[y * w + x]) { x++; continue; }
+        let e = x; while (e < w && fg[y * w + e]) e++;
+        for (let i = x; i < e; i++) hrun[y * w + i] = Math.min(65535, e - x);
+        x = e;
       }
-      comps.push({ x0, y0, x1, y1, n: cnt });
     }
+    for (let x = 0; x < w; x++) {
+      for (let y = 0; y < h;) {
+        if (!fg[y * w + x]) { y++; continue; }
+        let e = y; while (e < h && fg[e * w + x]) e++;
+        for (let i = y; i < e; i++) vrun[i * w + x] = Math.min(65535, e - y);
+        y = e;
+      }
+    }
+    for (let p = 0; p < n; p++) {
+      if (fg[p] && ((hrun[p] >= LONG && vrun[p] <= THIN) || (vrun[p] >= LONG && hrun[p] <= THIN))) fg[p] = 0;
+    }
+
+    // Connected shapes, then nearby shapes joined (letters into words, parts of a logo)
+    const label = mask => {
+      const lab = new Int32Array(n), comps = [], stack = [];
+      for (let i = 0; i < n; i++) {
+        if (!mask[i] || lab[i]) continue;
+        const id = comps.length + 1;
+        let x0 = w, y0 = h, x1 = 0, y1 = 0, cnt = 0;
+        lab[i] = id; stack.push(i);
+        while (stack.length) {
+          const q = stack.pop(), x = q % w, y = (q / w) | 0;
+          cnt++;
+          if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+          if (x > 0 && mask[q - 1] && !lab[q - 1]) { lab[q - 1] = id; stack.push(q - 1); }
+          if (x < w - 1 && mask[q + 1] && !lab[q + 1]) { lab[q + 1] = id; stack.push(q + 1); }
+          if (y > 0 && mask[q - w] && !lab[q - w]) { lab[q - w] = id; stack.push(q - w); }
+          if (y < h - 1 && mask[q + w] && !lab[q + w]) { lab[q + w] = id; stack.push(q + w); }
+        }
+        comps.push({ x0, y0, x1, y1, n: cnt });
+      }
+      return { lab, comps };
+    };
+    const { lab, comps } = label(fg);
+    const edgeTol = Math.max(1, Math.round(Math.min(w, h) * 0.004));
     const minN = Math.max(10, n * 0.00015);
-    // share of plain background around a shape: a logo stands on the background, a piece of a photo does not
+    const isBig = c => c.n > n * 0.12 || c.x1 - c.x0 + 1 > w * 0.6 || c.y1 - c.y0 + 1 > h * 0.6;
+    const touches = c => c.x0 <= edgeTol || c.y0 <= edgeTol || c.x1 >= w - 1 - edgeTol || c.y1 >= h - 1 - edgeTol;
+    // printed ink or a photo: the spread of brightness inside each shape (flat ink ≈ 0) and its share of pure ink —
+    // full white or a strong colour, which photo pieces seldom are
+    const pureInk = o => { const mx = Math.max(px[o], px[o + 1], px[o + 2]), mn = Math.min(px[o], px[o + 1], px[o + 2]); return mn >= 242 || (mx - mn >= 150 && mx >= 190); };
+    const lum = new Float64Array(comps.length + 1), lum2 = new Float64Array(comps.length + 1), pureN = new Int32Array(comps.length + 1);
+    const rgb = new Float64Array((comps.length + 1) * 3);
+    for (let p = 0; p < n; p++) {
+      const id = lab[p];
+      if (!id) continue;
+      const o = p * 4, l = 0.3 * px[o] + 0.59 * px[o + 1] + 0.11 * px[o + 2];
+      lum[id] += l; lum2[id] += l * l;
+      rgb[id * 3] += px[o]; rgb[id * 3 + 1] += px[o + 1]; rgb[id * 3 + 2] += px[o + 2];
+      if (pureInk(o)) pureN[id]++;
+    }
+    comps.forEach((c, i) => {
+      const m = lum[i + 1] / c.n;
+      c.texture = Math.sqrt(Math.max(0, lum2[i + 1] / c.n - m * m)); c.pure = pureN[i + 1] / c.n;
+      c.rgb = [rgb[(i + 1) * 3] / c.n, rgb[(i + 1) * 3 + 1] / c.n, rgb[(i + 1) * 3 + 2] / c.n];
+    });
+    const inkLike = c => c.pure >= 0.5 || c.texture <= 8;
+    // share of plain background in a ring around a shape: a logo or a word stands on the background, a piece of a
+    // photo does not
     const bgAround = c => {
-      const m = Math.max(4, Math.round(0.4 * Math.max(c.x1 - c.x0, c.y1 - c.y0)));
+      const m = Math.max(3, Math.round(0.3 * Math.min(c.x1 - c.x0 + 1, c.y1 - c.y0 + 1)));
       const X0 = Math.max(0, c.x0 - m), Y0 = Math.max(0, c.y0 - m), X1 = Math.min(w - 1, c.x1 + m), Y1 = Math.min(h - 1, c.y1 + m);
       let tot = 0, bgN = 0;
       for (let y = Y0; y <= Y1; y += 2) {
@@ -261,31 +309,146 @@ const SafeZoneCheck = {
       }
       return tot ? bgN / tot : 1;
     };
-    const keep = comps.filter(c => {
+    let keep = comps.filter(c => {
       if (c.n < minN) return false;                                       // specks: the Lines & Dots check
       const cw = c.x1 - c.x0 + 1, chh = c.y1 - c.y0 + 1;
-      if (c.n > n * 0.12 || cw > w * 0.6 || chh > h * 0.6) return false;    // big shapes / frames / panels
-      // touching the artwork edge: a bleed shape or part of a full-bleed picture (text there is caught by the reader)
-      if (c.x0 <= edgeTol || c.y0 <= edgeTol || c.x1 >= w - 1 - edgeTol || c.y1 >= h - 1 - edgeTol) return false;
-      // thin lines (frame / border rules) are decoration
+      if (isBig(c)) return false;                                         // big shapes / frames / panels / the photo
+      // touching the artwork edge: a background / bleed shape or a photo running off — unless it is a compact shape
+      // of flat ink (a logo or graphic the trim cuts through)
+      c.edge = touches(c);
+      if (c.edge && (cw > w * 0.25 || chh > h * 0.25 || c.n < 0.2 * cw * chh || !inkLike(c))) return false;
+      // thin lines (frame / border rules, curves) are decoration
       if (Math.max(cw, chh) >= 8 * Math.min(cw, chh) && Math.min(cw, chh) <= Math.max(3, Math.max(w, h) * 0.012)) return false;
       return true;
-    }).filter(c => bgAround(c) >= 0.6);
-    // join shapes that sit close together (letters of a word, parts of a logo)
-    const items = [];
-    keep.sort((a, b) => a.x0 - b.x0).forEach(c => {
-      const ch = c.y1 - c.y0 + 1;
-      const it = items.find(t => {
-        const gap = Math.max(c.x0 - t.x1, t.x0 - c.x1, c.y0 - t.y1, t.y0 - c.y1);
-        return gap <= Math.max(3, 0.6 * Math.min(ch, t.y1 - t.y0 + 1));
-      });
-      if (it) { it.x0 = Math.min(it.x0, c.x0); it.y0 = Math.min(it.y0, c.y0); it.x1 = Math.max(it.x1, c.x1); it.y1 = Math.max(it.y1, c.y1); it.n += c.n; it.parts++; }
-      else items.push(Object.assign({ parts: 1 }, c));
     });
+
+    // Logos standing on a photo (a team logo over the picture): the photo is one big shape, so near the edges a logo
+    // is looked for inside it by its colours — pure white or a strong ink colour, which a photo seldom has in a
+    // compact solid shape
+    const bigId = new Uint8Array(comps.length + 1);
+    comps.forEach((c, i) => { if (isBig(c)) bigId[i + 1] = 1; });
+    const BAND = 0.15, gm = new Uint8Array(n);
+    let onPic = 0;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (x > w * BAND && x < w * (1 - BAND) && y > h * BAND && y < h * (1 - BAND)) { x = Math.floor(w * (1 - BAND)); continue; }
+        const p = y * w + x;
+        if (!bigId[lab[p]]) continue;
+        const o = p * 4, mx = Math.max(px[o], px[o + 1], px[o + 2]), mn = Math.min(px[o], px[o + 1], px[o + 2]);
+        if (mn >= 225 || (mx - mn >= 110 && mx >= 150)) { gm[p] = 1; onPic++; }
+      }
+    }
+    if (onPic) {
+      const L = label(gm);
+      // printed ink is pure: most of a logo is full white or full colour, photo highlights / sparkles are not
+      const pure = new Int32Array(L.comps.length + 1);
+      for (let p = 0; p < n; p++) if (L.lab[p] && pureInk(p * 4)) pure[L.lab[p]]++;
+      L.comps.forEach((c, i) => {
+        const cw = c.x1 - c.x0 + 1, chh = c.y1 - c.y0 + 1;
+        if (c.n < 2 * minN || cw > w * 0.2 || chh > h * 0.2 || touches(c)) return;
+        if (c.n < 0.15 * cw * chh || Math.min(cw, chh) < 0.25 * Math.max(cw, chh)) return;   // thin / stripy: part of the photo
+        if (pure[i + 1] < 0.5 * c.n) return;
+        keep.push(Object.assign(c, { edge: false, onPicture: true }));
+      });
+    }
+    if (keep.length > 1500) keep = keep.sort((a, b) => b.n - a.n).slice(0, 1500);
+
+    // Background pattern: 8+ identical shapes spread over the artwork (bricks, tiles, polka dots) — a background
+    // that runs into the bleed on purpose, together with its pieces cut by the trim
+    const near = (a, b, t, abs) => Math.abs(a - b) <= Math.max(abs, t * Math.max(a, b));
+    const dims = c => [c.x1 - c.x0 + 1, c.y1 - c.y0 + 1];
+    const same = (a, b) => { const [aw, ah] = dims(a), [bw, bh] = dims(b); return near(aw, bw, 0.1, 1.5) && near(ah, bh, 0.1, 1.5) && near(a.n, b.n, 0.12, 8); };
+    const members = [];
+    keep.forEach(c => {
+      if (c.onPicture) return;
+      let k = 0, x0 = w, x1 = 0, y0 = h, y1 = 0;
+      for (const o of keep) {
+        if (o.onPicture || !same(c, o)) continue;
+        k++; x0 = Math.min(x0, o.x0); x1 = Math.max(x1, o.x1); y0 = Math.min(y0, o.y0); y1 = Math.max(y1, o.y1);
+      }
+      if (k >= 8 && x1 - x0 >= 0.3 * w && y1 - y0 >= 0.3 * h) { c.pattern = true; members.push(c); }
+    });
+    if (members.length) {
+      const sameInk = (a, b) => Math.hypot(a.rgb[0] - b.rgb[0], a.rgb[1] - b.rgb[1], a.rgb[2] - b.rgb[2]) <= 30;
+      // pieces of tiles cut by the trim or by the artwork's shape (curves, slanted edges), single or run together into
+      // up to three in a row: the pattern's colour and no bigger than that
+      keep.forEach(c => {
+        if (c.pattern || c.onPicture) return;
+        const [cw, chh] = dims(c);
+        if (members.some(m => {
+          const [mw, mh] = dims(m);
+          return sameInk(c, m) && c.n <= 3.3 * m.n
+            && ((cw <= 1.15 * mw + 2 && chh <= 3.3 * mh + 2) || (cw <= 3.3 * mw + 2 && chh <= 1.15 * mh + 2));
+        })) c.pattern = true;
+      });
+    }
+
+    // Join shapes that belong together: boxes that touch (one shape), letters side by side on one row (a word / a
+    // line of text), a small mark over or under a bigger shape (the dot of an i, an accent, a small logo part)
+    const par = keep.map((_, i) => i);
+    const find = i => { while (par[i] !== i) { par[i] = par[par[i]]; i = par[i]; } return i; };
+    for (let i = 0; i < keep.length; i++) {
+      const a = keep[i], aw = a.x1 - a.x0 + 1, ah = a.y1 - a.y0 + 1;
+      for (let j = i + 1; j < keep.length; j++) {
+        const b = keep[j], bw = b.x1 - b.x0 + 1, bh = b.y1 - b.y0 + 1;
+        const gx = Math.max(a.x0 - b.x1, b.x0 - a.x1) - 1, gy = Math.max(a.y0 - b.y1, b.y0 - a.y1) - 1;
+        if (gx > 1.2 * Math.max(ah, bh) + 3 || gy > 0.7 * Math.max(ah, bh) + 3) continue;
+        if (!a.onPicture !== !b.onPicture) continue;                       // a logo on the photo stays apart from photo pieces
+        const ox = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) + 1, oy = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) + 1;
+        const [big, small, sw, sh, bigH] = a.n >= b.n ? [a, b, bw, bh, ah] : [b, a, aw, ah, bh];
+        const join = (gx <= 1 && gy <= 1)
+          || (oy >= 0.5 * Math.min(ah, bh) && Math.max(ah, bh) <= 2.5 * Math.min(ah, bh) && gx <= Math.max(3, 0.8 * Math.max(ah, bh)))
+          || (small.n <= 0.2 * big.n && sw <= 0.22 * bigH && sh <= 0.22 * bigH && ox >= 0.5 * sw && gy <= 0.4 * bigH);
+        if (join) par[find(i)] = find(j);
+      }
+    }
+    const groups = new Map();
+    keep.forEach((c, i) => {
+      const r = find(i);
+      const t = groups.get(r) || { x0: w, y0: h, x1: 0, y1: 0, n: 0, parts: [], edge: false, onPicture: false, patternN: 0 };
+      t.x0 = Math.min(t.x0, c.x0); t.y0 = Math.min(t.y0, c.y0); t.x1 = Math.max(t.x1, c.x1); t.y1 = Math.max(t.y1, c.y1);
+      t.n += c.n; t.parts.push(c); t.edge = t.edge || c.edge; t.onPicture = t.onPicture || !!c.onPicture;
+      if (c.pattern) t.patternN++;
+      groups.set(r, t);
+    });
+
+    // Lettering: a row of 3+ shapes of a similar height side by side — a word the text reader may have missed
+    // (distressed / script fonts) or not read at all. Rows of identical shapes (dots, stars, a pattern) are graphics.
+    const spread = a => { const m = a.reduce((s, v) => s + v, 0) / a.length; return m ? Math.sqrt(a.reduce((s, v) => s + (v - m) * (v - m), 0) / a.length) / m : 0; };
+    const lettering = t => {
+      const big = Math.max(...t.parts.map(q => q.n));
+      const ps = t.parts.filter(p => p.n >= 0.03 * big).map(p => ({ x0: p.x0, x1: p.x1, w: p.x1 - p.x0 + 1, h: p.y1 - p.y0 + 1, cy: (p.y0 + p.y1) / 2, n: p.n,
+        fill: p.n / ((p.x1 - p.x0 + 1) * (p.y1 - p.y0 + 1)) }));
+      if (ps.length < 3) return false;
+      // a row grows only by close neighbours (letters of a word, words of a line) — scattered shapes (notes, stars,
+      // splashes) at the same height are not lettering
+      const rows = [];
+      ps.sort((a, b) => a.x0 - b.x0).forEach(p => {
+        const r = rows.find(r => Math.abs(r.cy - p.cy) <= 0.35 * Math.max(r.h, p.h) && Math.max(r.h, p.h) <= 2 * Math.min(r.h, p.h)
+          && p.x0 - r.x1 <= 0.9 * Math.max(r.h, p.h));
+        // letters stand side by side: a shape lying over the previous one (parts of one glyph / ornament) is not a
+        // new letter
+        if (r) { if (p.x0 >= r.x1 - 0.3 * p.w) { r.ps.push(p); r.ink += p.w; } r.x1 = Math.max(r.x1, p.x1); }
+        else rows.push({ cy: p.cy, h: p.h, x0: p.x0, x1: p.x1, ps: [p], ink: p.w });
+      });
+      return rows.some(r => {
+        if (r.ps.length < 3 || r.x1 - r.x0 + 1 < 1.5 * r.h || r.ink < 0.45 * (r.x1 - r.x0 + 1)) return false;
+        const fills = r.ps.map(p => p.fill).sort((a, b) => a - b);
+        if (fills[fills.length >> 1] > 0.8) return false;                  // solid blocks / tiles, not letters
+        const ws = r.ps.map(p => p.w), hs = r.ps.map(p => p.h), ns = r.ps.map(p => p.n);
+        return !(r.ps.length >= 6 && spread(ws) < 0.12 && spread(hs) < 0.12 && spread(ns) < 0.12);
+      });
+    };
+    // a shape standing on the plain background (a logo on a photo was found by its colours)
+    const items = [...groups.values()].filter(t => t.patternN < 0.6 * t.parts.length && (t.onPicture || bgAround(t) >= 0.55))
+      .sort((a, b) => b.n - a.n).slice(0, 80);
     return {
       ok: true, plain: true, size: { w: W0, h: H0 },
-      items: items.filter(t => (t.x1 - t.x0 + 1) <= w * 0.6 && (t.y1 - t.y0 + 1) <= h * 0.6)
-        .map(t => ({ box: { x: t.x0 / w, y: t.y0 / h, w: (t.x1 - t.x0 + 1) / w, h: (t.y1 - t.y0 + 1) / h }, parts: t.parts }))
+      items: items.map(t => ({ box: { x: t.x0 / w, y: t.y0 / h, w: (t.x1 - t.x0 + 1) / w, h: (t.y1 - t.y0 + 1) / h },
+        parts: t.parts.length, lettering: lettering(t), edge: t.edge, onPicture: t.onPicture,
+        _parts: this._debug ? t.parts.map(p => [p.x0, p.y0, p.x1, p.y1, p.n, Math.round(p.texture || 0), p.pattern ? 'P' : '', p.edge ? 'E' : '']) : undefined })),
+      // the background pattern's shapes: the text reader sometimes "reads" a word in a pattern (bricks → "Jd")
+      pattern: keep.filter(c => c.pattern).slice(0, 600).map(c => ({ x: c.x0 / w, y: c.y0 / h, w: (c.x1 - c.x0 + 1) / w, h: (c.y1 - c.y0 + 1) / h }))
     };
   },
 
@@ -319,11 +482,24 @@ const SafeZoneCheck = {
     const tol = g.qnap ? 0 : this._tolerance(g);
     const measure = b => g.qnap ? this._measureQnap(b, g, place) : this._measure(b, g, place);
     const outside = m => g.qnap ? m.out > 0 : m.dist < g.safeIn - tol;
-    const items = [];
-    const lines = textWords ? this._textLines(textWords, size) : [];
+    // near = on the safe line, within the measuring tolerance: listed in the details, not counted
+    const items = [], near = [];
+    // a short "word" read inside a background pattern is the pattern misread (bricks → "Jd"), not text
+    const pat = (obj.ok && obj.pattern) || [];
+    const onPattern = b => {
+      let a = 0;
+      pat.forEach(p => {
+        const ix = Math.min(b.x + b.w, p.x + p.w) - Math.max(b.x, p.x), iy = Math.min(b.y + b.h, p.y + p.h) - Math.max(b.y, p.y);
+        if (ix > 0 && iy > 0) a += ix * iy;
+      });
+      return a >= 0.5 * b.w * b.h;
+    };
+    const lines = (textWords ? this._textLines(textWords, size) : [])
+      .filter(l => !(pat.length && (l.text.match(/[A-Za-z0-9]/g) || []).length <= 4 && onPattern(l.box)));
     lines.forEach(l => {
-      const m = measure(l.box);
-      if (outside(m)) items.push(Object.assign({ kind: 'text', text: l.text, box: l.box }, m));
+      const m = measure(l.box), it = Object.assign({ kind: 'text', text: l.text, box: l.box }, m);
+      if (outside(m)) items.push(it);
+      else if (!g.qnap && m.dist < g.safeIn) near.push(it);
     });
     const overlapsText = b => lines.some(l => {
       const ix = Math.min(b.x + b.w, l.box.x + l.box.w) - Math.max(b.x, l.box.x);
@@ -333,12 +509,17 @@ const SafeZoneCheck = {
     if (obj.ok && obj.items) {
       obj.items.forEach(o => {
         if (overlapsText(o.box)) return;
-        const m = measure(o.box);
-        if (outside(m)) items.push(Object.assign({ kind: 'object', text: '', box: o.box }, m));
+        // lettering = a word read from its shapes (the text reader missed it or did not run): counted like text
+        const m = measure(o.box), it = Object.assign({ kind: o.lettering ? 'lettering' : 'object', text: '', box: o.box, edge: !!o.edge }, m);
+        if (outside(m)) items.push(it);
+        else if (o.lettering && !g.qnap && m.dist < g.safeIn) near.push(it);
       });
     }
-    items.sort((a, b) => a.dist - b.dist);
-    return { state: 'done', items: items.slice(0, 8), more: Math.max(0, items.length - 8), g, place,
+    const order = { text: 0, lettering: 1, object: 2 };
+    items.sort((a, b) => (order[a.kind] - order[b.kind]) || a.dist - b.dist);
+    const counts = { text: 0, lettering: 0, object: 0 };
+    items.forEach(it => counts[it.kind]++);
+    return { state: 'done', items: items.slice(0, 8), more: Math.max(0, items.length - 8), counts, near, tol, g, place,
       textRead: !!textWords, textLines: lines.length, objectsChecked: !!(obj.ok && obj.plain), objReason: obj.ok ? '' : obj.reason };
   },
 
@@ -346,14 +527,20 @@ const SafeZoneCheck = {
 
   /** One line per item, for the card and the alert */
   describe(it, g) {
-    const what = it.kind === 'text' ? `Text “${it.text.length > 40 ? it.text.slice(0, 38) + '…' : it.text}”` : 'Design element (logo / graphic)';
-    return `${what} ${this.where(it, g)}`;
+    return `${this.what(it)} ${this.where(it, g)}`;
   },
 
-  /** Where an item lies, in words */
+  what(it) {
+    return it.kind === 'text' ? `Text “${it.text.length > 40 ? it.text.slice(0, 38) + '…' : it.text}”`
+      : it.kind === 'lettering' ? 'Lettering / logo (read from its shapes)' : 'Graphic';
+  },
+
+  /** Where an item lies, in words — every side it is too close to */
   where(it, g) {
     if (g && g.qnap) return it.intoBleed ? `runs into the bleed on the ${it.side} (it will be cut off)` : `crosses the template safe area on the ${it.side}`;
-    return it.dist <= 0.005 ? `touches the ${it.side} edge (it will be cut)` : `is ${this._fmt(it.dist)} from the ${it.side} edge`;
+    if (it.dist <= 0.005) return it.kind === 'object' ? `runs off the ${it.side} edge — fine only if it is background / bleed` : `touches the ${it.side} edge (it will be cut)`;
+    const also = (it.sides || []).filter(s => s !== it.side && it.d).map(s => `${this._fmt(Math.max(0, it.d[s]))} from the ${s}`);
+    return `is ${this._fmt(it.dist)} from the ${it.side} edge${also.length ? ` and ${also.join(', ')}` : ''}`;
   },
 
   /** The pre-check card */
@@ -377,8 +564,11 @@ const SafeZoneCheck = {
         detail: `Every word the text reader finds and every logo / graphic near the edge is measured against the ${zone}.`, action: '' });
     }
     const g = r.g;
-    const scope = [r.textRead ? `${r.textLines} text line${r.textLines === 1 ? '' : 's'}` : 'text not readable automatically',
+    const scope = [r.textRead ? `${r.textLines} text line${r.textLines === 1 ? '' : 's'} read` : 'the text reader did not run — lettering measured from its shapes',
       r.objectsChecked ? 'logos & graphics on the plain background' : 'graphics on a busy / photo background not measured'].join(' · ');
+    const nearTxt = r.near && r.near.length
+      ? ` On the safe line (within the ${this._fmt(r.tol)} measuring tolerance, not counted): ${r.near.map(it => this.describe(it, g)).join(' · ')}.` : '';
+    const notRead = r.textRead ? '' : ' · text not read automatically, check it by eye';
     if (!r.items.length) {
       if (!r.textRead && !r.objectsChecked) {
         return Object.assign(base, { status: 'WARNING', manual: true, found: 'Not measured automatically',
@@ -386,24 +576,25 @@ const SafeZoneCheck = {
           action: `Use the canvas guides (${safeTxt} safe zone).` });
       }
       return Object.assign(base, { status: 'PASS', manual: false,
-        found: `Text and graphics are inside the ${zone}`,
-        detail: `Measured on ${onWhat} (${scope}).${r.textRead ? '' : ' The text could not be read automatically — confirm it by eye.'}`,
+        found: `Text and graphics are inside the ${zone}${r.near && r.near.length ? ` · ${r.near.length} on the safe line` : ''}`,
+        detail: `Measured on ${onWhat} (${scope}).${nearTxt}${r.textRead ? '' : ' The text could not be read automatically — confirm it by eye.'}`,
         action: '', safeZone: r });
     }
-    const n = r.items.length + (r.more || 0);
-    const list = r.items.map(it => this.describe(it, g)).join(' · ') + (r.more ? ` · and ${r.more} more` : '');
+    const c = r.counts || { text: 0, lettering: 0, object: r.items.length };
+    const crit = c.text + c.lettering, gfx = c.object;
+    // the items themselves are listed in the card (each with a "Show" button) — the details explain how it was measured
     const moveTo = g.qnap ? 'inside the safe area of the template (green dashed line)' : `at least ${safeTxt} inside the trim`;
-    // Text read on the artwork is certain → Critical. Graphics alone may be decoration (frames, ornaments) → marked,
-    // and confirmed by eye
-    if (!r.items.some(it => it.kind === 'text')) {
+    // Text (read, or lettering found from its shapes) is certain → Critical. Graphics alone may be decoration
+    // (ornaments, bleed shapes) → marked, and confirmed by eye
+    if (!crit) {
       return Object.assign(base, { status: 'WARNING', manual: true,
-        found: `${n} graphic${n > 1 ? 's' : ''} outside the ${zone} — check by eye`,
-        detail: `${list}. Decoration (frames, ornaments, patterns) may sit there; logos and important graphics must not — they can be cut off, hemmed or grommeted (measured on ${onWhat}; ${scope}).`,
+        found: `${gfx} graphic${gfx > 1 ? 's' : ''} outside the ${zone} — check by eye${notRead}`,
+        detail: `Decoration and background may run there; logos and important graphics must not — they can be cut off, hemmed or grommeted. Measured on ${onWhat} (${scope}).${nearTxt}`,
         action: `Look at the marked graphics: move logos / important graphics ${moveTo}.`, safeZone: r });
     }
     return Object.assign(base, { status: 'FAIL', manual: false,
-      found: `${n} item${n > 1 ? 's' : ''} outside the ${zone}`,
-      detail: list + `. Content outside the safe area can be cut off, folded into a hem or punched by a grommet (measured on ${onWhat}; ${scope}).`,
+      found: `${crit} text / logo item${crit > 1 ? 's' : ''} outside the ${zone}${gfx ? ` · ${gfx} graphic${gfx > 1 ? 's' : ''} to check` : ''}`,
+      detail: `Content outside the safe area can be cut off, folded into a hem or punched by a grommet. Measured on ${onWhat} (${scope}).${nearTxt}`,
       action: `Move the marked text / logos ${moveTo}, or confirm with the customer that they may be cut.`,
       safeZone: r });
   },
@@ -457,9 +648,10 @@ const SafeZoneCheck = {
     Object.assign(ov.style, { display: 'block', left: (canvas.offsetLeft + art.x * sx) + 'px', top: (canvas.offsetTop + art.y * sy) + 'px',
       width: (art.w * sx) + 'px', height: (art.h * sy) + 'px' });
     const pct = v => (v * 100).toFixed(2) + '%';
+    const tag = { text: 'TEXT OUTSIDE SAFE ZONE', lettering: 'TEXT / LOGO OUTSIDE SAFE ZONE', object: 'GRAPHIC IN THE MARGIN — CHECK' };
     ov.innerHTML = r.items.map((it, i) => `
-      <div class="sz-mark${it.kind === 'text' ? '' : ' sz-obj'}" id="sz-mark-${i}" style="left:${pct(it.box.x)}; top:${pct(it.box.y)}; width:${pct(it.box.w)}; height:${pct(it.box.h)};">
-        <span class="sz-tag">${it.kind === 'text' ? 'TEXT OUTSIDE SAFE ZONE' : 'GRAPHIC IN THE MARGIN — CHECK'}</span></div>`).join('');
+      <div class="sz-mark${it.kind === 'object' ? ' sz-obj' : ''}" id="sz-mark-${i}" style="left:${pct(it.box.x)}; top:${pct(it.box.y)}; width:${pct(it.box.w)}; height:${pct(it.box.h)};">
+        <span class="sz-tag">${tag[it.kind] || tag.object}</span></div>`).join('');
   },
 
   /** Scroll to the canvas and flash one mark */
@@ -487,24 +679,28 @@ const SafeZoneCheck = {
       AgenticAiInspector._alertStack().appendChild(box);
     }
     const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const n = r.items.length + (r.more || 0);
-    const textN = r.items.filter(it => it.kind === 'text').length;
-    box.classList.toggle('is-warn', !textN);
+    const c = r.counts || { text: 0, lettering: 0, object: r.items.length };
+    const crit = c.text + c.lettering, gfx = c.object;
+    box.classList.toggle('is-warn', !crit);
     const zone = this._zone(r.g);
+    const kindLabel = { text: 'Text', lettering: 'Lettering', object: 'Graphic' };
+    const dist = it => r.g.qnap ? this.where(it, r.g)
+      : it.dist <= 0.005 ? (it.kind === 'object' ? 'runs off the ' : 'touches the ') + it.side + ' edge' : this._fmt(it.dist) + ' from the ' + it.side + ' edge';
     box.innerHTML = `
-      <div class="spell-alert-head">⚠️ <span>${textN ? `${n} item${n > 1 ? 's' : ''} outside the ${zone}`
-        : `${n} graphic${n > 1 ? 's' : ''} outside the ${zone} — check by eye`}</span>
+      <div class="spell-alert-head">⚠️ <span>${crit ? `${crit} text / logo item${crit > 1 ? 's' : ''} outside the ${zone}${gfx ? ` · ${gfx} graphic${gfx > 1 ? 's' : ''}` : ''}`
+        : `${gfx} graphic${gfx > 1 ? 's' : ''} outside the ${zone} — check by eye`}</span>
         <button class="spell-alert-close" title="Close" onclick="SafeZoneCheck.closeAlert()">×</button></div>
       <div class="spell-alert-note">${r.g.qnap
         ? `Measured on the ${this._tplName(r.g, esc)}: important text and logos must stay inside its safe area (green dashed line) — outside it they can be cut off, hemmed, folded under or hidden by the hardware.`
-        : `Important text and logos must stay ${this._fmt(r.g.safeIn)} inside the trim — closer to the edge they can be cut off, hemmed or grommeted.`}</div>
-      ${r.items.slice(0, 5).map((it, i) => `
+        : `Important text and logos must stay ${this._fmt(r.g.safeIn)} inside the trim — closer to the edge they can be cut off, hemmed or grommeted.`}${r.textRead ? ''
+        : ' <strong>The text reader did not run on this file</strong> — lettering was measured from its shapes; check the text by eye.'}</div>
+      ${r.items.slice(0, 6).map((it, i) => `
         <div class="spell-alert-row">
-          <div class="spell-alert-words"><span class="spell-alert-kind">${it.kind === 'text' ? 'Text' : 'Logo / graphic'}</span>
+          <div class="spell-alert-words"><span class="spell-alert-kind">${kindLabel[it.kind] || 'Graphic'}</span>
             ${it.kind === 'text' ? `<span class="spell-alert-wrong" style="text-decoration:none;">${esc(it.text.length > 32 ? it.text.slice(0, 30) + '…' : it.text)}</span>` : ''}
-            <span class="sz-dist">${r.g.qnap ? this.where(it, r.g) : it.dist <= 0.005 ? 'touches the ' + it.side + ' edge' : this._fmt(it.dist) + ' from the ' + it.side + ' edge'}</span></div>
+            <span class="sz-dist">${dist(it)}</span></div>
           <button class="spell-alert-show" onclick="SafeZoneCheck.show(${i})">Show</button>
-        </div>`).join('')}`;
+        </div>`).join('')}${r.items.length + (r.more || 0) > 6 ? `<div class="spell-alert-note">+ ${r.items.length + (r.more || 0) - 6} more marked on the canvas</div>` : ''}`;
   },
 
   closeAlert() {

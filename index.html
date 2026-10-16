@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261017b">
+  <link rel="stylesheet" href="css/style.css?v=20261017f">
 </head>
 <body>
 
@@ -83,6 +83,7 @@
 
           <!-- Filename Auto-Detection Banner -->
           <div class="fn-banner" id="fn-banner"></div>
+          <div id="fn-orient-host"></div>
           <div class="fn-proof-note" id="fn-proof-note">
             ⚠️ <strong>Proof render detected:</strong> This file appears to be a script export. Resolution check will be evaluated against production source.
           </div>
@@ -128,9 +129,10 @@
           </details>
         </section>
 
-        <!-- Step 2 · Order details -->
-        <section class="lp-section">
-          <div class="lp-title"><span class="lp-step-num">2</span>Order Details<span class="lp-title-note">auto-filled from the file name</span></div>
+        <!-- Order details: read from the production file name, so folded away. Opens on a click — or by itself
+             when the file name did not give the product. -->
+        <details class="lp-section order-edit" id="order-details">
+          <summary class="order-edit-head" title="Order details are read from the production file name — open only to correct them">✎ Edit order details<span>if the file name was read wrong</span></summary>
           <div class="form-row">
             <div class="fg">
               <label class="fl" for="order-num">Order #</label>
@@ -235,11 +237,11 @@
 
           <!-- Product SOP Specifications Box -->
           <div class="spec-box" id="spec-box"></div>
-        </section>
+        </details>
 
-        <!-- Step 3 · Notes + run the pre-check -->
+        <!-- Step 2 · Notes + run the pre-check -->
         <section class="lp-section">
-          <div class="lp-title"><span class="lp-step-num">3</span>Run the Pre-Check</div>
+          <div class="lp-title"><span class="lp-step-num">2</span>Run the Pre-Check</div>
           <div class="fg">
             <label class="fl" for="notes">Special Production Notes</label>
             <input type="text" class="fi" id="notes" placeholder="Color code, pole pocket size, hem instructions…" />
@@ -597,15 +599,15 @@
   <script src="js/template_registry.js"></script>
   <script src="js/file_analyzer.js?v=20261017c"></script>
   <script src="js/artwork_text_check.js?v=20261009b"></script>
-  <script src="js/agentic_ai_inspector.js?v=20261015a"></script>
+  <script src="js/agentic_ai_inspector.js?v=20261017e"></script>
   <script src="js/color_check.js?v=20261015c"></script>
-  <script src="js/safe_zone_check.js?v=20261017b"></script>
-  <script src="js/precheck_engine.js?v=20261017c"></script>
+  <script src="js/safe_zone_check.js?v=20261017f"></script>
+  <script src="js/precheck_engine.js?v=20261017f"></script>
   <script src="js/previous_orders.js"></script>
   <script src="js/qnap_templates.js?v=20261017d"></script>
   <script src="js/product_templates.js?v=20261017c"></script>
   <script src="js/canvas_inspector.js?v=20261017c"></script>
   <script src="js/proof_studio.js?v=20261017b"></script>
-  <script src="js/app.js?v=20261017c"></script>
+  <script src="js/app.js?v=20261017f"></script>
 </body>
 </html>
