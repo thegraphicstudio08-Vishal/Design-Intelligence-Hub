@@ -976,16 +976,17 @@ const FileAnalyzer = {
     } else if (/pole_sleeve_at_left_side|pole_sleeve/i.test(clean)) {
       finishingTokens.push('Pole Sleeve at Left Side');
       pocketType = 'Pole Sleeve at Left Side';
-    } else if (/top_(and|&|n)_bottom_pole_pockets?|pole_pockets?_(at|on)_(the_)?top_(and|&)_bottom/i.test(clean)) {
+    } else if (/top_(and|&|n)_bottom_pole_pockets?|pole_pockets?_((at|on)_(the_)?)?top_((and|&|n)_)?bottom/i.test(clean)) {
+      // also "Pole_Pockets_Top_Bottom" (side after the words)
       finishingTokens.push('Top & Bottom Pole Pockets');
       pocketType = 'Top & Bottom Pole Pockets';
-    } else if (/left_(and|&|n)_right_pole_pockets?|pole_pockets?_(at|on)_(the_)?left_(and|&)_right/i.test(clean)) {
+    } else if (/left_(and|&|n)_right_pole_pockets?|pole_pockets?_((at|on)_(the_)?)?left_((and|&|n)_)?right/i.test(clean)) {
       finishingTokens.push('Left & Right Pole Pockets');
       pocketType = 'Left & Right Pole Pockets';
-    } else if (/top_pole_pocket/i.test(clean)) {
+    } else if (/top_pole_pocket|pole_pockets?_((at|on)_(the_)?)?top(_|$)/i.test(clean)) {
       finishingTokens.push('Top Pole Pocket');
       pocketType = 'Top Pole Pocket';
-    } else if (/bottom_pole_pocket/i.test(clean)) {
+    } else if (/bottom_pole_pocket|pole_pockets?_((at|on)_(the_)?)?bottom(_|$)/i.test(clean)) {
       finishingTokens.push('Bottom Pole Pocket');
       pocketType = 'Bottom Pole Pocket';
     } else if (/pole_pocket/i.test(clean)) {

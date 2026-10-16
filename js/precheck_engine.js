@@ -21,8 +21,18 @@ const PrecheckEngine = {
   orientationCheck(analysis, spec, dims) {
     const r = this._orientationCheck(analysis, spec, dims);
     const tp = analysis && analysis.templatePanel;
-    if (tp && r && r.detail) r.detail = `Measured on the QNAP template panel “${tp.name}” (${tp.w}" × ${tp.h}"). ` + r.detail;
+    if (tp && r && r.detail) r.detail = this._templatePanelNote(tp) + ' ' + r.detail;
     return r;
+  },
+
+  /** Where size / orientation were measured when the artwork is made for a template layout */
+  _templatePanelNote(tp) {
+    const kind = tp.kind || (tp.web ? 'website design template' : 'QNAP template');
+    return tp.on === 'shape'
+      ? `Matched by its outline to the ${kind} “${tp.name}” — the artwork measures ${tp.w}" × ${tp.h}" on it.`
+      : tp.on === 'front'
+        ? `Placed centred on the ${tp.area || 'Front panel'} of the ${kind} “${tp.name}” — the artwork prints at ${tp.w}" × ${tp.h}".`
+        : `Measured on the ${kind} panel “${tp.name}” (${tp.w}" × ${tp.h}"${tp.product ? ' — ' + tp.product : ''}).`;
   },
 
   _orientationCheck(analysis, spec, dims) {
@@ -283,7 +293,7 @@ const PrecheckEngine = {
     // Canopy walls & co.: the size is checked on the QNAP template panel, not the product's nominal size
     if (analysis.templatePanel) {
       const tp = analysis.templatePanel, sz = checks.find(c => c.id === 'sizeTransform');
-      if (sz) sz.detail = `Measured on the QNAP template panel “${tp.name}” (${tp.w}" × ${tp.h}" — ${tp.product}). ` + sz.detail;
+      if (sz) sz.detail = this._templatePanelNote(tp) + ' ' + sz.detail;
     }
 
     // ──────────────────────────────────────────────────────────────────────────

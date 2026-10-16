@@ -162,30 +162,46 @@ const CanvasInspector = {
       this.officialMockupImg = null;
     }
 
-    // QNAP product template (canopy walls, table covers, stands, backdrops…): matched to the order by product, size
-    // and panel; the designer can choose another one (or none) on the canvas toolbar
-    this.productTemplate = null;
-    this.artOpacity = 1;
-    if (typeof ProductTemplates !== 'undefined') {
-      const st = (typeof appState !== 'undefined') ? appState : {};
-      const fname = (st.parsedFilename && st.parsedFilename.fname) || (st.file && st.file.name) || '';
-      this.productTemplate = ProductTemplates.best(spec, dims, st.parsedFilename, fname);
-      if (this.productTemplate) ProductTemplates.load(this.productTemplate, () => this._afterTemplateLoad());
-    }
-
-    // Update the contextual toolbar options in the DOM
-    this.renderContextualToolbar();
-
     if (!imgSrc) {
       // Create clean high-resolution demonstration artwork if none provided
       imgSrc = this._createDemoArtwork(spec, dims);
     }
+
+    // Product template (production standard, website design template or QNAP template: table covers, flags, canopy walls,
+    // stands…): matched to the order — and a shaped artwork to its outline — once the artwork is read; the designer
+    // can choose another one (or none) on the canvas toolbar
+    this.productTemplate = null;
+    this.templateMatch = null;
+    this.templateMatching = false;
+    this.templateView = 'art';
+    this.artOpacity = 1;
+    this.layoutBg = null;
+    this._fitOv = null;
+    this._matchToken = null;
+    if (typeof ProductTemplates !== 'undefined') {
+      const st = (typeof appState !== 'undefined') ? appState : {};
+      const fname = (st.parsedFilename && st.parsedFilename.fname) || (st.file && st.file.name) || '';
+      const ready = ProductTemplates.cachedMatch(spec, dims, st.parsedFilename, fname, imgSrc);
+      if (ready) {
+        this._useMatch(ready, true);
+      } else if (ProductTemplates.rank(spec, dims, st.parsedFilename, fname).length) {
+        const token = this._matchToken = {};
+        this.templateMatching = true;
+        ProductTemplates.autoMatch(spec, dims, st.parsedFilename, fname, imgSrc).then(m => {
+          if (this._matchToken === token) this._useMatch(m);
+        });
+      }
+    }
+
+    // Update the contextual toolbar options in the DOM
+    this.renderContextualToolbar();
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       this.currentImg = img;
       this.redraw();
+      if (this.productTemplate) this.renderContextualToolbar();   // fit chips need the artwork
     };
     img.onerror = () => {
       // Fallback to synthesized demo artwork
@@ -1241,7 +1257,7 @@ const CanvasInspector = {
   _drawRotationNote() {
     if (!this.canvas || !this.ctx || !this.currentImg || !(this.currentRotation || this.previewOrderTurned)) return;
     if (this.inspectorMode && this.inspectorMode !== 'artwork') return;
-    const ctx = this.ctx, w = this.canvas.width, h = this.canvas.height;
+    const ctx = this.ctx, w = this.viewW || this.canvas.width, h = this.viewH || this.canvas.height;
     const d = this.currentDims || {};
     const parts = [];
     if (this.previewOrderTurned) parts.push(`⤾ Artboard turned to ${+(+d.heightIn).toFixed(2)}" × ${+(+d.widthIn).toFixed(2)}"`);
@@ -1517,7 +1533,7 @@ const CanvasInspector = {
       </div>
       <div class="tl-cards">${L.cards.map(c => `
         <div class="tl-card tl-${c.key}${c.warn ? ' warn' : ''}">
-          <i class="tl-sw tl-sw-${c.key}"></i>
+          <i class="tl-sw tl-sw-${c.key}"${c.color ? ` style="background:${esc(c.color)};"` : ''}></i>
           <div class="tl-txt"><span class="tl-title">${esc(c.title)}</span><strong>${esc(c.value)}</strong><em>${esc(c.desc || '')}</em></div>
         </div>`).join('')}</div>
       ${L.notes && L.notes.length ? `<div class="tl-notes">${L.notes.map(n => `<span><i style="background:${esc(n.color)};"></i>${esc(n.text)}</span>`).join('')}</div>` : ''}
@@ -1611,7 +1627,7 @@ const CanvasInspector = {
 
     // Viewport scaling strictly preserving physical product aspect ratio (never squeeze or stretch!)
     const maxViewportW = 860 - pad.l - pad.r;
-    const maxViewportH = 480 - pad.t - pad.b;
+    const maxViewportH = (qnap ? 520 : 480) - pad.t - pad.b;   // the template sheet uses the full viewport height
     // Real banner proportions go well past 8:1 (e.g. 20' x 2' = 10:1), so only guard against absurd values
     const targetAspect = Math.max(0.02, Math.min(50.0, viewW / viewH));
 
@@ -1634,8 +1650,19 @@ const CanvasInspector = {
       w = Math.round(h * targetAspect);
     }
 
-    this.canvas.width = w + pad.l + pad.r;
-    this.canvas.height = h + pad.t + pad.b;
+    // Product template sheet: drawn at 2× (sharp template, outlines and text on every screen); viewW / viewH stay
+    // the layout size, artRect is in canvas pixels as the overlays expect
+    const k = qnap ? 2 : 1;
+    this.pxScale = k;
+    this.viewW = w + pad.l + pad.r;
+    this.viewH = h + pad.t + pad.b;
+    this.canvas.width = this.viewW * k;
+    this.canvas.height = this.viewH * k;
+    this.canvas.style.width = k > 1 ? Math.round(this.viewW * Math.min(1, 520 / this.viewH)) + 'px' : '';
+    if (k > 1) {
+      this.ctx.setTransform(k, 0, 0, k, 0, 0);
+      this.ctx.imageSmoothingQuality = 'high';
+    }
 
     if (this.inspectorMode === 'template') {
       this._drawTemplateMode(w, h, spec, dims);
@@ -1734,15 +1761,50 @@ const CanvasInspector = {
 
   // ── QNAP product templates (ProductTemplates) ──────────────────────────────────────────────────────────
 
-  productTemplate: null,   // QNAP_TEMPLATES record shown under the artwork, or null
-  artOpacity: 1,           // 0.5: the template shows through the artwork
+  productTemplate: null,   // QNAP_TEMPLATES record (website or QNAP template) shown under the artwork, or null
+  templateMatch: null,     // ProductTemplates.autoMatch result for this order + artwork
+  templateMatching: false, // the artwork outline is being matched
+  templateView: 'art',     // 'art' artwork · 'blend' artwork 50% · 'tpl' template only · 'fit' fit check
+  artOpacity: 1,           // 0.5 in the 'blend' view (kept for older callers)
+  pxScale: 1,              // canvas pixels per layout pixel (2 on the template sheet)
+  layoutBg: null,          // background colour the designer chose for a Front panel layout (null = automatic)
 
-  /** The chosen QNAP template when its pictures are loaded and the artwork view is showing */
+  /** Background of a Front panel layout: the designer's colour, else the artwork's own background, else white */
+  _layoutColor() {
+    return this.layoutBg || (typeof ProductTemplates !== 'undefined' ? ProductTemplates.background().color : '#ffffff');
+  },
+
+  /** Toolbar colour picker: the layout background ('' = automatic again) */
+  setLayoutBg(v) {
+    this.layoutBg = /^#[0-9a-f]{6}$/i.test(v || '') ? v.toLowerCase() : null;
+    this._qnapComp = null;
+    this.redraw();
+    this.renderContextualToolbar();
+  },
+
+  /** The chosen template when its pictures are loaded and the artwork view is showing */
   _activeQnap() {
     if (!this.productTemplate || typeof ProductTemplates === 'undefined') return null;
     if (this.inspectorMode && this.inspectorMode !== 'artwork') return null;
     const c = ProductTemplates.load(this.productTemplate, () => this._afterTemplateLoad());
     return c ? { t: this.productTemplate, c } : null;
+  },
+
+  /** Template matched to the order / artwork outline: show it (sync = before the first draw) */
+  _useMatch(m, sync) {
+    this.templateMatch = m || null;
+    this.templateMatching = false;
+    this.productTemplate = (m && m.t) || null;
+    this._fitOv = null;
+    if (sync) {
+      if (this.productTemplate) ProductTemplates.load(this.productTemplate, () => this._afterTemplateLoad());
+      return;
+    }
+    if (this.productTemplate && !ProductTemplates.load(this.productTemplate, () => this._afterTemplateLoad())) {
+      this.renderContextualToolbar();
+      return;
+    }
+    this._afterTemplateLoad();
   },
 
   _afterTemplateLoad() {
@@ -1751,9 +1813,11 @@ const CanvasInspector = {
     if (typeof SafeZoneCheck !== 'undefined') SafeZoneCheck.refresh();
   },
 
-  /** Canvas toolbar: choose the QNAP template ('' = none, SOP guides) */
+  /** Canvas toolbar: choose the template ('' = none, SOP guides) */
   setProductTemplate(id) {
     this.productTemplate = id && typeof ProductTemplates !== 'undefined' ? ProductTemplates.get(id) : null;
+    this._fitOv = null;
+    this._qnapComp = null;
     if (this.productTemplate && !ProductTemplates.load(this.productTemplate, () => this._afterTemplateLoad())) {
       this.renderContextualToolbar();
       return;
@@ -1761,11 +1825,86 @@ const CanvasInspector = {
     this._afterTemplateLoad();
   },
 
-  /** Artwork at 50%: the template's bleed, visible and safe areas show through */
-  toggleArtOpacity() {
-    this.artOpacity = this.artOpacity < 1 ? 1 : 0.5;
+  /** Template view: 'art' artwork · 'blend' artwork at 50% · 'tpl' template only · 'fit' fit check */
+  setTemplateView(v) {
+    this.templateView = ['art', 'blend', 'tpl', 'fit'].includes(v) ? v : 'art';
+    this.artOpacity = this.templateView === 'blend' ? 0.5 : 1;
     this.redraw();
     this.renderContextualToolbar();
+  },
+
+  /** Artwork at 50%: the template's bleed, visible and safe areas show through */
+  toggleArtOpacity() {
+    this.setTemplateView(this.templateView === 'blend' ? 'art' : 'blend');
+  },
+
+  /** Fit numbers of the artwork on the chosen template (ProductTemplates.stats), or null */
+  _templateStats() {
+    const t = this.productTemplate, img = this.currentImg;
+    if (!t || !img || !img.naturalWidth || typeof ProductTemplates === 'undefined') return null;
+    const turned = this.currentRotation === 90 || this.currentRotation === 270;
+    return ProductTemplates.stats(t, turned ? img.naturalHeight : img.naturalWidth, turned ? img.naturalWidth : img.naturalHeight, this.currentRotation);
+  },
+
+  /** The template is for another size than the order ("8 x 2.5 Ft" template, 6 ft order): a warning, else '' */
+  _templateSizeNote(t) {
+    const d = this.currentDims || {}, W = parseFloat(d.widthIn), H = parseFloat(d.heightIn);
+    if (!t || !t.stated || !t.stated[0] || !(W > 0 && H > 0)) return '';
+    if (ProductTemplates._sizeErr([W, H], [t.stated[0], t.stated[1]]) <= 0.08) return '';
+    const f = v => +(+v).toFixed(2);
+    return `⚠ Template is for ${f(t.stated[0])}" × ${f(t.stated[1])}" — order is ${f(W)}" × ${f(H)}"`;
+  },
+
+  /**
+   * The order names another variant than the layout the artwork is made for (artwork outline = 3 Sided Open Back,
+   * order = 4 Sided Closed Back): a warning, else ''
+   */
+  _templateVariantNote(t) {
+    const m = this.templateMatch;
+    if (!t || !m || !m.shaped || m.t !== t || typeof ProductTemplates === 'undefined') return '';
+    const st = (typeof appState !== 'undefined') ? appState : {};
+    const fname = (st.parsedFilename && st.parsedFilename.fname) || (st.file && st.file.name) || '';
+    const rows = ProductTemplates.rank(this.currentSpec || {}, this.currentDims || {}, st.parsedFilename, fname);
+    const cur = rows.find(r => r.t === t);
+    if (!cur) return '';
+    const alt = rows.filter(r => r.t.product === t.product && ProductTemplates.isLayout(r.t) && r.size >= cur.size && r.panel > cur.panel + 0.2)
+      .sort((a, b) => b.panel - a.panel)[0];
+    if (!alt) return '';
+    const variant = x => String(x.name).split('·').pop().trim();
+    return `⚠ Order says “${variant(alt.t)}” — the artwork is laid out for “${variant(t)}”`;
+  },
+
+  /** Fit chips for the toolbar: outline match / proportions, variant and size checks */
+  _fitChips(s) {
+    const t = this.productTemplate;
+    if (!t || !s) return '';
+    const esc = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    const m = this.templateMatch, pc = v => `${Math.round(v * 100)}%`;
+    let cls = 'ok', text, title = '';
+    if (s.on === 'shape') {
+      const top = m && m.shapeRank && m.shapeRank[0];
+      const better = top && top.t.id !== t.id && top.score > s.score + 0.03 ? top : null;
+      if (s.score >= 0.9) text = `✓ Artwork outline matches this template · ${pc(s.score)}`;
+      else if (s.score >= 0.8) text = `✓ Outline matches · ${pc(s.score)} — check the edges in Fit check`;
+      else { cls = 'bad'; text = `⚠ Artwork outline differs from this template · ${pc(s.score)}${better ? ` — best: ${better.t.name} (${pc(better.score)})` : ''}`; }
+      title = 'The artwork outline was matched to the template outline (open / closed back, length, flag shape) and placed where it lies on the template.';
+    } else if (s.on === 'front') {
+      const bg = ProductTemplates.background(), col = this._layoutColor();
+      const area = ProductTemplates.logoArea(t);
+      text = `✓ Artwork centred on the ${area} · background ${this.layoutBg ? 'chosen' : bg.from === 'artwork' ? 'from the artwork' : 'white (default)'}`;
+      title = `Not a laid-out file for this product (a logo or a design of another shape): it is centred on the ${area} inside the safe line, and the background colour fills the whole product including the bleed.`;
+      const warns = [this._templateSizeNote(t)].filter(Boolean);
+      return `<span class="vqb-fit ok" title="${esc(title)}">${esc(text)}</span>
+        <label class="vqb-bg" title="Background colour of the cover"><span>Background</span><input type="color" value="${esc(col)}" onchange="CanvasInspector.setLayoutBg(this.value)"></label>
+        ${this.layoutBg ? `<button type="button" class="vqb-view" onclick="CanvasInspector.setLayoutBg('')" title="Back to the artwork's own background (or white)">Auto</button>` : ''}`
+        + warns.map(w => `<span class="vqb-fit warn">${esc(w)}</span>`).join('');
+    } else if (s.on === 'fit') {
+      cls = 'warn'; text = '⚠ Proportions differ from the template — fitted into the visible area';
+    } else {
+      text = `✓ Proportions match the ${s.on === 'full' ? 'full template size with bleed' : s.on + ' area'}`;
+    }
+    const warns = [this._templateVariantNote(t), this._templateSizeNote(t)].filter(Boolean);
+    return `<span class="vqb-fit ${cls}" title="${esc(title)}">${esc(text)}</span>` + warns.map(w => `<span class="vqb-fit warn">${esc(w)}</span>`).join('');
   },
 
   /**
@@ -1777,68 +1916,110 @@ const CanvasInspector = {
     const img = this.currentImg;
     if (!q || !img || !img.naturalWidth) return null;
     const t = this.productTemplate;
-    const key = [t.id, img.src.length, img.src.slice(-40), this.currentRotation].join('|');
+    const turned = this.currentRotation === 90 || this.currentRotation === 270;
+    const p = ProductTemplates.placement(t, turned ? img.naturalHeight : img.naturalWidth, turned ? img.naturalWidth : img.naturalHeight, this.currentRotation);
+    const key = [t.id, img.src.length, img.src.slice(-40), this.currentRotation, p.x, p.y, p.w, this._layoutColor()].join('|');
     if (this._qnapComp && this._qnapComp.key === key) return this._qnapComp.url;
-    const W = q.img.naturalWidth, H = q.img.naturalHeight, s = W / t.fullIn[0];
+    // at least 2000 px across: the proof page is printed / zoomed
+    const k = Math.max(1, 2000 / q.img.naturalWidth);
+    const W = Math.round(q.img.naturalWidth * k), H = Math.round(q.img.naturalHeight * k), s = W / t.fullIn[0];
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
     ctx.drawImage(q.img, 0, 0, W, H);
-    const turned = this.currentRotation === 90 || this.currentRotation === 270;
-    const p = ProductTemplates.placement(t, turned ? img.naturalHeight : img.naturalWidth, turned ? img.naturalWidth : img.naturalHeight);
+    if (p.on === 'front') ProductTemplates.fillProduct(ctx, q, t, 0, 0, W, H, this._layoutColor());
+    const art = p.on === 'shape' ? ProductTemplates.clippedArt(img) : img;
     const px = p.x * s, py = p.y * s, pw = p.w * s, ph = p.h * s;
     ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
     if (this.currentRotation) {
       ctx.translate(px + pw / 2, py + ph / 2);
       ctx.rotate((this.currentRotation * Math.PI) / 180);
       const bw = turned ? ph : pw, bh = turned ? pw : ph;
-      ctx.drawImage(img, -bw / 2, -bh / 2, bw, bh);
+      ctx.drawImage(art, -bw / 2, -bh / 2, bw, bh);
     } else {
-      ctx.drawImage(img, px, py, pw, ph);
+      ctx.drawImage(art, px, py, pw, ph);
+      ProductTemplates.logoCopies(t, p).forEach(c => ctx.drawImage(art, c.x * s, c.y * s, c.w * s, c.h * s));
     }
     ctx.restore();
-    if (q.edges) { ctx.imageSmoothingEnabled = true; ctx.drawImage(q.edges, 0, 0, W, H); }
+    ProductTemplates.drawOutlines(ctx, q, t, 0, 0, W, H, { width: Math.max(2, W / 700) });
     let url = null;
     try { url = cv.toDataURL('image/jpeg', 0.88); } catch (e) { return null; }
     this._qnapComp = { key, url };
     return url;
   },
 
-  /** Toolbar row: template picker (best matches for this order) and the artwork opacity switch */
+  /**
+   * Toolbar: template picker (best outline matches · production standard · website design templates · QNAP templates, with the
+   * outline match in %), the view switch (Artwork · 50% · Template · Fit check) and the fit chips
+   */
   _qnapBar() {
     if (typeof ProductTemplates === 'undefined' || !ProductTemplates.list().length) return '';
     const st = (typeof appState !== 'undefined') ? appState : {};
     const fname = (st.parsedFilename && st.parsedFilename.fname) || (st.file && st.file.name) || '';
-    const ranked = ProductTemplates.rank(this.currentSpec || {}, this.currentDims || {}, st.parsedFilename, fname).slice(0, 40);
+    const ranked = ProductTemplates.rank(this.currentSpec || {}, this.currentDims || {}, st.parsedFilename, fname).map(r => r.t);
     const cur = this.productTemplate;
     if (!ranked.length && !cur) return '';
     const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-    const opt = t => `<option value="${esc(t.id)}" ${cur && cur.id === t.id ? 'selected' : ''}>${esc(ProductTemplates.label(t))}</option>`;
+    const m = this.templateMatch, fits = m && m.shaped ? m.fits : null;
+    const pct = t => fits && fits.get(t.id) ? ` · ${Math.round(fits.get(t.id).score * 100)}% outline match` : '';
+    const opt = t => `<option value="${esc(t.id)}" ${cur && cur.id === t.id ? 'selected' : ''}>${esc(ProductTemplates.label(t) + pct(t))}</option>`;
+    const best = m && m.shaped ? m.shapeRank.slice(0, 3).map(x => x.t) : [];
+    const rest = ranked.filter(t => !best.includes(t));
+    const std = rest.filter(t => ProductTemplates.isProduction(t));
+    const web = rest.filter(t => ProductTemplates.isWebsite(t));
+    const qnap = rest.filter(t => !ProductTemplates.isLayout(t)).slice(0, 40);
+    const group = (label, list) => list.length ? `<optgroup label="${esc(label)}">${list.map(opt).join('')}</optgroup>` : '';
+    const listed = best.concat(std, web, qnap);
     const loading = cur && !ProductTemplates.load(cur);
+    const views = [['art', 'Artwork', 'The artwork on the template'], ['blend', '◐ 50%', 'Artwork at 50% — the template shows through'],
+      ['tpl', 'Template', 'The template alone'], ['fit', 'Fit check', 'Red = visible area not covered · pink = bleed not covered · amber = artwork cut off']];
+    const view = this.templateView || 'art';
+    const kind = cur ? ProductTemplates.kindName(cur) : '';
     return `
       <div class="vi-qnap-bar">
-        <span class="vqb-label">🏛️ QNAP product template</span>
-        <select class="vqb-select" onchange="CanvasInspector.setProductTemplate(this.value)" title="Official template from \\\\192.168.0.250\\qnap\\Template_Mockups">
-          <option value="">— None (SOP guides) —</option>
-          ${ranked.map(r => opt(r.t)).join('')}
-          ${cur && !ranked.some(r => r.t.id === cur.id) ? opt(cur) : ''}
-        </select>
-        ${cur ? `<button type="button" class="btn btn-outline btn-sm vqb-opacity${this.artOpacity < 1 ? ' on' : ''}" onclick="CanvasInspector.toggleArtOpacity()" title="Show the template (bleed, visible and safe area) through the artwork">◐ Artwork ${this.artOpacity < 1 ? '50%' : '100%'}</button>` : ''}
-        ${loading ? '<span class="vqb-note">loading template…</span>' : ''}
+        <div class="vqb-row">
+          <span class="vqb-label">🧩 Product template</span>
+          <select class="vqb-select" onchange="CanvasInspector.setProductTemplate(this.value)" title="Production standard templates, website design templates (what customers design on) and QNAP production templates (\\\\192.168.0.250\\qnap\\Template_Mockups)">
+            <option value="">— None (SOP guides) —</option>
+            ${group('Best match for this artwork', best)}
+            ${group('Production standard (BannerBuzz)', std)}
+            ${group('Website design templates', web)}
+            ${group('QNAP production templates', qnap)}
+            ${cur && !listed.includes(cur) ? opt(cur) : ''}
+          </select>
+          ${kind ? `<span class="vqb-kind ${ProductTemplates.isProduction(cur) ? 'std' : ProductTemplates.isWebsite(cur) ? 'web' : 'qnap'}">${kind}</span>` : ''}
+          ${this.templateMatching ? '<span class="vqb-note"><i class="vqb-spin"></i>Matching the artwork outline…</span>' : ''}
+          ${loading ? '<span class="vqb-note"><i class="vqb-spin"></i>Loading template…</span>' : ''}
+        </div>
+        ${cur ? `
+        <div class="vqb-row">
+          <div class="vqb-views" role="group" aria-label="Template view">${views.map(([k, l, tip]) => `<button type="button" class="vqb-view${k === 'blend' ? ' vqb-opacity' : ''}${view === k ? ' on' : ''}" aria-pressed="${view === k}" title="${esc(tip)}" onclick="CanvasInspector.setTemplateView('${k}')">${l}</button>`).join('')}</div>
+          ${this._fitChips(this._templateStats())}
+        </div>` : ''}
       </div>`;
   },
 
   /**
-   * QNAP template sheet: the official template (red bleed · white visible area · lavender safe area) is the artboard,
-   * the customer's artwork is placed on it — full size with bleed, visible area or safe area, whichever its proportions
-   * match, else fitted into the visible area — at 50% when the designer wants to see the template through it, and the
-   * template's area outlines are drawn on top. Sizes are on the pasteboard and in the legend, never on the artwork.
+   * Template sheet: the production standard, website design template or QNAP template is the artboard (drawn at 2×). A shaped
+   * artwork sits where its outline matches the template (without the white page around it); a rectangle on the full
+   * size with bleed, visible area or safe area, whichever its proportions match, else fitted into the visible area.
+   * Views: artwork · 50% · template only · fit check (gaps red, uncovered bleed pink, cut-off artwork amber). The
+   * template's outlines (cut line red, visible blue, safe green dashed) are smooth vector lines on top. Sizes are on
+   * the pasteboard and in the legend, never on the artwork.
    */
   _drawQnapSheet(img, w, h, pad, t, c) {
-    const ctx = this.ctx;
+    const ctx = this.ctx, k = this.pxScale || 1;
     const ox = pad.l, oy = pad.t, s = w / t.fullIn[0];
     const fmt = v => +(+v).toFixed(2);
+    const pc = v => `${Math.round(v * 1000) / 10}%`;
     const isRotated = (this.currentRotation === 90 || this.currentRotation === 270);
-    this._drawPasteboard(this.canvas.width, this.canvas.height);
+    const web = ProductTemplates.isLayout(t);   // a product layout on a white page (production standard / website)
+    const view = this.templateView || 'art';
+    const CW = this.viewW || this.canvas.width, CH = this.viewH || this.canvas.height;
+    this._drawPasteboard(CW, CH);
     ctx.save();
     ctx.shadowColor = 'rgba(15, 23, 42, 0.22)';
     ctx.shadowBlur = 12;
@@ -1846,73 +2027,150 @@ const CanvasInspector = {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(ox, oy, w, h);
     ctx.restore();
-    ctx.drawImage(c.img, ox, oy, w, h);
-
-    // artwork on the template
-    const aw = img.naturalWidth || 1, ah = img.naturalHeight || 1;
-    const p = ProductTemplates.placement(t, isRotated ? ah : aw, isRotated ? aw : ah);
-    this.qnapPlacement = p;
-    const px = ox + p.x * s, py = oy + p.y * s, pw = p.w * s, ph = p.h * s;
     ctx.save();
-    ctx.globalAlpha = this.artOpacity < 1 ? this.artOpacity : 1;
-    if (this.currentRotation) {
-      ctx.translate(px + pw / 2, py + ph / 2);
-      ctx.rotate((this.currentRotation * Math.PI) / 180);
-      const bw = isRotated ? ph : pw, bh = isRotated ? pw : ph;
-      ctx.drawImage(img, -bw / 2, -bh / 2, bw, bh);
-    } else {
-      ctx.drawImage(img, px, py, pw, ph);
-      this.artRect = { x: px, y: py, w: pw, h: ph };
-    }
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(c.img, ox, oy, w, h);
     ctx.restore();
 
-    // the template's area outlines (safe = green, visible = blue) and the sheet edge
-    if (this.guides.safeArea !== false && c.edges) {
+    // artwork on the template: a shaped artwork where its outline matches (without the white page around it),
+    // a rectangle by its proportions; nothing beyond the template picture is drawn
+    const aw = img.naturalWidth || 1, ah = img.naturalHeight || 1;
+    const p = ProductTemplates.placement(t, isRotated ? ah : aw, isRotated ? aw : ah, this.currentRotation);
+    this.qnapPlacement = p;
+    const px = ox + p.x * s, py = oy + p.y * s, pw = p.w * s, ph = p.h * s;
+    if (view !== 'tpl') {
+      const art = p.on === 'shape' ? ProductTemplates.clippedArt(img) : img;
+      // logo / front design: the background colour fills the whole cover (bleed included) under it
+      if (p.on === 'front') {
+        ctx.save();
+        ctx.globalAlpha = view === 'blend' ? 0.5 : 1;
+        ProductTemplates.fillProduct(ctx, c, t, ox, oy, w, h, this._layoutColor());
+        ctx.restore();
+      }
       ctx.save();
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(c.edges, ox, oy, w, h);
+      ctx.beginPath(); ctx.rect(ox, oy, w, h); ctx.clip();
+      ctx.globalAlpha = view === 'blend' ? 0.5 : view === 'fit' && p.on !== 'front' ? 0.35 : 1;
+      ctx.imageSmoothingQuality = 'high';
+      if (this.currentRotation) {
+        ctx.translate(px + pw / 2, py + ph / 2);
+        ctx.rotate((this.currentRotation * Math.PI) / 180);
+        const bw = isRotated ? ph : pw, bh = isRotated ? pw : ph;
+        ctx.drawImage(art, -bw / 2, -bh / 2, bw, bh);
+      } else {
+        ctx.drawImage(art, px, py, pw, ph);
+        // a double-sided flag: the same logo on the other side
+        ProductTemplates.logoCopies(t, p).forEach(c => ctx.drawImage(art, ox + c.x * s, oy + c.y * s, c.w * s, c.h * s));
+      }
       ctx.restore();
     }
+    if (!this.currentRotation) this.artRect = { x: px * k, y: py * k, w: pw * k, h: ph * k };   // canvas px
+
+    // fit check on the Front panel layout: the panel's safe area the logo is centred in
+    if (view === 'fit' && p.on === 'front' && t.frontSafe) {
+      const fb = t.frontSafe;
+      ctx.save();
+      ctx.fillStyle = 'rgba(22, 163, 74, 0.12)';
+      ctx.strokeStyle = '#16a34a';
+      ctx.setLineDash([5, 3]);
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(ox + fb[0] * s, oy + fb[1] * s, (fb[2] - fb[0]) * s, (fb[3] - fb[1]) * s);
+      ctx.strokeRect(ox + fb[0] * s, oy + fb[1] * s, (fb[2] - fb[0]) * s, (fb[3] - fb[1]) * s);
+      ctx.restore();
+    }
+    // fit check: red = visible area not covered, pink = bleed not covered, amber = artwork outside the product
+    if (view === 'fit' && p.on !== 'front') {
+      const m = ProductTemplates._match;
+      const sil = p.on === 'shape' && m && m.sil ? m.sil : ProductTemplates._rectSil(isRotated ? ah : aw, isRotated ? aw : ah);
+      const key = [t.id, p.x, p.y, p.w, p.h, sil.w, sil.h].join('|');
+      if (!this._fitOv || this._fitOv.key !== key) this._fitOv = { key, cv: ProductTemplates.fitOverlay(t, c, p, sil) };
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(this._fitOv.cv, ox, oy, w, h);
+      ctx.restore();
+    }
+
+    // the template's outlines: cut line (red), visible area (blue), safe area (green dashed) — smooth vector lines
+    if (this.guides.safeArea !== false) ProductTemplates.drawOutlines(ctx, c, t, ox, oy, w, h);
     ctx.save();
-    ctx.strokeStyle = '#94a3b8';
+    ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 1;
     ctx.strokeRect(ox + 0.5, oy + 0.5, w - 1, h - 1);
     ctx.restore();
     this._drawCropMarks(ox, oy, w, h, 4);
 
+    // sizes on the pasteboard: the product (with bleed) for a product layout, the template sheet for QNAP
     const vis = t.visIn || [0, 0, t.fullIn[0], t.fullIn[1]], safe = t.safeIn || vis;
+    const prod = web && t.prodIn ? t.prodIn : [0, 0, t.fullIn[0], t.fullIn[1]];
+    const R = c.mask ? ProductTemplates._regions(c, t) : null;
+    const bleedBars = !!(R && R.full.area && (R.full.area - R.visible.area) / R.full.area > 0.005);
     if (this.guides.dims !== false) {
       const yTop = Math.round(pad.t / 2) - 6, xLeft = Math.round(pad.l / 2) - 6;
-      this._dimLine(ox, yTop, w, [`${fmt(t.fullIn[0])}" W with bleed`, `visible ${fmt(vis[2] - vis[0])}"`], false, oy - yTop - 2);
-      this._dimLine(xLeft, oy, h, [`${fmt(t.fullIn[1])}" H with bleed`, `visible ${fmt(vis[3] - vis[1])}"`], true, ox - xLeft - 2);
+      if (web) {
+        const with_ = bleedBars ? 'with bleed' : 'flat layout';
+        this._dimLine(ox + prod[0] * s, yTop, (prod[2] - prod[0]) * s, [`${fmt(prod[2] - prod[0])}" W`, with_], false, oy + prod[1] * s - yTop - 2);
+        this._dimLine(xLeft, oy + prod[1] * s, (prod[3] - prod[1]) * s, [`${fmt(prod[3] - prod[1])}" H`, with_], true, ox + prod[0] * s - xLeft - 2);
+      } else {
+        this._dimLine(ox, yTop, w, [`${fmt(t.fullIn[0])}" W with bleed`, `visible ${fmt(vis[2] - vis[0])}"`], false, oy - yTop - 2);
+        this._dimLine(xLeft, oy, h, [`${fmt(t.fullIn[1])}" H with bleed`, `visible ${fmt(vis[3] - vis[1])}"`], true, ox - xLeft - 2);
+      }
     }
-    const CW = this.canvas.width, CH = this.canvas.height;
     if (pad.b >= 20 && !this.currentRotation && CW > 420) {
       ctx.save();
       ctx.font = '600 10px Inter, sans-serif';
       ctx.fillStyle = '#64748b';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
-      const cap = `QNAP TEMPLATE · ${t.product} · ${t.name}`;
+      const cap = `${ProductTemplates.kindName(t).toUpperCase()} · ${t.product} · ${t.name}`;
       ctx.fillText(cap.length > 110 ? cap.slice(0, 108) + '…' : cap, CW - pad.r, CH - Math.max(12, pad.b / 2 - 4));
       ctx.restore();
     }
 
-    const ON = { full: 'the full template size (with bleed)', visible: 'the visible area', safe: 'the safe area', fit: 'fitted into the visible area (its proportions differ from the template)' };
-    const notes = [{ text: `Artwork placed on ${ON[p.on]}`, color: '#334155' }];
-    if (p.on !== 'full') notes.push({ text: 'Background does not run into the bleed — extend it to the full template size', color: '#b45309' });
-    if (this.artOpacity < 1) notes.push({ text: 'Artwork shown at 50% — the template shows through', color: '#4739d2' });
+    // legend: areas of the template, how the artwork fits
+    const st = this._templateStats();
+    const ON = { shape: 'by its outline — registered on the template', full: 'the full template size (with bleed)', visible: 'the visible area', safe: 'the safe area', fit: 'fitted into the visible area (its proportions differ from the template)',
+      front: t.logoArea ? `centred in the ${t.logoArea}` : 'centred on the Front panel, inside its safe area' };
+    const notes = [{ text: `Artwork placed ${p.on === 'shape' || p.on === 'front' ? '' : 'on '}${ON[p.on]}`, color: '#334155' }];
+    const bg = ProductTemplates.background(), bgColor = this._layoutColor();
+    if (p.on === 'front') {
+      notes.push({ text: this.layoutBg ? `Background ${bgColor.toUpperCase()} — chosen by the designer` : bg.from === 'artwork' ? `Background ${bgColor.toUpperCase()} — the artwork's own background colour, over the whole cover and bleed` : 'Background white — the artwork has no background colour (default)', color: bgColor === '#ffffff' ? '#94a3b8' : bgColor });
+    } else if (p.on === 'shape' && p.region === 'visible' && bleedBars) notes.push({ text: 'Artwork stops at the visible edge — extend the background into the bleed', color: '#b45309' });
+    else if (p.on !== 'full' && p.on !== 'shape') notes.push({ text: 'Background does not run into the bleed — extend it to the full template size', color: '#b45309' });
+    [this._templateVariantNote(t), this._templateSizeNote(t)].filter(Boolean).forEach(w => notes.push({ text: w.replace(/^⚠\s*/, ''), color: '#b45309' }));
+    if (view === 'blend') notes.push({ text: 'Artwork shown at 50% — the template shows through', color: '#4739d2' });
+    if (view === 'tpl') notes.push({ text: 'Template only — the artwork is hidden', color: '#4739d2' });
+    if (view === 'fit') notes.push(p.on === 'front'
+      ? { text: `Fit check: green box = the ${t.logoArea || 'Front panel safe area'} the artwork is centred in`, color: '#16a34a' }
+      : { text: 'Fit check: red = visible area not covered · pink = bleed not covered · amber = artwork cut off', color: '#dc2626' });
     if (this.currentRotation) notes.push({ text: 'Preview turned — order unchanged', color: '#b45309' });
+    const cards = web ? [
+      bleedBars
+        ? { key: 'bleed', title: 'Bleed (red)', value: `${fmt(prod[2] - prod[0])}" × ${fmt(prod[3] - prod[1])}" with bleed`, desc: 'Red bars / band: cut off or pulled under — backgrounds must run into them.' }
+        : { key: 'bleed', title: 'Cut line (red)', value: `${fmt(prod[2] - prod[0])}" × ${fmt(prod[3] - prod[1])}" flat layout`, desc: 'The product outline — the artwork must fill it to the line.' },
+      { key: 'trim', title: 'Visible area (blue line)', value: t.stated && t.stated[0] ? `Fits a ${fmt(t.stated[0] / 12)} × ${fmt(t.stated[1] / 12)} ft table (${fmt(t.stated[0])}" × ${fmt(t.stated[1])}")` : `${fmt(vis[2] - vis[0])}" × ${fmt(vis[3] - vis[1])}" outline`, desc: 'What shows on the finished product.' },
+      { key: 'safe', title: 'Safe area (green dashed)', value: t.safeNote || 'Lavender area of the template', desc: 'Keep all important text, logos and graphics inside this line.' },
+      { key: 'canvas', title: 'Template', value: t.name, desc: ProductTemplates.isProduction(t) ? 'BannerBuzz production standard — the layout the print file is made on.' : 'Website design template — the layout the customer designs on.' }
+    ] : [
+      { key: 'bleed', title: 'Bleed (red)', value: `${fmt(t.fullIn[0])}" × ${fmt(t.fullIn[1])}" with bleed`, desc: 'Cut off after printing — backgrounds and photos must run to here.' },
+      { key: 'trim', title: 'Visible area (blue line)', value: `${fmt(vis[2] - vis[0])}" × ${fmt(vis[3] - vis[1])}"`, desc: 'What shows on the finished product.' },
+      { key: 'safe', title: 'Safe area (green dashed)', value: `${fmt(safe[2] - safe[0])}" × ${fmt(safe[3] - safe[1])}"`, desc: 'Keep all important text, logos and graphics inside this line.' },
+      { key: 'canvas', title: 'Template', value: t.name, desc: t.path || t.product }
+    ];
+    if (st && st.on === 'front') {
+      cards.push({ key: 'layout', color: bgColor, title: `Layout · ${ProductTemplates.logoArea(t)}`, value: `Artwork ${fmt(p.w)}" × ${fmt(p.h)}" centred in the ${t.logoArea ? 'safe area' : 'Front'}`,
+        desc: `Background ${bgColor.toUpperCase()} fills the product and bleed${this.layoutBg ? ' (designer)' : bg.from === 'artwork' ? ' (from the artwork)' : ' (default white)'}.` });
+    } else if (st) {
+      const bad = st.cover < 0.985 || st.spill > 0.01 || (st.score != null && st.score < 0.8);
+      const parts = [`${pc(st.spill)} of the artwork outside the product`];
+      if (bleedBars || !web) parts.push(`bleed ${pc(st.bleed)} covered`);
+      cards.push({ key: 'fit', title: st.score != null ? `Artwork fit · outline ${Math.round(st.score * 100)}%` : 'Artwork fit',
+        value: `${pc(st.cover)} of the visible area covered`, desc: parts.join(' · '), warn: bad });
+    }
     this.legend = {
-      title: 'QNAP Product Template', product: t.product, source: 'QNAP', words: t.src,
-      cards: [
-        { key: 'bleed', title: 'Bleed (red)', value: `${fmt(t.fullIn[0])}" × ${fmt(t.fullIn[1])}" with bleed`, desc: 'Cut off after printing — backgrounds and photos must run to here.' },
-        { key: 'trim', title: 'Visible area (white)', value: `${fmt(vis[2] - vis[0])}" × ${fmt(vis[3] - vis[1])}"`, desc: 'What shows on the finished product.' },
-        { key: 'safe', title: 'Safe area (lavender)', value: `${fmt(safe[2] - safe[0])}" × ${fmt(safe[3] - safe[1])}"`, desc: 'Keep all important text, logos and graphics inside this line.' },
-        { key: 'canvas', title: 'Template', value: t.name, desc: t.path || t.product }
-      ],
-      notes,
-      tip: 'Use ◐ Artwork 50% to see the template through the artwork; the Safe Area check measures text and logos against this template.'
+      title: ProductTemplates.kindName(t).replace(/\b\w/g, ch => ch.toUpperCase()), product: t.product,
+      source: ProductTemplates.isProduction(t) ? 'Production' : web ? 'Website' : 'QNAP', words: ProductTemplates.isProduction(t) ? t.path : t.src,
+      cards, notes,
+      tip: 'Switch the view: ◐ 50% shows the template through the artwork, Template shows it alone, Fit check marks gaps and cut-off areas. The Safe Area check measures text and logos against this template.'
     };
   },
 

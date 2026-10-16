@@ -1,0 +1,44 @@
+ok (cut line on the page)                                    Custom Flags\Backpack Flags\Backpack Flags - Teardrop_(Double Side).psdt
+ok (cut line on the page)                                    Custom Flags\Car Flag\car_flags_18x12_in_double_sided.psdt
+ok (cut line on the page)                                    Custom Flags\Car Flag\car_flags_18x12_in_single_sided.psdt
+ok (cut line on the page)                                    Custom Flags\Clip Flag\Clip Rectangle Flag Double Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Clip Flag\Clip Rectangle Flag Single Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Clip Flag\Clip Teardrop Flag Double Sided.psdt
+ok (template outline)                                        Custom Flags\Desk Flags\Desktop Blade Flag SF.psdt
+ok (cut line on the page)                                    Custom Flags\Desk Flags\Desktop Teardrop Flag DF.psdt
+ok (cut line on the page)                                    Custom Flags\Garden Flag\Garden Flag 12 x 18 Dual Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Garden Flag\Garden Flag 12 x 18 Single Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Giant Flag Pole\Giant Flag Pole 2.63 x 10.17 Ft_Double Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Giant Flag Pole\Giant Flag Pole 2.63 x 10.17 Ft_Single Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Giant Flag Pole\Giant Flag Pole 3.58 x 13 Ft_Double Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Giant Flag Pole\Giant Flag Pole 3.58 x 13 Ft_Single Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Giant Flag Pole\Giant Flag Pole 4.67 x 18.67 Ft_Double Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Giant Flag Pole\Giant Flag Pole 4.67 x 18.67 Ft_Single Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Golf Flag\Tube- Rectangle\Golf Flag With Tube Double Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Golf Flag\Tube- Rectangle\Golf Flag With Tube Single Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Hand Flag\12 x 8 Hand Flag.psdt
+ok (cut line on the page)                                    Custom Flags\Hand Flag\18 x 12 Hand Flag.psdt
+ok (cut line on the page)                                    Custom Flags\Hand Flag\36 x 24 Hand Flag.psdt
+ok (cut line on the page)                                    Custom Flags\Hand Flag\6 x 4 Hand Flag.psdt
+ok (cut line on the page)                                    Custom Flags\L FLAG\L-Flag 27.5 x 87 Inch_Double Side.psdt
+ok (cut line on the page)                                    Custom Flags\L FLAG\L-Flag 27.5 x 87 Inch_Single Side.psdt
+ok (cut line on the page)                                    Custom Flags\L FLAG\L-Flag 27.5 x128 Inch_Double Side.psdt
+ok (cut line on the page)                                    Custom Flags\L FLAG\L-Flag 27.5 x128 Inch_Single Side.psdt
+ok (cut line on the page)                                    Custom Flags\L FLAG\L-Flag 32.5 x 167 Inch_Double Side.psdt
+ok (cut line on the page)                                    Custom Flags\L FLAG\L-Flag 32.5 x 167 Inch_Single Side.psdt
+ok (cut line on the page)                                    Custom Flags\Sail Flag\1.5 x 5.5 Ft_Double Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Sail Flag\1.5 x 5.5 Ft_Single Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Sail Flag\2 x 11.5 Ft_Double sided.psdt
+ok (cut line on the page)                                    Custom Flags\Sail Flag\2 x 11.5 Ft_Single sided.psdt
+ok (cut line on the page)                                    Custom Flags\Sail Flag\2 x 7.58 Ft_Double Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Sail Flag\2 x 7.58 Ft_Single Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Sail Flag\2 x 9.5 Ft_Double Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Sail Flag\2 x 9.5 Ft_Single Sided.psdt
+ok (cut line on the page)                                    Custom Flags\Sail Flag\2.5 x 15.5 Ft_Double SIded.psdt
+ok (cut line on the page)                                    Custom Flags\Sail Flag\2.5 x 15.5 Ft_Single SIded.psdt
+ok (cut line on the page)                                    Custom Flags\Suction Cup Banner\Suction Cup Rectangle Flag Template DF.psdt
+ok (cut line on the page)                                    Custom Flags\Suction Cup Banner\Suction Cup Rectangle Flag Template SF.psdt
+ok (cut line on the page)                                    Custom Flags\Suction Cup Banner\Suction Cup Teardrop Flag Template DF.psdt
+ok (template outline)                                        Custom Flags\Teardrop Flags\2 x 5 Ft_Teardrop Flags_Double Sided.psdt
+ok (template outline)                                        Custom Flags\Teardrop Flags\2.5 x 5.5 Ft_Teardrop Flags_Double Sided.psdt
+ok (template outline)                                        Custom Flags\Teardrop Flags\3 x 7.75 Ft_Teardrop Flags_Double Sided.psdt

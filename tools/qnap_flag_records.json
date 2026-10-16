@@ -1,0 +1,6753 @@
+[
+{
+"group": "Custom Flags",
+"product": "Backpack Flags",
+"path": "Backpack Flags",
+"name": "Backpack Flags - Blade_(Double Side)",
+"panel": "Backpack Flags Blade Double Side",
+"sides": "double",
+"stated": null,
+"id": "backpack-flags-blade-double-side-586e48",
+"src": "Custom Flags\\Backpack Flags\\Backpack Flags - Blade_(Double Side).psdt",
+"img": "assets/qnap/backpack-flags-blade-double-side-586e48.jpg",
+"mask": "assets/qnap/backpack-flags-blade-double-side-586e48.m.png",
+"outline": "assets/qnap/backpack-flags-blade-double-side-586e48.o.json",
+"fullIn": [
+41.88,
+49.03
+],
+"visIn": [
+1.001,
+1.062,
+40.879,
+48.031
+],
+"safeIn": [
+1.491,
+1.634,
+40.368,
+47.52
+],
+"prodIn": [
+0.49,
+0.49,
+41.369,
+48.521
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.072
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Backpack Flags",
+"path": "Backpack Flags",
+"name": "Backpack Flags - Blade_(Single Side)",
+"panel": "Backpack Flags Blade Single Side",
+"sides": "single",
+"stated": null,
+"id": "backpack-flags-blade-single-side-d03a08",
+"src": "Custom Flags\\Backpack Flags\\Backpack Flags - Blade_(Single Side).psdt",
+"img": "assets/qnap/backpack-flags-blade-single-side-d03a08.jpg",
+"mask": "assets/qnap/backpack-flags-blade-single-side-d03a08.m.png",
+"outline": "assets/qnap/backpack-flags-blade-single-side-d03a08.o.json",
+"fullIn": [
+21.09,
+49.02
+],
+"visIn": [
+1.001,
+1.062,
+20.087,
+48.023
+],
+"safeIn": [
+1.492,
+1.655,
+19.576,
+47.512
+],
+"prodIn": [
+0.49,
+0.49,
+20.577,
+48.513
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.072
+},
+"layersFrom": "clipping mask layer",
+"front": [
+6.008,
+8.906,
+19.576,
+47.512
+],
+"frontSafe": [
+6.008,
+8.906,
+19.576,
+47.512
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Backpack Flags",
+"path": "Backpack Flags",
+"name": "Backpack Flags - Rectangle_(Double Side)",
+"panel": "Backpack Flags Rectangle Double Side",
+"sides": "double",
+"stated": null,
+"id": "backpack-flags-rectangle-double-side-2b870b",
+"src": "Custom Flags\\Backpack Flags\\Backpack Flags - Rectangle_(Double Side).psdt",
+"img": "assets/qnap/backpack-flags-rectangle-double-side-2b870b.jpg",
+"mask": "assets/qnap/backpack-flags-rectangle-double-side-2b870b.m.png",
+"outline": "assets/qnap/backpack-flags-rectangle-double-side-2b870b.o.json",
+"fullIn": [
+35.41,
+32.5
+],
+"visIn": [
+0.988,
+0.988,
+34.405,
+31.493
+],
+"safeIn": [
+1.49,
+1.49,
+33.903,
+30.991
+],
+"prodIn": [
+0.502,
+0.502,
+34.906,
+31.994
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.089
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Backpack Flags",
+"path": "Backpack Flags",
+"name": "Backpack Flags - Rectangle_(Single Side)",
+"panel": "Backpack Flags Rectangle Single Side",
+"sides": "single",
+"stated": null,
+"id": "backpack-flags-rectangle-single-side-796a6e",
+"src": "Custom Flags\\Backpack Flags\\Backpack Flags - Rectangle_(Single Side).psdt",
+"img": "assets/qnap/backpack-flags-rectangle-single-side-796a6e.jpg",
+"mask": "assets/qnap/backpack-flags-rectangle-single-side-796a6e.m.png",
+"outline": "assets/qnap/backpack-flags-rectangle-single-side-796a6e.o.json",
+"fullIn": [
+17.74,
+32.5
+],
+"visIn": [
+0.988,
+0.988,
+16.734,
+31.494
+],
+"safeIn": [
+1.489,
+1.489,
+16.233,
+30.993
+],
+"prodIn": [
+0.501,
+0.501,
+17.235,
+31.995
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.089
+},
+"layersFrom": "clipping mask layer",
+"front": [
+1.503,
+1.489,
+16.206,
+30.993
+],
+"frontSafe": [
+1.503,
+1.489,
+16.206,
+30.993
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Backpack Flags",
+"path": "Backpack Flags",
+"name": "Backpack Flags - Teardrop_(Double Side)",
+"panel": "Backpack Flags Teardrop Double Side",
+"sides": "double",
+"stated": null,
+"id": "backpack-flags-teardrop-double-side-44552d",
+"src": "Custom Flags\\Backpack Flags\\Backpack Flags - Teardrop_(Double Side).psdt",
+"img": "assets/qnap/backpack-flags-teardrop-double-side-44552d.jpg",
+"mask": "assets/qnap/backpack-flags-teardrop-double-side-44552d.m.png",
+"outline": "assets/qnap/backpack-flags-teardrop-double-side-44552d.o.json",
+"fullIn": [
+20.5,
+50.82
+],
+"visIn": [
+0.508,
+0.508,
+19.932,
+49.808
+],
+"safeIn": [
+1.017,
+1.016,
+19.487,
+49.808
+],
+"prodIn": [
+0.0,
+0.0,
+20.504,
+50.824
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.113
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Backpack Flags",
+"path": "Backpack Flags",
+"name": "Backpack Flags - Teardrop_(Single Side)",
+"panel": "Backpack Flags Teardrop Single Side",
+"sides": "single",
+"stated": null,
+"id": "backpack-flags-teardrop-single-side-6bfb12",
+"src": "Custom Flags\\Backpack Flags\\Backpack Flags - Teardrop_(Single Side).psdt",
+"img": "assets/qnap/backpack-flags-teardrop-single-side-6bfb12.jpg",
+"mask": "assets/qnap/backpack-flags-teardrop-single-side-6bfb12.m.png",
+"outline": "assets/qnap/backpack-flags-teardrop-single-side-6bfb12.o.json",
+"fullIn": [
+21.47,
+41.56
+],
+"visIn": [
+1.004,
+0.987,
+20.416,
+39.084
+],
+"safeIn": [
+1.507,
+1.489,
+19.879,
+37.594
+],
+"prodIn": [
+0.502,
+0.502,
+20.97,
+41.04
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.108
+},
+"layersFrom": "clipping mask layer",
+"front": [
+5.455,
+4.641,
+14.182,
+17.611
+],
+"frontSafe": [
+5.455,
+4.641,
+14.182,
+17.611
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Backpack Flags",
+"path": "Backpack Flags",
+"name": "Backpack Flags - U Shape_(Double Side)",
+"panel": "Backpack Flags U Shape Double Side",
+"sides": "double",
+"stated": null,
+"id": "backpack-flags-u-shape-double-side-d0e63b",
+"src": "Custom Flags\\Backpack Flags\\Backpack Flags - U Shape_(Double Side).psdt",
+"img": "assets/qnap/backpack-flags-u-shape-double-side-d0e63b.jpg",
+"mask": "assets/qnap/backpack-flags-u-shape-double-side-d0e63b.m.png",
+"outline": "assets/qnap/backpack-flags-u-shape-double-side-d0e63b.o.json",
+"fullIn": [
+41.46,
+42.46
+],
+"visIn": [
+0.991,
+0.991,
+40.455,
+40.518
+],
+"safeIn": [
+1.504,
+1.504,
+39.96,
+39.403
+],
+"prodIn": [
+0.496,
+0.495,
+40.968,
+41.951
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.081
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Backpack Flags",
+"path": "Backpack Flags",
+"name": "Backpack Flags - U Shape_(Single Side)",
+"panel": "Backpack Flags U Shape Single Side",
+"sides": "single",
+"stated": null,
+"id": "backpack-flags-u-shape-single-side-236293",
+"src": "Custom Flags\\Backpack Flags\\Backpack Flags - U Shape_(Single Side).psdt",
+"img": "assets/qnap/backpack-flags-u-shape-single-side-236293.jpg",
+"mask": "assets/qnap/backpack-flags-u-shape-single-side-236293.m.png",
+"outline": "assets/qnap/backpack-flags-u-shape-single-side-236293.o.json",
+"fullIn": [
+20.89,
+42.46
+],
+"visIn": [
+0.99,
+0.991,
+19.88,
+40.518
+],
+"safeIn": [
+1.503,
+1.504,
+19.385,
+39.403
+],
+"prodIn": [
+0.495,
+0.495,
+20.375,
+41.951
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.081
+},
+"layersFrom": "clipping mask layer",
+"front": [
+4.015,
+5.45,
+15.016,
+32.839
+],
+"frontSafe": [
+4.015,
+5.45,
+15.016,
+32.839
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Blade Flags",
+"path": "Blade Flags",
+"name": "Blade Flag 1.5 x 5.5 Ft (18 x 66 In) Double Sided",
+"panel": "Blade Flag Double Sided",
+"sides": "double",
+"stated": [
+18.0,
+66.0,
+"ft"
+],
+"id": "blade-flag-1-5-x-5-5-ft-18-x-66-in-d-e06b1e",
+"src": "Custom Flags\\Blade Flags\\Blade Flag 1.5 x 5.5 Ft (18 x 66 In) Double Sided.psdt",
+"img": "assets/qnap/blade-flag-1-5-x-5-5-ft-18-x-66-in-d-e06b1e.jpg",
+"mask": "assets/qnap/blade-flag-1-5-x-5-5-ft-18-x-66-in-d-e06b1e.m.png",
+"outline": "assets/qnap/blade-flag-1-5-x-5-5-ft-18-x-66-in-d-e06b1e.o.json",
+"fullIn": [
+44.0,
+70.0
+],
+"visIn": [
+1.691,
+1.808,
+42.309,
+67.783
+],
+"safeIn": [
+2.187,
+2.304,
+41.813,
+67.025
+],
+"prodIn": [
+0.7,
+0.788,
+43.3,
+69.504
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.128
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Blade Flags",
+"path": "Blade Flags",
+"name": "Blade Flag 1.5 x 5.5 Ft (18 x 66 In) Single Sided",
+"panel": "Blade Flag Single Sided",
+"sides": "single",
+"stated": [
+18.0,
+66.0,
+"ft"
+],
+"id": "blade-flag-1-5-x-5-5-ft-18-x-66-in-s-a5a85c",
+"src": "Custom Flags\\Blade Flags\\Blade Flag 1.5 x 5.5 Ft (18 x 66 In) Single Sided.psdt",
+"img": "assets/qnap/blade-flag-1-5-x-5-5-ft-18-x-66-in-s-a5a85c.jpg",
+"mask": "assets/qnap/blade-flag-1-5-x-5-5-ft-18-x-66-in-s-a5a85c.m.png",
+"outline": "assets/qnap/blade-flag-1-5-x-5-5-ft-18-x-66-in-s-a5a85c.o.json",
+"fullIn": [
+22.0,
+70.0
+],
+"visIn": [
+1.692,
+1.808,
+20.308,
+67.783
+],
+"safeIn": [
+2.188,
+2.304,
+19.812,
+67.025
+],
+"prodIn": [
+0.7,
+0.788,
+21.329,
+69.504
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.129
+},
+"layersFrom": "clipping mask layer",
+"front": [
+6.594,
+8.05,
+15.406,
+60.113
+],
+"frontSafe": [
+6.594,
+8.05,
+15.406,
+60.113
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Blade Flags",
+"path": "Blade Flags",
+"name": "Blade Flag 2 x 11.5 Ft (24 x 138 In) Double sided",
+"panel": "Blade Flag Double sided",
+"sides": "double",
+"stated": [
+24.0,
+138.0,
+"ft"
+],
+"id": "blade-flag-2-x-11-5-ft-24-x-138-in-d-655722",
+"src": "Custom Flags\\Blade Flags\\Blade Flag 2 x 11.5 Ft (24 x 138 In) Double sided.psdt",
+"img": "assets/qnap/blade-flag-2-x-11-5-ft-24-x-138-in-d-655722.jpg",
+"mask": "assets/qnap/blade-flag-2-x-11-5-ft-24-x-138-in-d-655722.m.png",
+"outline": "assets/qnap/blade-flag-2-x-11-5-ft-24-x-138-in-d-655722.o.json",
+"fullIn": [
+60.01,
+141.01
+],
+"visIn": [
+1.528,
+1.41,
+58.486,
+139.251
+],
+"safeIn": [
+1.999,
+1.88,
+58.015,
+138.664
+],
+"prodIn": [
+0.529,
+0.411,
+59.544,
+140.896
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.086
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Blade Flags",
+"path": "Blade Flags",
+"name": "Blade Flag 2 x 11.5 Ft (24 x 138 In) Single sided",
+"panel": "Blade Flag Single sided",
+"sides": "single",
+"stated": [
+24.0,
+138.0,
+"ft"
+],
+"id": "blade-flag-2-x-11-5-ft-24-x-138-in-s-2efbcc",
+"src": "Custom Flags\\Blade Flags\\Blade Flag 2 x 11.5 Ft (24 x 138 In) Single sided.psdt",
+"img": "assets/qnap/blade-flag-2-x-11-5-ft-24-x-138-in-s-2efbcc.jpg",
+"mask": "assets/qnap/blade-flag-2-x-11-5-ft-24-x-138-in-s-2efbcc.m.png",
+"outline": "assets/qnap/blade-flag-2-x-11-5-ft-24-x-138-in-s-2efbcc.o.json",
+"fullIn": [
+30.0,
+141.0
+],
+"visIn": [
+1.526,
+1.41,
+28.474,
+139.238
+],
+"safeIn": [
+1.996,
+1.88,
+28.004,
+138.65
+],
+"prodIn": [
+0.528,
+0.352,
+29.53,
+140.824
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.087
+},
+"layersFrom": "clipping mask layer",
+"front": [
+8.395,
+15.51,
+21.546,
+131.424
+],
+"frontSafe": [
+8.395,
+15.51,
+21.546,
+131.424
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Blade Flags",
+"path": "Blade Flags",
+"name": "Blade Flag 2 x 7.5 Ft (24 x 90 In) Double Sided",
+"panel": "Blade Flag Double Sided",
+"sides": "double",
+"stated": [
+24.0,
+90.0,
+"ft"
+],
+"id": "blade-flag-2-x-7-5-ft-24-x-90-in-dou-1a9ff3",
+"src": "Custom Flags\\Blade Flags\\Blade Flag 2 x 7.5 Ft (24 x 90 In) Double Sided.psdt",
+"img": "assets/qnap/blade-flag-2-x-7-5-ft-24-x-90-in-dou-1a9ff3.jpg",
+"mask": "assets/qnap/blade-flag-2-x-7-5-ft-24-x-90-in-dou-1a9ff3.m.png",
+"outline": "assets/qnap/blade-flag-2-x-7-5-ft-24-x-90-in-dou-1a9ff3.o.json",
+"fullIn": [
+54.0,
+95.0
+],
+"visIn": [
+1.742,
+1.781,
+52.258,
+92.704
+],
+"safeIn": [
+2.217,
+2.296,
+51.783,
+92.031
+],
+"prodIn": [
+0.713,
+0.712,
+53.248,
+94.288
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.102
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Blade Flags",
+"path": "Blade Flags",
+"name": "Blade Flag 2 x 7.5 Ft (24 x 90 In) Single Sided",
+"panel": "Blade Flag Single Sided",
+"sides": "single",
+"stated": [
+24.0,
+90.0,
+"ft"
+],
+"id": "blade-flag-2-x-7-5-ft-24-x-90-in-sin-f10cd0",
+"src": "Custom Flags\\Blade Flags\\Blade Flag 2 x 7.5 Ft (24 x 90 In) Single Sided.psdt",
+"img": "assets/qnap/blade-flag-2-x-7-5-ft-24-x-90-in-sin-f10cd0.jpg",
+"mask": "assets/qnap/blade-flag-2-x-7-5-ft-24-x-90-in-sin-f10cd0.m.png",
+"outline": "assets/qnap/blade-flag-2-x-7-5-ft-24-x-90-in-sin-f10cd0.o.json",
+"fullIn": [
+27.0,
+95.0
+],
+"visIn": [
+1.742,
+1.781,
+25.258,
+92.704
+],
+"safeIn": [
+2.217,
+2.296,
+24.783,
+92.031
+],
+"prodIn": [
+0.713,
+0.712,
+26.248,
+94.288
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.102
+},
+"layersFrom": "clipping mask layer",
+"front": [
+7.799,
+11.242,
+19.161,
+85.065
+],
+"frontSafe": [
+7.799,
+11.242,
+19.161,
+85.065
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Blade Flags",
+"path": "Blade Flags",
+"name": "Blade Flag 2 x 9.5 Ft (24 x 114 In) Double Sided",
+"panel": "Blade Flag Double Sided",
+"sides": "double",
+"stated": [
+24.0,
+114.0,
+"ft"
+],
+"id": "blade-flag-2-x-9-5-ft-24-x-114-in-do-12c20d",
+"src": "Custom Flags\\Blade Flags\\Blade Flag 2 x 9.5 Ft (24 x 114 In) Double Sided.psdt",
+"img": "assets/qnap/blade-flag-2-x-9-5-ft-24-x-114-in-do-12c20d.jpg",
+"mask": "assets/qnap/blade-flag-2-x-9-5-ft-24-x-114-in-do-12c20d.m.png",
+"outline": "assets/qnap/blade-flag-2-x-9-5-ft-24-x-114-in-do-12c20d.o.json",
+"fullIn": [
+54.0,
+119.0
+],
+"visIn": [
+1.488,
+1.735,
+52.512,
+116.62
+],
+"safeIn": [
+1.983,
+2.281,
+52.017,
+115.975
+],
+"prodIn": [
+0.496,
+0.744,
+53.504,
+118.256
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.096
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Blade Flags",
+"path": "Blade Flags",
+"name": "Blade Flag 2 x 9.5 Ft (24 x 114 In) Single Sided",
+"panel": "Blade Flag Single Sided",
+"sides": "single",
+"stated": [
+24.0,
+114.0,
+"ft"
+],
+"id": "blade-flag-2-x-9-5-ft-24-x-114-in-si-236a65",
+"src": "Custom Flags\\Blade Flags\\Blade Flag 2 x 9.5 Ft (24 x 114 In) Single Sided.psdt",
+"img": "assets/qnap/blade-flag-2-x-9-5-ft-24-x-114-in-si-236a65.jpg",
+"mask": "assets/qnap/blade-flag-2-x-9-5-ft-24-x-114-in-si-236a65.m.png",
+"outline": "assets/qnap/blade-flag-2-x-9-5-ft-24-x-114-in-si-236a65.o.json",
+"fullIn": [
+27.0,
+119.0
+],
+"visIn": [
+1.486,
+1.735,
+25.514,
+116.62
+],
+"safeIn": [
+1.982,
+2.281,
+25.018,
+115.975
+],
+"prodIn": [
+0.495,
+0.744,
+26.455,
+118.256
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.094
+},
+"layersFrom": "clipping mask layer",
+"front": [
+7.629,
+15.024,
+19.272,
+108.786
+],
+"frontSafe": [
+7.629,
+15.024,
+19.272,
+108.786
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Blade Flags",
+"path": "Blade Flags",
+"name": "Blade Flag 2.50 x 15.5 Ft (30 x 186) Double Sided",
+"panel": "Blade Flag Double Sided",
+"sides": "double",
+"stated": [
+30.0,
+186.0,
+"ft"
+],
+"id": "blade-flag-2-50-x-15-5-ft-30-x-186-d-f4045f",
+"src": "Custom Flags\\Blade Flags\\Blade Flag 2.50 x 15.5 Ft (30 x 186) Double Sided.psdt",
+"img": "assets/qnap/blade-flag-2-50-x-15-5-ft-30-x-186-d-f4045f.jpg",
+"mask": "assets/qnap/blade-flag-2-50-x-15-5-ft-30-x-186-d-f4045f.m.png",
+"outline": "assets/qnap/blade-flag-2-50-x-15-5-ft-30-x-186-d-f4045f.o.json",
+"fullIn": [
+66.0,
+188.0
+],
+"visIn": [
+1.488,
+1.332,
+64.512,
+186.198
+],
+"safeIn": [
+1.957,
+1.802,
+64.043,
+185.572
+],
+"prodIn": [
+0.47,
+0.313,
+65.452,
+187.765
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.074
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Blade Flags",
+"path": "Blade Flags",
+"name": "Blade Flag 2.50 x 15.5 Ft (30 x 186) Single Sided",
+"panel": "Blade Flag Single Sided",
+"sides": "single",
+"stated": [
+30.0,
+186.0,
+"ft"
+],
+"id": "blade-flag-2-50-x-15-5-ft-30-x-186-s-7951d0",
+"src": "Custom Flags\\Blade Flags\\Blade Flag 2.50 x 15.5 Ft (30 x 186) Single Sided.psdt",
+"img": "assets/qnap/blade-flag-2-50-x-15-5-ft-30-x-186-s-7951d0.jpg",
+"mask": "assets/qnap/blade-flag-2-50-x-15-5-ft-30-x-186-s-7951d0.m.png",
+"outline": "assets/qnap/blade-flag-2-50-x-15-5-ft-30-x-186-s-7951d0.o.json",
+"fullIn": [
+33.0,
+188.0
+],
+"visIn": [
+1.489,
+1.332,
+31.511,
+186.12
+],
+"safeIn": [
+1.96,
+1.802,
+31.04,
+185.572
+],
+"prodIn": [
+0.47,
+0.313,
+32.53,
+187.765
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.077
+},
+"layersFrom": "clipping mask layer",
+"front": [
+9.093,
+22.638,
+23.829,
+178.365
+],
+"frontSafe": [
+9.093,
+22.638,
+23.829,
+178.365
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Body Flag",
+"path": "Body Flag",
+"name": "Body Flag_3 x 2 Ft",
+"panel": "Body Flag",
+"sides": "",
+"stated": [
+36.0,
+24.0,
+"ft"
+],
+"id": "body-flag-3-x-2-ft-10bf92",
+"src": "Custom Flags\\Body Flag\\Body Flag_3 x 2 Ft.psdt",
+"img": "assets/qnap/body-flag-3-x-2-ft-10bf92.jpg",
+"mask": "assets/qnap/body-flag-3-x-2-ft-10bf92.m.png",
+"outline": "assets/qnap/body-flag-3-x-2-ft-10bf92.o.json",
+"fullIn": [
+36.52,
+32.06
+],
+"visIn": [
+0.243,
+0.243,
+36.246,
+31.821
+],
+"safeIn": [
+0.715,
+0.715,
+35.774,
+31.029
+],
+"prodIn": [
+0.243,
+0.243,
+36.246,
+31.821
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.004
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Body Flag",
+"path": "Body Flag",
+"name": "Body Flag_5 x 3 Ft",
+"panel": "Body Flag",
+"sides": "",
+"stated": [
+60.0,
+36.0,
+"ft"
+],
+"id": "body-flag-5-x-3-ft-bfea9e",
+"src": "Custom Flags\\Body Flag\\Body Flag_5 x 3 Ft.psdt",
+"img": "assets/qnap/body-flag-5-x-3-ft-bfea9e.jpg",
+"mask": "assets/qnap/body-flag-5-x-3-ft-bfea9e.m.png",
+"outline": "assets/qnap/body-flag-5-x-3-ft-bfea9e.o.json",
+"fullIn": [
+60.52,
+49.1
+],
+"visIn": [
+0.252,
+0.252,
+60.268,
+48.852
+],
+"safeIn": [
+1.034,
+1.034,
+59.461,
+48.07
+],
+"prodIn": [
+0.252,
+0.252,
+60.268,
+48.852
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.004
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Burgee Flags",
+"path": "Burgee Flags",
+"name": "Burgee Flags_1.5x1 Ft_Double Fold",
+"panel": "Burgee Flags Double Fold",
+"sides": "double",
+"stated": [
+18.0,
+12.0,
+"ft"
+],
+"id": "burgee-flags-1-5x1-ft-double-fold-f7b017",
+"src": "Custom Flags\\Burgee Flags\\Burgee Flags_1.5x1 Ft_Double Fold.psdt",
+"img": "assets/qnap/burgee-flags-1-5x1-ft-double-fold-f7b017.jpg",
+"mask": "assets/qnap/burgee-flags-1-5x1-ft-double-fold-f7b017.m.png",
+"outline": "assets/qnap/burgee-flags-1-5x1-ft-double-fold-f7b017.o.json",
+"fullIn": [
+40.57,
+13.3
+],
+"visIn": [
+0.507,
+0.676,
+40.061,
+12.628
+],
+"safeIn": [
+1.014,
+1.319,
+39.554,
+11.985
+],
+"prodIn": [
+0.0,
+0.0,
+40.568,
+13.304
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.195
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Burgee Flags",
+"path": "Burgee Flags",
+"name": "Burgee Flags_1.5x1 Ft_Single Fold",
+"panel": "Burgee Flags Single Fold",
+"sides": "single",
+"stated": [
+18.0,
+12.0,
+"ft"
+],
+"id": "burgee-flags-1-5x1-ft-single-fold-797a43",
+"src": "Custom Flags\\Burgee Flags\\Burgee Flags_1.5x1 Ft_Single Fold.psdt",
+"img": "assets/qnap/burgee-flags-1-5x1-ft-single-fold-797a43.jpg",
+"mask": "assets/qnap/burgee-flags-1-5x1-ft-single-fold-797a43.m.png",
+"outline": "assets/qnap/burgee-flags-1-5x1-ft-single-fold-797a43.o.json",
+"fullIn": [
+20.3,
+13.3
+],
+"visIn": [
+0.499,
+0.66,
+18.393,
+12.644
+],
+"safeIn": [
+1.015,
+1.302,
+16.702,
+12.002
+],
+"prodIn": [
+0.0,
+0.0,
+20.288,
+13.304
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.193
+},
+"layersFrom": "clipping mask layer",
+"front": [
+1.015,
+4.347,
+12.786,
+8.948
+],
+"frontSafe": [
+1.015,
+4.347,
+12.786,
+8.948
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Burgee Flags",
+"path": "Burgee Flags",
+"name": "Burgee Flags_10x6 Ft_Double Fold",
+"panel": "Burgee Flags Double Fold",
+"sides": "double",
+"stated": [
+120.0,
+72.0,
+"ft"
+],
+"id": "burgee-flags-10x6-ft-double-fold-ac4430",
+"src": "Custom Flags\\Burgee Flags\\Burgee Flags_10x6 Ft_Double Fold.psdt",
+"img": "assets/qnap/burgee-flags-10x6-ft-double-fold-ac4430.jpg",
+"mask": "assets/qnap/burgee-flags-10x6-ft-double-fold-ac4430.m.png",
+"outline": "assets/qnap/burgee-flags-10x6-ft-double-fold-ac4430.o.json",
+"fullIn": [
+244.93,
+73.25
+],
+"visIn": [
+0.918,
+1.326,
+244.012,
+71.924
+],
+"safeIn": [
+3.878,
+4.897,
+241.052,
+68.251
+],
+"prodIn": [
+0.0,
+0.0,
+244.931,
+73.25
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.072
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Burgee Flags",
+"path": "Burgee Flags",
+"name": "Burgee Flags_10x6 Ft_Single Fold",
+"panel": "Burgee Flags Single Fold",
+"sides": "single",
+"stated": [
+120.0,
+72.0,
+"ft"
+],
+"id": "burgee-flags-10x6-ft-single-fold-fe96e8",
+"src": "Custom Flags\\Burgee Flags\\Burgee Flags_10x6 Ft_Single Fold.psdt",
+"img": "assets/qnap/burgee-flags-10x6-ft-single-fold-fe96e8.jpg",
+"mask": "assets/qnap/burgee-flags-10x6-ft-single-fold-fe96e8.m.png",
+"outline": "assets/qnap/burgee-flags-10x6-ft-single-fold-fe96e8.o.json",
+"fullIn": [
+122.46,
+73.25
+],
+"visIn": [
+0.459,
+0.663,
+119.703,
+72.587
+],
+"safeIn": [
+0.51,
+0.714,
+119.448,
+72.536
+],
+"prodIn": [
+0.0,
+0.0,
+122.407,
+73.25
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.034
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Burgee Flags",
+"path": "Burgee Flags",
+"name": "Burgee Flags_3x2 Ft_Double Fold",
+"panel": "Burgee Flags Double Fold",
+"sides": "double",
+"stated": [
+36.0,
+24.0,
+"ft"
+],
+"id": "burgee-flags-3x2-ft-double-fold-9ac42b",
+"src": "Custom Flags\\Burgee Flags\\Burgee Flags_3x2 Ft_Double Fold.psdt",
+"img": "assets/qnap/burgee-flags-3x2-ft-double-fold-9ac42b.jpg",
+"mask": "assets/qnap/burgee-flags-3x2-ft-double-fold-9ac42b.m.png",
+"outline": "assets/qnap/burgee-flags-3x2-ft-double-fold-9ac42b.o.json",
+"fullIn": [
+76.39,
+25.29
+],
+"visIn": [
+0.509,
+0.701,
+75.883,
+24.587
+],
+"safeIn": [
+2.483,
+3.217,
+73.909,
+22.039
+],
+"prodIn": [
+0.0,
+0.0,
+76.392,
+25.288
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.105
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Burgee Flags",
+"path": "Burgee Flags",
+"name": "Burgee Flags_3x2 Ft_Single Fold",
+"panel": "Burgee Flags Single Fold",
+"sides": "single",
+"stated": [
+36.0,
+24.0,
+"ft"
+],
+"id": "burgee-flags-3x2-ft-single-fold-132218",
+"src": "Custom Flags\\Burgee Flags\\Burgee Flags_3x2 Ft_Single Fold.psdt",
+"img": "assets/qnap/burgee-flags-3x2-ft-single-fold-132218.jpg",
+"mask": "assets/qnap/burgee-flags-3x2-ft-single-fold-132218.m.png",
+"outline": "assets/qnap/burgee-flags-3x2-ft-single-fold-132218.o.json",
+"fullIn": [
+38.28,
+25.29
+],
+"visIn": [
+0.494,
+0.67,
+36.254,
+24.618
+],
+"safeIn": [
+2.504,
+3.223,
+29.396,
+22.049
+],
+"prodIn": [
+0.0,
+0.0,
+38.264,
+25.288
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.104
+},
+"layersFrom": "clipping mask layer",
+"front": [
+2.504,
+8.44,
+22.713,
+12.413
+],
+"frontSafe": [
+2.504,
+8.44,
+22.713,
+12.413
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Burgee Flags",
+"path": "Burgee Flags",
+"name": "Burgee Flags_5x3 Ft_Double Fold",
+"panel": "Burgee Flags Double Fold",
+"sides": "double",
+"stated": [
+60.0,
+36.0,
+"ft"
+],
+"id": "burgee-flags-5x3-ft-double-fold-1a10d4",
+"src": "Custom Flags\\Burgee Flags\\Burgee Flags_5x3 Ft_Double Fold.psdt",
+"img": "assets/qnap/burgee-flags-5x3-ft-double-fold-1a10d4.jpg",
+"mask": "assets/qnap/burgee-flags-5x3-ft-double-fold-1a10d4.m.png",
+"outline": "assets/qnap/burgee-flags-5x3-ft-double-fold-1a10d4.o.json",
+"fullIn": [
+124.89,
+37.26
+],
+"visIn": [
+0.468,
+0.677,
+124.42,
+36.587
+],
+"safeIn": [
+1.301,
+0.833,
+123.587,
+36.431
+],
+"prodIn": [
+0.0,
+0.0,
+124.888,
+37.264
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.072
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Burgee Flags",
+"path": "Burgee Flags",
+"name": "Burgee Flags_5x3 Ft_Single Fold",
+"panel": "Burgee Flags Single Fold",
+"sides": "single",
+"stated": [
+60.0,
+36.0,
+"ft"
+],
+"id": "burgee-flags-5x3-ft-single-fold-b1d13f",
+"src": "Custom Flags\\Burgee Flags\\Burgee Flags_5x3 Ft_Single Fold.psdt",
+"img": "assets/qnap/burgee-flags-5x3-ft-single-fold-b1d13f.jpg",
+"mask": "assets/qnap/burgee-flags-5x3-ft-single-fold-b1d13f.m.png",
+"outline": "assets/qnap/burgee-flags-5x3-ft-single-fold-b1d13f.o.json",
+"fullIn": [
+62.46,
+37.26
+],
+"visIn": [
+0.495,
+0.651,
+60.096,
+36.605
+],
+"safeIn": [
+0.781,
+0.703,
+59.965,
+36.527
+],
+"prodIn": [
+0.0,
+0.0,
+62.438,
+37.256
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.068
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Burgee Flags",
+"path": "Burgee Flags",
+"name": "Burgee Flags_6.5 x 5 Inch_Single Fold",
+"panel": "Burgee Flags Single Fold",
+"sides": "single",
+"stated": [
+6.5,
+5.0,
+"inch"
+],
+"id": "burgee-flags-6-5-x-5-inch-single-fol-8e00ee",
+"src": "Custom Flags\\Burgee Flags\\Burgee Flags_6.5 x 5 Inch_Single Fold.psdt",
+"img": "assets/qnap/burgee-flags-6-5-x-5-inch-single-fol-8e00ee.jpg",
+"mask": "assets/qnap/burgee-flags-6-5-x-5-inch-single-fol-8e00ee.m.png",
+"outline": "assets/qnap/burgee-flags-6-5-x-5-inch-single-fol-8e00ee.o.json",
+"fullIn": [
+9.52,
+6.01
+],
+"visIn": [
+0.5,
+0.651,
+7.641,
+5.363
+],
+"safeIn": [
+1.003,
+1.289,
+5.896,
+4.724
+],
+"prodIn": [
+0.0,
+0.0,
+9.509,
+6.013
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.397
+},
+"layersFrom": "clipping mask layer",
+"front": [
+1.003,
+2.221,
+4.679,
+2.931
+],
+"frontSafe": [
+1.003,
+2.221,
+4.679,
+2.931
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Burgee Flags",
+"path": "Burgee Flags",
+"name": "Burgee Flags_6.5x5 Ft_Double Fold",
+"panel": "Burgee Flags Double Fold",
+"sides": "double",
+"stated": [
+78.0,
+60.0,
+"ft"
+],
+"id": "burgee-flags-6-5x5-ft-double-fold-36f4b6",
+"src": "Custom Flags\\Burgee Flags\\Burgee Flags_6.5x5 Ft_Double Fold.psdt",
+"img": "assets/qnap/burgee-flags-6-5x5-ft-double-fold-36f4b6.jpg",
+"mask": "assets/qnap/burgee-flags-6-5x5-ft-double-fold-36f4b6.m.png",
+"outline": "assets/qnap/burgee-flags-6-5x5-ft-double-fold-36f4b6.o.json",
+"fullIn": [
+160.1,
+61.34
+],
+"visIn": [
+0.467,
+0.8,
+159.629,
+60.477
+],
+"safeIn": [
+3.469,
+4.667,
+156.627,
+56.61
+],
+"prodIn": [
+0.0,
+0.0,
+160.096,
+61.277
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.05
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Burgee Flags",
+"path": "Burgee Flags",
+"name": "Burgee Flags_6.5x5 Ft_Single Fold",
+"panel": "Burgee Flags Single Fold",
+"sides": "single",
+"stated": [
+78.0,
+60.0,
+"ft"
+],
+"id": "burgee-flags-6-5x5-ft-single-fold-5f5d4d",
+"src": "Custom Flags\\Burgee Flags\\Burgee Flags_6.5x5 Ft_Single Fold.psdt",
+"img": "assets/qnap/burgee-flags-6-5x5-ft-single-fold-5f5d4d.jpg",
+"mask": "assets/qnap/burgee-flags-6-5x5-ft-single-fold-5f5d4d.m.png",
+"outline": "assets/qnap/burgee-flags-6-5x5-ft-single-fold-5f5d4d.o.json",
+"fullIn": [
+80.05,
+61.34
+],
+"visIn": [
+0.5,
+0.767,
+78.047,
+60.61
+],
+"safeIn": [
+3.502,
+4.703,
+69.008,
+56.674
+],
+"prodIn": [
+0.0,
+0.033,
+80.015,
+61.344
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.046
+},
+"layersFrom": "clipping mask layer",
+"front": [
+3.502,
+19.147,
+52.665,
+30.155
+],
+"frontSafe": [
+3.502,
+19.147,
+52.665,
+30.155
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Burgee Flags",
+"path": "Burgee Flags",
+"name": "Burgee Flags_6x4 Ft_Double Fold",
+"panel": "Burgee Flags Double Fold",
+"sides": "double",
+"stated": [
+72.0,
+48.0,
+"ft"
+],
+"id": "burgee-flags-6x4-ft-double-fold-a4e971",
+"src": "Custom Flags\\Burgee Flags\\Burgee Flags_6x4 Ft_Double Fold.psdt",
+"img": "assets/qnap/burgee-flags-6x4-ft-double-fold-a4e971.jpg",
+"mask": "assets/qnap/burgee-flags-6x4-ft-double-fold-a4e971.m.png",
+"outline": "assets/qnap/burgee-flags-6x4-ft-double-fold-a4e971.o.json",
+"fullIn": [
+148.56,
+49.3
+],
+"visIn": [
+0.495,
+0.743,
+148.065,
+48.553
+],
+"safeIn": [
+2.476,
+1.177,
+146.332,
+48.181
+],
+"prodIn": [
+0.0,
+0.0,
+148.56,
+49.296
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.058
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Burgee Flags",
+"path": "Burgee Flags",
+"name": "Burgee Flags_6x4 Ft_Single Fold",
+"panel": "Burgee Flags Single Fold",
+"sides": "single",
+"stated": [
+72.0,
+48.0,
+"ft"
+],
+"id": "burgee-flags-6x4-ft-single-fold-ac05a5",
+"src": "Custom Flags\\Burgee Flags\\Burgee Flags_6x4 Ft_Single Fold.psdt",
+"img": "assets/qnap/burgee-flags-6x4-ft-single-fold-ac05a5.jpg",
+"mask": "assets/qnap/burgee-flags-6x4-ft-single-fold-ac05a5.m.png",
+"outline": "assets/qnap/burgee-flags-6x4-ft-single-fold-ac05a5.o.json",
+"fullIn": [
+74.28,
+49.29
+],
+"visIn": [
+0.495,
+0.681,
+72.114,
+48.607
+],
+"safeIn": [
+0.712,
+0.712,
+72.083,
+48.576
+],
+"prodIn": [
+0.0,
+0.0,
+74.249,
+49.288
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.053
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Burgee Flags",
+"path": "Burgee Flags",
+"name": "Burgee Flags_8x5 Ft_Double Fold",
+"panel": "Burgee Flags Double Fold",
+"sides": "double",
+"stated": [
+96.0,
+60.0,
+"ft"
+],
+"id": "burgee-flags-8x5-ft-double-fold-ac7278",
+"src": "Custom Flags\\Burgee Flags\\Burgee Flags_8x5 Ft_Double Fold.psdt",
+"img": "assets/qnap/burgee-flags-8x5-ft-double-fold-ac7278.jpg",
+"mask": "assets/qnap/burgee-flags-8x5-ft-double-fold-ac7278.m.png",
+"outline": "assets/qnap/burgee-flags-8x5-ft-double-fold-ac7278.o.json",
+"fullIn": [
+196.85,
+61.29
+],
+"visIn": [
+0.492,
+0.738,
+196.356,
+60.55
+],
+"safeIn": [
+3.527,
+4.43,
+193.321,
+56.858
+],
+"prodIn": [
+0.0,
+0.0,
+196.848,
+61.288
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.047
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Burgee Flags",
+"path": "Burgee Flags",
+"name": "Burgee Flags_8x5 Ft_Single Fold",
+"panel": "Burgee Flags Single Fold",
+"sides": "single",
+"stated": [
+96.0,
+60.0,
+"ft"
+],
+"id": "burgee-flags-8x5-ft-single-fold-17aa7c",
+"src": "Custom Flags\\Burgee Flags\\Burgee Flags_8x5 Ft_Single Fold.psdt",
+"img": "assets/qnap/burgee-flags-8x5-ft-single-fold-17aa7c.jpg",
+"mask": "assets/qnap/burgee-flags-8x5-ft-single-fold-17aa7c.m.png",
+"outline": "assets/qnap/burgee-flags-8x5-ft-single-fold-17aa7c.o.json",
+"fullIn": [
+98.42,
+61.29
+],
+"visIn": [
+0.492,
+0.697,
+95.799,
+60.591
+],
+"safeIn": [
+1.025,
+0.779,
+95.594,
+60.427
+],
+"prodIn": [
+0.0,
+0.0,
+98.383,
+61.288
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.043
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Car Flag",
+"path": "Car Flag",
+"name": "car_flags_18x12_in_double_sided",
+"panel": "car flags double sided",
+"sides": "double",
+"stated": [
+18.0,
+12.0,
+"in"
+],
+"id": "car-flags-18x12-in-double-sided-f49750",
+"src": "Custom Flags\\Car Flag\\car_flags_18x12_in_double_sided.psdt",
+"img": "assets/qnap/car-flags-18x12-in-double-sided-f49750.jpg",
+"mask": "assets/qnap/car-flags-18x12-in-double-sided-f49750.m.png",
+"outline": "assets/qnap/car-flags-18x12-in-double-sided-f49750.o.json",
+"fullIn": [
+37.0,
+13.0
+],
+"visIn": [
+0.493,
+0.493,
+36.507,
+12.507
+],
+"safeIn": [
+1.002,
+1.002,
+35.998,
+11.998
+],
+"prodIn": [
+0.0,
+0.0,
+37.0,
+13.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.101
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Car Flag",
+"path": "Car Flag",
+"name": "car_flags_18x12_in_single_sided",
+"panel": "car flags single sided",
+"sides": "single",
+"stated": [
+18.0,
+12.0,
+"in"
+],
+"id": "car-flags-18x12-in-single-sided-71b922",
+"src": "Custom Flags\\Car Flag\\car_flags_18x12_in_single_sided.psdt",
+"img": "assets/qnap/car-flags-18x12-in-single-sided-71b922.jpg",
+"mask": "assets/qnap/car-flags-18x12-in-single-sided-71b922.m.png",
+"outline": "assets/qnap/car-flags-18x12-in-single-sided-71b922.o.json",
+"fullIn": [
+21.5,
+14.0
+],
+"visIn": [
+2.499,
+1.003,
+20.493,
+12.997
+],
+"safeIn": [
+2.992,
+1.496,
+20.001,
+12.504
+],
+"prodIn": [
+0.0,
+0.0,
+21.497,
+14.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.283
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Clip Flag",
+"path": "Clip Flag",
+"name": "Clip Blade Flag Double Sided",
+"panel": "Clip Blade Flag Double Sided",
+"sides": "double",
+"stated": null,
+"id": "clip-blade-flag-double-sided-80ab22",
+"src": "Custom Flags\\Clip Flag\\Clip Blade Flag Double Sided.psdt",
+"img": "assets/qnap/clip-blade-flag-double-sided-80ab22.jpg",
+"mask": "assets/qnap/clip-blade-flag-double-sided-80ab22.m.png",
+"outline": "assets/qnap/clip-blade-flag-double-sided-80ab22.o.json",
+"fullIn": [
+24.45,
+29.21
+],
+"visIn": [
+0.998,
+0.998,
+23.45,
+27.529
+],
+"safeIn": [
+2.008,
+1.996,
+22.44,
+25.983
+],
+"prodIn": [
+0.0,
+0.0,
+24.448,
+29.208
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.157
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Clip Flag",
+"path": "Clip Flag",
+"name": "Clip Blade Flag Single Sided",
+"panel": "Clip Blade Flag Single Sided",
+"sides": "single",
+"stated": null,
+"id": "clip-blade-flag-single-sided-4bc034",
+"src": "Custom Flags\\Clip Flag\\Clip Blade Flag Single Sided.psdt",
+"img": "assets/qnap/clip-blade-flag-single-sided-4bc034.jpg",
+"mask": "assets/qnap/clip-blade-flag-single-sided-4bc034.m.png",
+"outline": "assets/qnap/clip-blade-flag-single-sided-4bc034.o.json",
+"fullIn": [
+13.22,
+29.22
+],
+"visIn": [
+0.998,
+0.998,
+12.226,
+27.536
+],
+"safeIn": [
+2.009,
+1.996,
+11.227,
+25.99
+],
+"prodIn": [
+0.0,
+0.0,
+13.224,
+29.216
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.225
+},
+"layersFrom": "clipping mask layer",
+"front": [
+4.311,
+5.77,
+8.95,
+24.237
+],
+"frontSafe": [
+4.311,
+5.77,
+8.95,
+24.237
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Clip Flag",
+"path": "Clip Flag",
+"name": "Clip Rectangle Flag Double Sided",
+"panel": "Clip Rectangle Flag Double Sided",
+"sides": "double",
+"stated": null,
+"id": "clip-rectangle-flag-double-sided-8585c0",
+"src": "Custom Flags\\Clip Flag\\Clip Rectangle Flag Double Sided.psdt",
+"img": "assets/qnap/clip-rectangle-flag-double-sided-8585c0.jpg",
+"mask": "assets/qnap/clip-rectangle-flag-double-sided-8585c0.m.png",
+"outline": "assets/qnap/clip-rectangle-flag-double-sided-8585c0.o.json",
+"fullIn": [
+19.0,
+22.0
+],
+"visIn": [
+0.495,
+0.495,
+18.505,
+21.505
+],
+"safeIn": [
+0.999,
+0.999,
+18.001,
+21.001
+],
+"prodIn": [
+0.0,
+0.0,
+19.0,
+22.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.145
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Clip Flag",
+"path": "Clip Flag",
+"name": "Clip Rectangle Flag Single Sided",
+"panel": "Clip Rectangle Flag Single Sided",
+"sides": "single",
+"stated": null,
+"id": "clip-rectangle-flag-single-sided-a77fe5",
+"src": "Custom Flags\\Clip Flag\\Clip Rectangle Flag Single Sided.psdt",
+"img": "assets/qnap/clip-rectangle-flag-single-sided-a77fe5.jpg",
+"mask": "assets/qnap/clip-rectangle-flag-single-sided-a77fe5.m.png",
+"outline": "assets/qnap/clip-rectangle-flag-single-sided-a77fe5.o.json",
+"fullIn": [
+10.0,
+22.0
+],
+"visIn": [
+0.752,
+0.752,
+9.248,
+21.248
+],
+"safeIn": [
+1.247,
+1.247,
+8.753,
+20.753
+],
+"prodIn": [
+0.0,
+0.0,
+10.0,
+22.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.208
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Clip Flag",
+"path": "Clip Flag",
+"name": "Clip Teardrop Flag Double Sided",
+"panel": "Clip Teardrop Flag Double Sided",
+"sides": "double",
+"stated": null,
+"id": "clip-teardrop-flag-double-sided-f7b4b5",
+"src": "Custom Flags\\Clip Flag\\Clip Teardrop Flag Double Sided.psdt",
+"img": "assets/qnap/clip-teardrop-flag-double-sided-f7b4b5.jpg",
+"mask": "assets/qnap/clip-teardrop-flag-double-sided-f7b4b5.m.png",
+"outline": "assets/qnap/clip-teardrop-flag-double-sided-f7b4b5.o.json",
+"fullIn": [
+14.27,
+35.58
+],
+"visIn": [
+1.008,
+1.008,
+13.16,
+34.057
+],
+"safeIn": [
+1.497,
+1.512,
+12.731,
+34.057
+],
+"prodIn": [
+0.0,
+0.015,
+14.242,
+35.569
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.315
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Clip Flag",
+"path": "Clip Flag",
+"name": "Clip Teardrop Flag Single Sided",
+"panel": "Clip Teardrop Flag Single Sided",
+"sides": "single",
+"stated": null,
+"id": "clip-teardrop-flag-single-sided-09fa55",
+"src": "Custom Flags\\Clip Flag\\Clip Teardrop Flag Single Sided.psdt",
+"img": "assets/qnap/clip-teardrop-flag-single-sided-09fa55.jpg",
+"mask": "assets/qnap/clip-teardrop-flag-single-sided-09fa55.m.png",
+"outline": "assets/qnap/clip-teardrop-flag-single-sided-09fa55.o.json",
+"fullIn": [
+14.26,
+28.38
+],
+"visIn": [
+1.053,
+0.993,
+13.211,
+24.659
+],
+"safeIn": [
+1.549,
+1.502,
+12.679,
+23.027
+],
+"prodIn": [
+0.047,
+0.0,
+14.264,
+28.372
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.304
+},
+"layersFrom": "clipping mask layer",
+"front": [
+5.24,
+2.827,
+8.362,
+11.685
+],
+"frontSafe": [
+5.24,
+2.827,
+8.362,
+11.685
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Concave Flags",
+"path": "Concave Flags",
+"name": "Concave Flag 1.94 x 6.8 Ft_Double Sided",
+"panel": "Concave Flag Double Sided",
+"sides": "double",
+"stated": [
+23.28,
+81.6,
+"ft"
+],
+"id": "concave-flag-1-94-x-6-8-ft-double-si-d4a00f",
+"src": "Custom Flags\\Concave Flags\\Concave Flag 1.94 x 6.8 Ft_Double Sided.psdt",
+"img": "assets/qnap/concave-flag-1-94-x-6-8-ft-double-si-d4a00f.jpg",
+"mask": "assets/qnap/concave-flag-1-94-x-6-8-ft-double-si-d4a00f.m.png",
+"outline": "assets/qnap/concave-flag-1-94-x-6-8-ft-double-si-d4a00f.o.json",
+"fullIn": [
+54.02,
+86.02
+],
+"visIn": [
+1.828,
+2.007,
+52.188,
+82.217
+],
+"safeIn": [
+2.33,
+2.509,
+51.686,
+79.995
+],
+"prodIn": [
+0.824,
+1.004,
+53.156,
+85.012
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.114
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Concave Flags",
+"path": "Concave Flags",
+"name": "Concave Flag 1.94 x 6.8 Ft_Single Sided",
+"panel": "Concave Flag Single Sided",
+"sides": "single",
+"stated": [
+23.28,
+81.6,
+"ft"
+],
+"id": "concave-flag-1-94-x-6-8-ft-single-si-9d24a3",
+"src": "Custom Flags\\Concave Flags\\Concave Flag 1.94 x 6.8 Ft_Single Sided.psdt",
+"img": "assets/qnap/concave-flag-1-94-x-6-8-ft-single-si-9d24a3.jpg",
+"mask": "assets/qnap/concave-flag-1-94-x-6-8-ft-single-si-9d24a3.m.png",
+"outline": "assets/qnap/concave-flag-1-94-x-6-8-ft-single-si-9d24a3.o.json",
+"fullIn": [
+25.34,
+84.0
+],
+"visIn": [
+0.98,
+0.98,
+24.356,
+81.2
+],
+"safeIn": [
+1.505,
+1.505,
+23.831,
+78.995
+],
+"prodIn": [
+0.0,
+0.0,
+25.336,
+84.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.115
+},
+"layersFrom": "clipping mask layer",
+"front": [
+7.034,
+5.355,
+18.267,
+65.24
+],
+"frontSafe": [
+7.034,
+5.355,
+18.267,
+65.24
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Concave Flags",
+"path": "Concave Flags",
+"name": "Concave Flag 2.03 x 8.91 Ft_Double Sided",
+"panel": "Concave Flag Double Sided",
+"sides": "double",
+"stated": [
+24.36,
+106.92,
+"ft"
+],
+"id": "concave-flag-2-03-x-8-91-ft-double-s-c46c6f",
+"src": "Custom Flags\\Concave Flags\\Concave Flag 2.03 x 8.91 Ft_Double Sided.psdt",
+"img": "assets/qnap/concave-flag-2-03-x-8-91-ft-double-s-c46c6f.jpg",
+"mask": "assets/qnap/concave-flag-2-03-x-8-91-ft-double-s-c46c6f.m.png",
+"outline": "assets/qnap/concave-flag-2-03-x-8-91-ft-double-s-c46c6f.o.json",
+"fullIn": [
+56.02,
+112.02
+],
+"visIn": [
+1.774,
+2.94,
+54.242,
+107.909
+],
+"safeIn": [
+2.287,
+3.5,
+53.729,
+105.808
+],
+"prodIn": [
+0.794,
+1.774,
+55.222,
+110.289
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.108
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Concave Flags",
+"path": "Concave Flags",
+"name": "Concave Flag 2.03 x 8.91 Ft_Single Sided",
+"panel": "Concave Flag Single Sided",
+"sides": "single",
+"stated": [
+24.36,
+106.92,
+"ft"
+],
+"id": "concave-flag-2-03-x-8-91-ft-single-s-16ea13",
+"src": "Custom Flags\\Concave Flags\\Concave Flag 2.03 x 8.91 Ft_Single Sided.psdt",
+"img": "assets/qnap/concave-flag-2-03-x-8-91-ft-single-s-16ea13.jpg",
+"mask": "assets/qnap/concave-flag-2-03-x-8-91-ft-single-s-16ea13.m.png",
+"outline": "assets/qnap/concave-flag-2-03-x-8-91-ft-single-s-16ea13.o.json",
+"fullIn": [
+26.41,
+108.5
+],
+"visIn": [
+0.995,
+1.175,
+25.413,
+106.145
+],
+"safeIn": [
+1.492,
+1.718,
+24.916,
+104.066
+],
+"prodIn": [
+0.0,
+0.0,
+26.408,
+108.496
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.109
+},
+"layersFrom": "clipping mask layer",
+"front": [
+7.326,
+11.482,
+19.082,
+81.056
+],
+"frontSafe": [
+7.326,
+11.482,
+19.082,
+81.056
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Concave Flags",
+"path": "Concave Flags",
+"name": "Concave Flag 2.67 x 11.86 Ft_Double Sided",
+"panel": "Concave Flag Double Sided",
+"sides": "double",
+"stated": [
+32.04,
+142.32,
+"ft"
+],
+"id": "concave-flag-2-67-x-11-86-ft-double-313918",
+"src": "Custom Flags\\Concave Flags\\Concave Flag 2.67 x 11.86 Ft_Double Sided.psdt",
+"img": "assets/qnap/concave-flag-2-67-x-11-86-ft-double-313918.jpg",
+"mask": "assets/qnap/concave-flag-2-67-x-11-86-ft-double-313918.m.png",
+"outline": "assets/qnap/concave-flag-2-67-x-11-86-ft-double-313918.o.json",
+"fullIn": [
+70.01,
+145.51
+],
+"visIn": [
+1.455,
+1.516,
+68.559,
+142.361
+],
+"safeIn": [
+1.94,
+2.001,
+68.074,
+140.845
+],
+"prodIn": [
+0.424,
+0.485,
+69.59,
+144.968
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.083
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Concave Flags",
+"path": "Concave Flags",
+"name": "Concave Flag 2.67 x 11.86 Ft_Single Sided",
+"panel": "Concave Flag Single Sided",
+"sides": "single",
+"stated": [
+32.04,
+142.32,
+"ft"
+],
+"id": "concave-flag-2-67-x-11-86-ft-single-b4ba4f",
+"src": "Custom Flags\\Concave Flags\\Concave Flag 2.67 x 11.86 Ft_Single Sided.psdt",
+"img": "assets/qnap/concave-flag-2-67-x-11-86-ft-single-b4ba4f.jpg",
+"mask": "assets/qnap/concave-flag-2-67-x-11-86-ft-single-b4ba4f.m.png",
+"outline": "assets/qnap/concave-flag-2-67-x-11-86-ft-single-b4ba4f.o.json",
+"fullIn": [
+34.12,
+144.46
+],
+"visIn": [
+0.963,
+0.963,
+33.162,
+141.93
+],
+"safeIn": [
+1.505,
+1.505,
+32.62,
+140.365
+],
+"prodIn": [
+0.0,
+0.0,
+34.125,
+144.458
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.081
+},
+"layersFrom": "clipping mask layer",
+"front": [
+9.148,
+17.997,
+24.856,
+115.386
+],
+"frontSafe": [
+9.148,
+17.997,
+24.856,
+115.386
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Concave Flags",
+"path": "Concave Flags",
+"name": "Concave Flag_2.9 x 15.5 Ft_Double Sided",
+"panel": "Concave Flag Double Sided",
+"sides": "double",
+"stated": [
+34.8,
+186.0,
+"ft"
+],
+"id": "concave-flag-2-9-x-15-5-ft-double-si-61d234",
+"src": "Custom Flags\\Concave Flags\\Concave Flag_2.9 x 15.5 Ft_Double Sided.psdt",
+"img": "assets/qnap/concave-flag-2-9-x-15-5-ft-double-si-61d234.jpg",
+"mask": "assets/qnap/concave-flag-2-9-x-15-5-ft-double-si-61d234.m.png",
+"outline": "assets/qnap/concave-flag-2-9-x-15-5-ft-double-si-61d234.o.json",
+"fullIn": [
+76.01,
+189.01
+],
+"visIn": [
+1.497,
+1.654,
+74.517,
+186.257
+],
+"safeIn": [
+2.048,
+2.126,
+73.966,
+185.391
+],
+"prodIn": [
+0.551,
+0.63,
+75.541,
+188.069
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.072
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Concave Flags",
+"path": "Concave Flags",
+"name": "Concave Flag_2.9 x 15.5 Ft_Single Sided",
+"panel": "Concave Flag Single Sided",
+"sides": "single",
+"stated": [
+34.8,
+186.0,
+"ft"
+],
+"id": "concave-flag-2-9-x-15-5-ft-single-si-1a01b4",
+"src": "Custom Flags\\Concave Flags\\Concave Flag_2.9 x 15.5 Ft_Single Sided.psdt",
+"img": "assets/qnap/concave-flag-2-9-x-15-5-ft-single-si-1a01b4.jpg",
+"mask": "assets/qnap/concave-flag-2-9-x-15-5-ft-single-si-1a01b4.m.png",
+"outline": "assets/qnap/concave-flag-2-9-x-15-5-ft-single-si-1a01b4.o.json",
+"fullIn": [
+37.0,
+187.44
+],
+"visIn": [
+1.015,
+1.015,
+35.985,
+185.492
+],
+"safeIn": [
+1.483,
+1.484,
+35.517,
+184.789
+],
+"prodIn": [
+0.0,
+0.0,
+37.0,
+187.444
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.075
+},
+"layersFrom": "clipping mask layer",
+"front": [
+9.914,
+19.369,
+27.008,
+158.703
+],
+"frontSafe": [
+9.914,
+19.369,
+27.008,
+158.703
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Desk Flags",
+"path": "Desk Flags",
+"name": "Desktop Blade Flag DF",
+"panel": "Desktop Blade Flag DF",
+"sides": "",
+"stated": null,
+"id": "desktop-blade-flag-df-695d6e",
+"src": "Custom Flags\\Desk Flags\\Desktop Blade Flag DF.psdt",
+"img": "assets/qnap/desktop-blade-flag-df-695d6e.jpg",
+"mask": "assets/qnap/desktop-blade-flag-df-695d6e.m.png",
+"outline": "assets/qnap/desktop-blade-flag-df-695d6e.o.json",
+"fullIn": [
+14.38,
+19.21
+],
+"visIn": [
+1.001,
+1.0,
+13.383,
+18.71
+],
+"safeIn": [
+1.393,
+1.416,
+12.991,
+18.318
+],
+"prodIn": [
+0.0,
+0.0,
+14.383,
+19.207
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.27
+},
+"layersFrom": "clipping mask layer",
+"front": [
+2.841,
+2.945,
+11.542,
+18.318
+],
+"frontSafe": [
+2.841,
+2.945,
+11.542,
+18.318
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Desk Flags",
+"path": "Desk Flags",
+"name": "Desktop Blade Flag SF",
+"panel": "Desktop Blade Flag SF",
+"sides": "",
+"stated": null,
+"id": "desktop-blade-flag-sf-6fff89",
+"src": "Custom Flags\\Desk Flags\\Desktop Blade Flag SF.psdt",
+"img": "assets/qnap/desktop-blade-flag-sf-6fff89.jpg",
+"mask": "assets/qnap/desktop-blade-flag-sf-6fff89.m.png",
+"outline": "assets/qnap/desktop-blade-flag-sf-6fff89.o.json",
+"fullIn": [
+7.5,
+19.7
+],
+"visIn": [
+1.002,
+1.002,
+6.51,
+18.71
+],
+"safeIn": [
+1.396,
+1.42,
+6.009,
+18.316
+],
+"prodIn": [
+0.0,
+0.0,
+7.503,
+19.703
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.344
+},
+"layersFrom": "template outline"
+},
+{
+"group": "Custom Flags",
+"product": "Desk Flags",
+"path": "Desk Flags",
+"name": "Desktop Teardrop Flag DF",
+"panel": "Desktop Teardrop Flag DF",
+"sides": "",
+"stated": null,
+"id": "desktop-teardrop-flag-df-6f7752",
+"src": "Custom Flags\\Desk Flags\\Desktop Teardrop Flag DF.psdt",
+"img": "assets/qnap/desktop-teardrop-flag-df-6f7752.jpg",
+"mask": "assets/qnap/desktop-teardrop-flag-df-6f7752.m.png",
+"outline": "assets/qnap/desktop-teardrop-flag-df-6f7752.o.json",
+"fullIn": [
+8.87,
+25.46
+],
+"visIn": [
+1.506,
+1.485,
+8.262,
+23.564
+],
+"safeIn": [
+1.898,
+1.878,
+8.008,
+23.564
+],
+"prodIn": [
+0.0,
+0.0,
+8.856,
+25.453
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.488
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Desk Flags",
+"path": "Desk Flags",
+"name": "Desktop Teardrop Flag SF",
+"panel": "Desktop Teardrop Flag SF",
+"sides": "",
+"stated": null,
+"id": "desktop-teardrop-flag-sf-6da2db",
+"src": "Custom Flags\\Desk Flags\\Desktop Teardrop Flag SF.psdt",
+"img": "assets/qnap/desktop-teardrop-flag-sf-6da2db.jpg",
+"mask": "assets/qnap/desktop-teardrop-flag-sf-6da2db.m.png",
+"outline": "assets/qnap/desktop-teardrop-flag-sf-6da2db.o.json",
+"fullIn": [
+9.34,
+21.63
+],
+"visIn": [
+1.604,
+1.586,
+8.361,
+16.441
+],
+"safeIn": [
+1.964,
+1.983,
+7.758,
+14.981
+],
+"prodIn": [
+0.099,
+0.099,
+9.235,
+21.525
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.527
+},
+"layersFrom": "clipping mask layer",
+"front": [
+4.334,
+2.371,
+5.145,
+8.131
+],
+"frontSafe": [
+4.334,
+2.371,
+5.145,
+8.131
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Feather Flag",
+"path": "Feather Flag",
+"name": "1.5 x 5.5 Ft_.Feather Flags_Single Sided",
+"panel": "Feather Flags Single Sided",
+"sides": "single",
+"stated": [
+18.0,
+66.0,
+"ft"
+],
+"id": "1-5-x-5-5-ft-feather-flags-single-si-97502b",
+"src": "Custom Flags\\Feather Flag\\1.5 x 5.5 Ft_.Feather Flags_Single Sided.psdt",
+"img": "assets/qnap/1-5-x-5-5-ft-feather-flags-single-si-97502b.jpg",
+"mask": "assets/qnap/1-5-x-5-5-ft-feather-flags-single-si-97502b.m.png",
+"outline": "assets/qnap/1-5-x-5-5-ft-feather-flags-single-si-97502b.o.json",
+"fullIn": [
+21.0,
+69.57
+],
+"visIn": [
+1.189,
+1.449,
+19.811,
+67.51
+],
+"safeIn": [
+1.711,
+1.942,
+19.289,
+66.959
+],
+"prodIn": [
+0.203,
+0.464,
+20.826,
+68.582
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.128
+},
+"layersFrom": "clipping mask layer",
+"front": [
+6.12,
+7.595,
+14.88,
+60.118
+],
+"frontSafe": [
+6.12,
+7.595,
+14.88,
+60.118
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Feather Flag",
+"path": "Feather Flag",
+"name": "1.5 x 5.5 Ft_Feather Flags_Double Sided",
+"panel": "Feather Flags Double Sided",
+"sides": "double",
+"stated": [
+18.0,
+66.0,
+"ft"
+],
+"id": "1-5-x-5-5-ft-feather-flags-double-si-a9b8d3",
+"src": "Custom Flags\\Feather Flag\\1.5 x 5.5 Ft_Feather Flags_Double Sided.psdt",
+"img": "assets/qnap/1-5-x-5-5-ft-feather-flags-double-si-a9b8d3.jpg",
+"mask": "assets/qnap/1-5-x-5-5-ft-feather-flags-double-si-a9b8d3.m.png",
+"outline": "assets/qnap/1-5-x-5-5-ft-feather-flags-double-si-a9b8d3.o.json",
+"fullIn": [
+42.0,
+69.58
+],
+"visIn": [
+1.188,
+1.449,
+40.812,
+67.518
+],
+"safeIn": [
+1.71,
+1.942,
+40.29,
+66.967
+],
+"prodIn": [
+0.203,
+0.464,
+41.797,
+68.59
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.127
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Feather Flag",
+"path": "Feather Flag",
+"name": "2 x 11.5 Ft_.Feather Flags_Single Sided",
+"panel": "Feather Flags Single Sided",
+"sides": "single",
+"stated": [
+24.0,
+138.0,
+"ft"
+],
+"id": "2-x-11-5-ft-feather-flags-single-sid-259093",
+"src": "Custom Flags\\Feather Flag\\2 x 11.5 Ft_.Feather Flags_Single Sided.psdt",
+"img": "assets/qnap/2-x-11-5-ft-feather-flags-single-sid-259093.jpg",
+"mask": "assets/qnap/2-x-11-5-ft-feather-flags-single-sid-259093.m.png",
+"outline": "assets/qnap/2-x-11-5-ft-feather-flags-single-sid-259093.o.json",
+"fullIn": [
+30.0,
+141.24
+],
+"visIn": [
+1.471,
+1.471,
+28.529,
+139.471
+],
+"safeIn": [
+1.941,
+2.001,
+28.059,
+139.0
+],
+"prodIn": [
+0.471,
+0.471,
+29.588,
+140.471
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.085
+},
+"layersFrom": "clipping mask layer",
+"front": [
+8.412,
+15.595,
+21.529,
+132.527
+],
+"frontSafe": [
+8.412,
+15.595,
+21.529,
+132.527
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Feather Flag",
+"path": "Feather Flag",
+"name": "2 x 11.5 Ft_Feather Flags_Double Sided",
+"panel": "Feather Flags Double Sided",
+"sides": "double",
+"stated": [
+24.0,
+138.0,
+"ft"
+],
+"id": "2-x-11-5-ft-feather-flags-double-sid-d553f3",
+"src": "Custom Flags\\Feather Flag\\2 x 11.5 Ft_Feather Flags_Double Sided.psdt",
+"img": "assets/qnap/2-x-11-5-ft-feather-flags-double-sid-d553f3.jpg",
+"mask": "assets/qnap/2-x-11-5-ft-feather-flags-double-sid-d553f3.m.png",
+"outline": "assets/qnap/2-x-11-5-ft-feather-flags-double-sid-d553f3.o.json",
+"fullIn": [
+60.0,
+141.22
+],
+"visIn": [
+1.471,
+1.471,
+58.529,
+139.516
+],
+"safeIn": [
+1.941,
+2.001,
+58.059,
+138.986
+],
+"prodIn": [
+0.471,
+0.471,
+59.588,
+140.457
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.084
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Feather Flag",
+"path": "Feather Flag",
+"name": "2 x 7.5 Ft_.Feather Flags_Single Sided",
+"panel": "Feather Flags Single Sided",
+"sides": "single",
+"stated": [
+24.0,
+90.0,
+"ft"
+],
+"id": "2-x-7-5-ft-feather-flags-single-side-eb2c62",
+"src": "Custom Flags\\Feather Flag\\2 x 7.5 Ft_.Feather Flags_Single Sided.psdt",
+"img": "assets/qnap/2-x-7-5-ft-feather-flags-single-side-eb2c62.jpg",
+"mask": "assets/qnap/2-x-7-5-ft-feather-flags-single-side-eb2c62.m.png",
+"outline": "assets/qnap/2-x-7-5-ft-feather-flags-single-side-eb2c62.o.json",
+"fullIn": [
+27.0,
+94.51
+],
+"visIn": [
+1.574,
+1.615,
+25.465,
+92.464
+],
+"safeIn": [
+2.086,
+2.127,
+24.953,
+91.913
+],
+"prodIn": [
+0.59,
+0.512,
+26.449,
+93.488
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.1
+},
+"layersFrom": "clipping mask layer",
+"front": [
+7.793,
+11.026,
+19.246,
+83.052
+],
+"frontSafe": [
+7.793,
+11.026,
+19.246,
+83.052
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Feather Flag",
+"path": "Feather Flag",
+"name": "2 x 7.5 Ft_Feather Flags_Double Sided",
+"panel": "Feather Flags Double Sided",
+"sides": "double",
+"stated": [
+24.0,
+90.0,
+"ft"
+],
+"id": "2-x-7-5-ft-feather-flags-double-side-baa80c",
+"src": "Custom Flags\\Feather Flag\\2 x 7.5 Ft_Feather Flags_Double Sided.psdt",
+"img": "assets/qnap/2-x-7-5-ft-feather-flags-double-side-baa80c.jpg",
+"mask": "assets/qnap/2-x-7-5-ft-feather-flags-double-side-baa80c.m.png",
+"outline": "assets/qnap/2-x-7-5-ft-feather-flags-double-side-baa80c.o.json",
+"fullIn": [
+54.0,
+94.51
+],
+"visIn": [
+1.575,
+1.615,
+52.464,
+92.464
+],
+"safeIn": [
+2.088,
+2.127,
+51.952,
+91.913
+],
+"prodIn": [
+0.591,
+0.512,
+53.488,
+93.488
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.1
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Feather Flag",
+"path": "Feather Flag",
+"name": "2 x 9.5 Ft_.Feather Flags_Single Sided",
+"panel": "Feather Flags Single Sided",
+"sides": "single",
+"stated": [
+24.0,
+114.0,
+"ft"
+],
+"id": "2-x-9-5-ft-feather-flags-single-side-8d5f95",
+"src": "Custom Flags\\Feather Flag\\2 x 9.5 Ft_.Feather Flags_Single Sided.psdt",
+"img": "assets/qnap/2-x-9-5-ft-feather-flags-single-side-8d5f95.jpg",
+"mask": "assets/qnap/2-x-9-5-ft-feather-flags-single-side-8d5f95.m.png",
+"outline": "assets/qnap/2-x-9-5-ft-feather-flags-single-side-8d5f95.o.json",
+"fullIn": [
+27.01,
+118.49
+],
+"visIn": [
+1.482,
+1.53,
+25.483,
+116.462
+],
+"safeIn": [
+2.025,
+2.024,
+24.989,
+115.968
+],
+"prodIn": [
+0.494,
+0.494,
+26.52,
+117.499
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.098
+},
+"layersFrom": "clipping mask layer",
+"front": [
+7.754,
+14.91,
+19.26,
+103.182
+],
+"frontSafe": [
+7.754,
+14.91,
+19.26,
+103.182
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Feather Flag",
+"path": "Feather Flag",
+"name": "2 x 9.5 Ft_Feather Flags_Double Sided",
+"panel": "Feather Flags Double Sided",
+"sides": "double",
+"stated": [
+24.0,
+114.0,
+"ft"
+],
+"id": "2-x-9-5-ft-feather-flags-double-side-727ffa",
+"src": "Custom Flags\\Feather Flag\\2 x 9.5 Ft_Feather Flags_Double Sided.psdt",
+"img": "assets/qnap/2-x-9-5-ft-feather-flags-double-side-727ffa.jpg",
+"mask": "assets/qnap/2-x-9-5-ft-feather-flags-double-side-727ffa.m.png",
+"outline": "assets/qnap/2-x-9-5-ft-feather-flags-double-side-727ffa.o.json",
+"fullIn": [
+54.01,
+118.49
+],
+"visIn": [
+1.481,
+1.53,
+52.483,
+116.462
+],
+"safeIn": [
+2.024,
+2.024,
+51.99,
+115.968
+],
+"prodIn": [
+0.494,
+0.494,
+53.471,
+117.499
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.097
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Feather Flag",
+"path": "Feather Flag",
+"name": "2.5 x 15.5 Ft_.Feather Flags_Single Sided",
+"panel": "Feather Flags Single Sided",
+"sides": "single",
+"stated": [
+30.0,
+186.0,
+"ft"
+],
+"id": "2-5-x-15-5-ft-feather-flags-single-s-1893df",
+"src": "Custom Flags\\Feather Flag\\2.5 x 15.5 Ft_.Feather Flags_Single Sided.psdt",
+"img": "assets/qnap/2-5-x-15-5-ft-feather-flags-single-s-1893df.jpg",
+"mask": "assets/qnap/2-5-x-15-5-ft-feather-flags-single-s-1893df.m.png",
+"outline": "assets/qnap/2-5-x-15-5-ft-feather-flags-single-s-1893df.o.json",
+"fullIn": [
+33.01,
+188.07
+],
+"visIn": [
+1.255,
+1.489,
+31.524,
+186.502
+],
+"safeIn": [
+1.804,
+2.037,
+30.975,
+185.954
+],
+"prodIn": [
+0.235,
+0.47,
+32.543,
+187.443
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.076
+},
+"layersFrom": "clipping mask layer",
+"front": [
+8.94,
+23.039,
+23.682,
+176.08
+],
+"frontSafe": [
+8.94,
+23.039,
+23.682,
+176.08
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Feather Flag",
+"path": "Feather Flag",
+"name": "2.5 x 15.5 Ft_Feather Flags_Double Sided",
+"panel": "Feather Flags Double Sided",
+"sides": "double",
+"stated": [
+30.0,
+186.0,
+"ft"
+],
+"id": "2-5-x-15-5-ft-feather-flags-double-s-2c8c53",
+"src": "Custom Flags\\Feather Flag\\2.5 x 15.5 Ft_Feather Flags_Double Sided.psdt",
+"img": "assets/qnap/2-5-x-15-5-ft-feather-flags-double-s-2c8c53.jpg",
+"mask": "assets/qnap/2-5-x-15-5-ft-feather-flags-double-s-2c8c53.m.png",
+"outline": "assets/qnap/2-5-x-15-5-ft-feather-flags-double-s-2c8c53.o.json",
+"fullIn": [
+66.01,
+188.31
+],
+"visIn": [
+1.256,
+1.491,
+64.522,
+186.501
+],
+"safeIn": [
+1.805,
+2.04,
+63.973,
+185.952
+],
+"prodIn": [
+0.235,
+0.471,
+65.543,
+187.442
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.075
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Garden Flag",
+"path": "Garden Flag",
+"name": "Garden Flag 12 x 18 Dual Sided",
+"panel": "Garden Flag Dual Sided",
+"sides": "",
+"stated": [
+12.0,
+18.0,
+"?"
+],
+"id": "garden-flag-12-x-18-dual-sided-b03a79",
+"src": "Custom Flags\\Garden Flag\\Garden Flag 12 x 18 Dual Sided.psdt",
+"img": "assets/qnap/garden-flag-12-x-18-dual-sided-b03a79.jpg",
+"mask": "assets/qnap/garden-flag-12-x-18-dual-sided-b03a79.m.png",
+"outline": "assets/qnap/garden-flag-12-x-18-dual-sided-b03a79.o.json",
+"fullIn": [
+25.0,
+21.5
+],
+"visIn": [
+0.5,
+2.999,
+24.5,
+20.996
+],
+"safeIn": [
+0.854,
+3.343,
+24.156,
+20.663
+],
+"prodIn": [
+0.0,
+0.0,
+25.0,
+21.496
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.23
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Garden Flag",
+"path": "Garden Flag",
+"name": "Garden Flag 12 x 18 Single Sided",
+"panel": "Garden Flag Single Sided",
+"sides": "single",
+"stated": [
+12.0,
+18.0,
+"?"
+],
+"id": "garden-flag-12-x-18-single-sided-f1687e",
+"src": "Custom Flags\\Garden Flag\\Garden Flag 12 x 18 Single Sided.psdt",
+"img": "assets/qnap/garden-flag-12-x-18-single-sided-f1687e.jpg",
+"mask": "assets/qnap/garden-flag-12-x-18-single-sided-f1687e.m.png",
+"outline": "assets/qnap/garden-flag-12-x-18-single-sided-f1687e.o.json",
+"fullIn": [
+14.0,
+22.0
+],
+"visIn": [
+0.999,
+2.998,
+13.001,
+21.001
+],
+"safeIn": [
+1.348,
+3.346,
+12.652,
+20.652
+],
+"prodIn": [
+0.0,
+0.0,
+14.0,
+22.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.299
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Giant Flag Pole",
+"path": "Giant Flag Pole",
+"name": "Giant Flag Pole 2.63 x 10.17 Ft_Double Sided",
+"panel": "Giant Flag Pole Double Sided",
+"sides": "double",
+"stated": [
+31.56,
+122.04,
+"ft"
+],
+"id": "giant-flag-pole-2-63-x-10-17-ft-doub-544e15",
+"src": "Custom Flags\\Giant Flag Pole\\Giant Flag Pole 2.63 x 10.17 Ft_Double Sided.psdt",
+"img": "assets/qnap/giant-flag-pole-2-63-x-10-17-ft-doub-544e15.jpg",
+"mask": "assets/qnap/giant-flag-pole-2-63-x-10-17-ft-doub-544e15.m.png",
+"outline": "assets/qnap/giant-flag-pole-2-63-x-10-17-ft-doub-544e15.o.json",
+"fullIn": [
+64.0,
+121.0
+],
+"visIn": [
+0.958,
+1.008,
+63.042,
+119.992
+],
+"safeIn": [
+3.984,
+3.983,
+60.016,
+117.017
+],
+"prodIn": [
+0.0,
+0.0,
+64.0,
+121.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.046
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Giant Flag Pole",
+"path": "Giant Flag Pole",
+"name": "Giant Flag Pole 2.63 x 10.17 Ft_Single Sided",
+"panel": "Giant Flag Pole Single Sided",
+"sides": "single",
+"stated": [
+31.56,
+122.04,
+"ft"
+],
+"id": "giant-flag-pole-2-63-x-10-17-ft-sing-32fb46",
+"src": "Custom Flags\\Giant Flag Pole\\Giant Flag Pole 2.63 x 10.17 Ft_Single Sided.psdt",
+"img": "assets/qnap/giant-flag-pole-2-63-x-10-17-ft-sing-32fb46.jpg",
+"mask": "assets/qnap/giant-flag-pole-2-63-x-10-17-ft-sing-32fb46.m.png",
+"outline": "assets/qnap/giant-flag-pole-2-63-x-10-17-ft-sing-32fb46.o.json",
+"fullIn": [
+35.0,
+123.0
+],
+"visIn": [
+1.999,
+1.999,
+33.001,
+121.001
+],
+"safeIn": [
+5.022,
+5.022,
+30.029,
+117.977
+],
+"prodIn": [
+0.0,
+0.0,
+35.0,
+123.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.143
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Giant Flag Pole",
+"path": "Giant Flag Pole",
+"name": "Giant Flag Pole 3.58 x 13 Ft_Double Sided",
+"panel": "Giant Flag Pole Double Sided",
+"sides": "double",
+"stated": [
+42.96,
+156.0,
+"ft"
+],
+"id": "giant-flag-pole-3-58-x-13-ft-double-cd4eb4",
+"src": "Custom Flags\\Giant Flag Pole\\Giant Flag Pole 3.58 x 13 Ft_Double Sided.psdt",
+"img": "assets/qnap/giant-flag-pole-3-58-x-13-ft-double-cd4eb4.jpg",
+"mask": "assets/qnap/giant-flag-pole-3-58-x-13-ft-double-cd4eb4.m.png",
+"outline": "assets/qnap/giant-flag-pole-3-58-x-13-ft-double-cd4eb4.o.json",
+"fullIn": [
+86.0,
+155.0
+],
+"visIn": [
+0.968,
+0.969,
+85.032,
+154.031
+],
+"safeIn": [
+4.003,
+4.004,
+81.997,
+150.996
+],
+"prodIn": [
+0.0,
+0.0,
+86.0,
+155.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.037
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Giant Flag Pole",
+"path": "Giant Flag Pole",
+"name": "Giant Flag Pole 3.58 x 13 Ft_Single Sided",
+"panel": "Giant Flag Pole Single Sided",
+"sides": "single",
+"stated": [
+42.96,
+156.0,
+"ft"
+],
+"id": "giant-flag-pole-3-58-x-13-ft-single-6e1fd1",
+"src": "Custom Flags\\Giant Flag Pole\\Giant Flag Pole 3.58 x 13 Ft_Single Sided.psdt",
+"img": "assets/qnap/giant-flag-pole-3-58-x-13-ft-single-6e1fd1.jpg",
+"mask": "assets/qnap/giant-flag-pole-3-58-x-13-ft-single-6e1fd1.m.png",
+"outline": "assets/qnap/giant-flag-pole-3-58-x-13-ft-single-6e1fd1.o.json",
+"fullIn": [
+46.0,
+157.0
+],
+"visIn": [
+1.963,
+1.963,
+44.037,
+155.038
+],
+"safeIn": [
+5.038,
+4.972,
+41.027,
+152.028
+],
+"prodIn": [
+0.0,
+0.0,
+46.0,
+157.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.108
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Giant Flag Pole",
+"path": "Giant Flag Pole",
+"name": "Giant Flag Pole 4.67 x 18.67 Ft_Double Sided",
+"panel": "Giant Flag Pole Double Sided",
+"sides": "double",
+"stated": [
+56.04,
+224.04,
+"ft"
+],
+"id": "giant-flag-pole-4-67-x-18-67-ft-doub-84df59",
+"src": "Custom Flags\\Giant Flag Pole\\Giant Flag Pole 4.67 x 18.67 Ft_Double Sided.psdt",
+"img": "assets/qnap/giant-flag-pole-4-67-x-18-67-ft-doub-84df59.jpg",
+"mask": "assets/qnap/giant-flag-pole-4-67-x-18-67-ft-doub-84df59.m.png",
+"outline": "assets/qnap/giant-flag-pole-4-67-x-18-67-ft-doub-84df59.o.json",
+"fullIn": [
+110.0,
+222.0
+],
+"visIn": [
+0.925,
+1.018,
+109.075,
+220.982
+],
+"safeIn": [
+3.978,
+3.978,
+106.022,
+218.022
+],
+"prodIn": [
+0.0,
+0.0,
+110.0,
+222.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.029
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Giant Flag Pole",
+"path": "Giant Flag Pole",
+"name": "Giant Flag Pole 4.67 x 18.67 Ft_Single Sided",
+"panel": "Giant Flag Pole Single Sided",
+"sides": "single",
+"stated": [
+56.04,
+224.04,
+"ft"
+],
+"id": "giant-flag-pole-4-67-x-18-67-ft-sing-3d4949",
+"src": "Custom Flags\\Giant Flag Pole\\Giant Flag Pole 4.67 x 18.67 Ft_Single Sided.psdt",
+"img": "assets/qnap/giant-flag-pole-4-67-x-18-67-ft-sing-3d4949.jpg",
+"mask": "assets/qnap/giant-flag-pole-4-67-x-18-67-ft-sing-3d4949.m.png",
+"outline": "assets/qnap/giant-flag-pole-4-67-x-18-67-ft-sing-3d4949.o.json",
+"fullIn": [
+58.0,
+224.0
+],
+"visIn": [
+1.961,
+1.96,
+56.039,
+222.04
+],
+"safeIn": [
+5.043,
+5.04,
+52.957,
+218.96
+],
+"prodIn": [
+0.0,
+0.0,
+58.0,
+224.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.09
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Golf Flag",
+"path": "Golf Flag › Grommet-Triangle",
+"name": "Golf Flag With Grommets Triangle Double Sided",
+"panel": "Golf Flag With Grommets Triangle Double Sided",
+"sides": "double",
+"stated": null,
+"id": "golf-flag-with-grommets-triangle-dou-1aeaf7",
+"src": "Custom Flags\\Golf Flag\\Grommet-Triangle\\Golf Flag With Grommets Triangle Double Sided.psdt",
+"img": "assets/qnap/golf-flag-with-grommets-triangle-dou-1aeaf7.jpg",
+"mask": "assets/qnap/golf-flag-with-grommets-triangle-dou-1aeaf7.m.png",
+"outline": "assets/qnap/golf-flag-with-grommets-triangle-dou-1aeaf7.o.json",
+"fullIn": [
+26.0,
+26.0
+],
+"visIn": [
+1.885,
+0.878,
+24.115,
+25.123
+],
+"safeIn": [
+4.799,
+2.264,
+21.201,
+23.736
+],
+"prodIn": [
+0.238,
+0.336,
+25.762,
+25.675
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.37
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Golf Flag",
+"path": "Golf Flag › Grommet-Triangle",
+"name": "Golf Flag With Grommets Triangle Single Sided",
+"panel": "Golf Flag With Grommets Triangle Single Sided",
+"sides": "single",
+"stated": null,
+"id": "golf-flag-with-grommets-triangle-sin-0e63bc",
+"src": "Custom Flags\\Golf Flag\\Grommet-Triangle\\Golf Flag With Grommets Triangle Single Sided.psdt",
+"img": "assets/qnap/golf-flag-with-grommets-triangle-sin-0e63bc.jpg",
+"mask": "assets/qnap/golf-flag-with-grommets-triangle-sin-0e63bc.m.png",
+"outline": "assets/qnap/golf-flag-with-grommets-triangle-sin-0e63bc.o.json",
+"fullIn": [
+26.0,
+17.0
+],
+"visIn": [
+4.236,
+1.517,
+24.126,
+15.483
+],
+"safeIn": [
+5.243,
+2.915,
+21.212,
+14.085
+],
+"prodIn": [
+0.238,
+0.964,
+25.751,
+16.036
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.37
+},
+"layersFrom": "clipping mask layer",
+"front": [
+5.243,
+7.097,
+17.225,
+9.903
+],
+"frontSafe": [
+5.243,
+7.097,
+17.225,
+9.903
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Golf Flag",
+"path": "Golf Flag › Tube- Rectangle",
+"name": "Golf Flag With Tube Double Sided",
+"panel": "Golf Flag With Tube Double Sided",
+"sides": "double",
+"stated": null,
+"id": "golf-flag-with-tube-double-sided-a78163",
+"src": "Custom Flags\\Golf Flag\\Tube- Rectangle\\Golf Flag With Tube Double Sided.psdt",
+"img": "assets/qnap/golf-flag-with-tube-double-sided-a78163.jpg",
+"mask": "assets/qnap/golf-flag-with-tube-double-sided-a78163.m.png",
+"outline": "assets/qnap/golf-flag-with-tube-double-sided-a78163.o.json",
+"fullIn": [
+46.5,
+16.0
+],
+"visIn": [
+4.999,
+0.988,
+45.012,
+15.012
+],
+"safeIn": [
+5.987,
+1.995,
+44.004,
+14.005
+],
+"prodIn": [
+0.0,
+0.0,
+46.504,
+16.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.246
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Golf Flag",
+"path": "Golf Flag › Tube- Rectangle",
+"name": "Golf Flag With Tube Single Sided",
+"panel": "Golf Flag With Tube Single Sided",
+"sides": "single",
+"stated": null,
+"id": "golf-flag-with-tube-single-sided-cc169f",
+"src": "Custom Flags\\Golf Flag\\Tube- Rectangle\\Golf Flag With Tube Single Sided.psdt",
+"img": "assets/qnap/golf-flag-with-tube-single-sided-cc169f.jpg",
+"mask": "assets/qnap/golf-flag-with-tube-single-sided-cc169f.m.png",
+"outline": "assets/qnap/golf-flag-with-tube-single-sided-cc169f.o.json",
+"fullIn": [
+26.5,
+16.0
+],
+"visIn": [
+5.003,
+1.005,
+25.013,
+15.006
+],
+"safeIn": [
+6.008,
+1.999,
+24.008,
+14.001
+],
+"prodIn": [
+0.0,
+0.0,
+26.504,
+16.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.339
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Hand Flag",
+"path": "Hand Flag",
+"name": "12 x 8 Hand Flag",
+"panel": "Hand Flag",
+"sides": "",
+"stated": [
+12.0,
+8.0,
+"?"
+],
+"id": "12-x-8-hand-flag-d5ec51",
+"src": "Custom Flags\\Hand Flag\\12 x 8 Hand Flag.psdt",
+"img": "assets/qnap/12-x-8-hand-flag-d5ec51.jpg",
+"mask": "assets/qnap/12-x-8-hand-flag-d5ec51.m.png",
+"outline": "assets/qnap/12-x-8-hand-flag-d5ec51.o.json",
+"fullIn": [
+13.0,
+8.0
+],
+"visIn": [
+0.0,
+0.0,
+12.502,
+8.0
+],
+"safeIn": [
+1.506,
+0.509,
+12.502,
+7.507
+],
+"prodIn": [
+0.0,
+0.0,
+12.502,
+8.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.0
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Hand Flag",
+"path": "Hand Flag",
+"name": "18 x 12 Hand Flag",
+"panel": "Hand Flag",
+"sides": "",
+"stated": [
+18.0,
+12.0,
+"?"
+],
+"id": "18-x-12-hand-flag-015f0f",
+"src": "Custom Flags\\Hand Flag\\18 x 12 Hand Flag.psdt",
+"img": "assets/qnap/18-x-12-hand-flag-015f0f.jpg",
+"mask": "assets/qnap/18-x-12-hand-flag-015f0f.m.png",
+"outline": "assets/qnap/18-x-12-hand-flag-015f0f.o.json",
+"fullIn": [
+19.0,
+12.0
+],
+"visIn": [
+1.75,
+0.752,
+18.248,
+11.248
+],
+"safeIn": [
+1.758,
+0.752,
+18.248,
+11.248
+],
+"prodIn": [
+1.75,
+0.752,
+18.248,
+11.248
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.0
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Hand Flag",
+"path": "Hand Flag",
+"name": "36 x 24 Hand Flag",
+"panel": "Hand Flag",
+"sides": "",
+"stated": [
+36.0,
+24.0,
+"?"
+],
+"id": "36-x-24-hand-flag-6ee7c4",
+"src": "Custom Flags\\Hand Flag\\36 x 24 Hand Flag.psdt",
+"img": "assets/qnap/36-x-24-hand-flag-6ee7c4.jpg",
+"mask": "assets/qnap/36-x-24-hand-flag-6ee7c4.m.png",
+"outline": "assets/qnap/36-x-24-hand-flag-6ee7c4.o.json",
+"fullIn": [
+37.0,
+24.0
+],
+"visIn": [
+0.0,
+0.0,
+35.489,
+24.0
+],
+"safeIn": [
+2.513,
+1.541,
+35.489,
+22.536
+],
+"prodIn": [
+0.0,
+0.0,
+35.489,
+24.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.0
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Hand Flag",
+"path": "Hand Flag",
+"name": "6 x 4 Hand Flag",
+"panel": "Hand Flag",
+"sides": "",
+"stated": [
+6.0,
+4.0,
+"?"
+],
+"id": "6-x-4-hand-flag-abb101",
+"src": "Custom Flags\\Hand Flag\\6 x 4 Hand Flag.psdt",
+"img": "assets/qnap/6-x-4-hand-flag-abb101.jpg",
+"mask": "assets/qnap/6-x-4-hand-flag-abb101.m.png",
+"outline": "assets/qnap/6-x-4-hand-flag-abb101.o.json",
+"fullIn": [
+7.0,
+4.0
+],
+"visIn": [
+0.0,
+0.0,
+6.749,
+4.0
+],
+"safeIn": [
+1.251,
+0.251,
+6.749,
+3.749
+],
+"prodIn": [
+0.0,
+0.0,
+6.749,
+4.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.005
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "L FLAG",
+"path": "L FLAG",
+"name": "L-Flag 27.5 x 87 Inch_Double Side",
+"panel": "L Flag Double Side",
+"sides": "double",
+"stated": [
+27.5,
+87.0,
+"inch"
+],
+"id": "l-flag-27-5-x-87-inch-double-side-688423",
+"src": "Custom Flags\\L FLAG\\L-Flag 27.5 x 87 Inch_Double Side.psdt",
+"img": "assets/qnap/l-flag-27-5-x-87-inch-double-side-688423.jpg",
+"mask": "assets/qnap/l-flag-27-5-x-87-inch-double-side-688423.m.png",
+"outline": "assets/qnap/l-flag-27-5-x-87-inch-double-side-688423.o.json",
+"fullIn": [
+57.0,
+88.0
+],
+"visIn": [
+0.477,
+0.477,
+56.523,
+87.523
+],
+"safeIn": [
+0.99,
+0.99,
+56.01,
+87.01
+],
+"prodIn": [
+0.0,
+0.0,
+57.0,
+88.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.044
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "L FLAG",
+"path": "L FLAG",
+"name": "L-Flag 27.5 x 87 Inch_Single Side",
+"panel": "L Flag Single Side",
+"sides": "single",
+"stated": [
+27.5,
+87.0,
+"inch"
+],
+"id": "l-flag-27-5-x-87-inch-single-side-7a9af8",
+"src": "Custom Flags\\L FLAG\\L-Flag 27.5 x 87 Inch_Single Side.psdt",
+"img": "assets/qnap/l-flag-27-5-x-87-inch-single-side-7a9af8.jpg",
+"mask": "assets/qnap/l-flag-27-5-x-87-inch-single-side-7a9af8.m.png",
+"outline": "assets/qnap/l-flag-27-5-x-87-inch-single-side-7a9af8.o.json",
+"fullIn": [
+28.5,
+88.0
+],
+"visIn": [
+0.477,
+0.477,
+28.027,
+87.523
+],
+"safeIn": [
+0.99,
+0.99,
+27.514,
+87.01
+],
+"prodIn": [
+0.0,
+0.0,
+28.504,
+88.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.044
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "L FLAG",
+"path": "L FLAG",
+"name": "L-Flag 27.5 x128 Inch_Double Side",
+"panel": "L Flag Double Side",
+"sides": "double",
+"stated": [
+27.5,
+128.0,
+"inch"
+],
+"id": "l-flag-27-5-x128-inch-double-side-70cbec",
+"src": "Custom Flags\\L FLAG\\L-Flag 27.5 x128 Inch_Double Side.psdt",
+"img": "assets/qnap/l-flag-27-5-x128-inch-double-side-70cbec.jpg",
+"mask": "assets/qnap/l-flag-27-5-x128-inch-double-side-70cbec.m.png",
+"outline": "assets/qnap/l-flag-27-5-x128-inch-double-side-70cbec.o.json",
+"fullIn": [
+57.0,
+129.0
+],
+"visIn": [
+0.484,
+0.484,
+56.516,
+128.516
+],
+"safeIn": [
+1.022,
+1.021,
+55.978,
+127.979
+],
+"prodIn": [
+0.0,
+0.0,
+57.0,
+129.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.041
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "L FLAG",
+"path": "L FLAG",
+"name": "L-Flag 27.5 x128 Inch_Single Side",
+"panel": "L Flag Single Side",
+"sides": "single",
+"stated": [
+27.5,
+128.0,
+"inch"
+],
+"id": "l-flag-27-5-x128-inch-single-side-6f797e",
+"src": "Custom Flags\\L FLAG\\L-Flag 27.5 x128 Inch_Single Side.psdt",
+"img": "assets/qnap/l-flag-27-5-x128-inch-single-side-6f797e.jpg",
+"mask": "assets/qnap/l-flag-27-5-x128-inch-single-side-6f797e.m.png",
+"outline": "assets/qnap/l-flag-27-5-x128-inch-single-side-6f797e.o.json",
+"fullIn": [
+28.5,
+129.0
+],
+"visIn": [
+0.484,
+0.484,
+28.016,
+128.516
+],
+"safeIn": [
+1.022,
+1.021,
+27.478,
+127.979
+],
+"prodIn": [
+0.0,
+0.0,
+28.5,
+129.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.045
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "L FLAG",
+"path": "L FLAG",
+"name": "L-Flag 32.5 x 167 Inch_Double Side",
+"panel": "L Flag Double Side",
+"sides": "double",
+"stated": [
+32.5,
+167.0,
+"inch"
+],
+"id": "l-flag-32-5-x-167-inch-double-side-9542b4",
+"src": "Custom Flags\\L FLAG\\L-Flag 32.5 x 167 Inch_Double Side.psdt",
+"img": "assets/qnap/l-flag-32-5-x-167-inch-double-side-9542b4.jpg",
+"mask": "assets/qnap/l-flag-32-5-x-167-inch-double-side-9542b4.m.png",
+"outline": "assets/qnap/l-flag-32-5-x-167-inch-double-side-9542b4.o.json",
+"fullIn": [
+67.0,
+168.0
+],
+"visIn": [
+0.49,
+0.49,
+66.51,
+167.51
+],
+"safeIn": [
+0.98,
+0.98,
+66.02,
+167.02
+],
+"prodIn": [
+0.0,
+0.0,
+67.0,
+168.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.036
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "L FLAG",
+"path": "L FLAG",
+"name": "L-Flag 32.5 x 167 Inch_Single Side",
+"panel": "L Flag Single Side",
+"sides": "single",
+"stated": [
+32.5,
+167.0,
+"inch"
+],
+"id": "l-flag-32-5-x-167-inch-single-side-4c4294",
+"src": "Custom Flags\\L FLAG\\L-Flag 32.5 x 167 Inch_Single Side.psdt",
+"img": "assets/qnap/l-flag-32-5-x-167-inch-single-side-4c4294.jpg",
+"mask": "assets/qnap/l-flag-32-5-x-167-inch-single-side-4c4294.m.png",
+"outline": "assets/qnap/l-flag-32-5-x-167-inch-single-side-4c4294.o.json",
+"fullIn": [
+33.5,
+168.0
+],
+"visIn": [
+0.49,
+0.49,
+33.01,
+167.51
+],
+"safeIn": [
+0.979,
+0.98,
+32.521,
+167.02
+],
+"prodIn": [
+0.0,
+0.0,
+33.5,
+168.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.038
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Leaf Banner Flag",
+"path": "Leaf Banner Flag",
+"name": "Leaf Banner Flag_10 Ft_Back",
+"panel": "Leaf Banner Flag Back",
+"sides": "",
+"stated": null,
+"id": "leaf-banner-flag-10-ft-back-097d2d",
+"src": "Custom Flags\\Leaf Banner Flag\\Leaf Banner Flag_10 Ft_Back.psdt",
+"img": "assets/qnap/leaf-banner-flag-10-ft-back-097d2d.jpg",
+"mask": "assets/qnap/leaf-banner-flag-10-ft-back-097d2d.m.png",
+"outline": "assets/qnap/leaf-banner-flag-10-ft-back-097d2d.o.json",
+"fullIn": [
+39.28,
+103.26
+],
+"visIn": [
+2.194,
+1.42,
+37.086,
+102.998
+],
+"safeIn": [
+3.012,
+2.624,
+36.268,
+101.492
+],
+"prodIn": [
+0.258,
+0.258,
+39.022,
+102.998
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.112
+},
+"layersFrom": "clipping mask layer",
+"front": [
+7.142,
+21.254,
+32.138,
+69.87
+],
+"frontSafe": [
+7.142,
+21.254,
+32.138,
+69.87
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Leaf Banner Flag",
+"path": "Leaf Banner Flag",
+"name": "Leaf Banner Flag_10 Ft_Front",
+"panel": "Leaf Banner Flag Front",
+"sides": "",
+"stated": null,
+"id": "leaf-banner-flag-10-ft-front-3991a6",
+"src": "Custom Flags\\Leaf Banner Flag\\Leaf Banner Flag_10 Ft_Front.psdt",
+"img": "assets/qnap/leaf-banner-flag-10-ft-front-3991a6.jpg",
+"mask": "assets/qnap/leaf-banner-flag-10-ft-front-3991a6.m.png",
+"outline": "assets/qnap/leaf-banner-flag-10-ft-front-3991a6.o.json",
+"fullIn": [
+39.28,
+103.26
+],
+"visIn": [
+2.194,
+1.42,
+37.086,
+102.998
+],
+"safeIn": [
+3.012,
+2.624,
+36.268,
+101.492
+],
+"prodIn": [
+0.258,
+0.258,
+39.022,
+102.998
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.112
+},
+"layersFrom": "clipping mask layer",
+"front": [
+7.142,
+21.254,
+32.138,
+69.87
+],
+"frontSafe": [
+7.142,
+21.254,
+32.138,
+69.87
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Pin Point Flag",
+"path": "Pin Point Flag",
+"name": "Pin Point Flag - 43 x 86 Inch",
+"panel": "Pin Point Flag",
+"sides": "",
+"stated": [
+43.0,
+86.0,
+"inch"
+],
+"id": "pin-point-flag-43-x-86-inch-8d73c4",
+"src": "Custom Flags\\Pin Point Flag\\Pin Point Flag - 43 x 86 Inch.psdt",
+"img": "assets/qnap/pin-point-flag-43-x-86-inch-8d73c4.jpg",
+"mask": "assets/qnap/pin-point-flag-43-x-86-inch-8d73c4.m.png",
+"outline": "assets/qnap/pin-point-flag-43-x-86-inch-8d73c4.o.json",
+"fullIn": [
+45.0,
+75.0
+],
+"visIn": [
+1.5,
+1.969,
+43.5,
+73.031
+],
+"safeIn": [
+2.5,
+2.969,
+42.5,
+72.031
+],
+"prodIn": [
+0.5,
+0.969,
+44.5,
+74.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.082
+},
+"layersFrom": "clipping mask layer",
+"front": [
+7.469,
+9.75,
+37.375,
+42.781
+],
+"frontSafe": [
+7.469,
+9.75,
+37.375,
+42.781
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Sail Flag",
+"path": "Sail Flag",
+"name": "1.5 x 5.5 Ft_Double Sided",
+"panel": "Double Sided",
+"sides": "double",
+"stated": [
+18.0,
+66.0,
+"ft"
+],
+"id": "1-5-x-5-5-ft-double-sided-dc4348",
+"src": "Custom Flags\\Sail Flag\\1.5 x 5.5 Ft_Double Sided.psdt",
+"img": "assets/qnap/1-5-x-5-5-ft-double-sided-dc4348.jpg",
+"mask": "assets/qnap/1-5-x-5-5-ft-double-sided-dc4348.m.png",
+"outline": "assets/qnap/1-5-x-5-5-ft-double-sided-dc4348.o.json",
+"fullIn": [
+41.74,
+68.75
+],
+"visIn": [
+1.003,
+1.146,
+40.762,
+67.749
+],
+"safeIn": [
+1.518,
+1.719,
+40.246,
+67.262
+],
+"prodIn": [
+0.0,
+0.0,
+41.736,
+68.752
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.13
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Sail Flag",
+"path": "Sail Flag",
+"name": "1.5 x 5.5 Ft_Single Sided",
+"panel": "Single Sided",
+"sides": "single",
+"stated": [
+18.0,
+66.0,
+"ft"
+],
+"id": "1-5-x-5-5-ft-single-sided-7451b0",
+"src": "Custom Flags\\Sail Flag\\1.5 x 5.5 Ft_Single Sided.psdt",
+"img": "assets/qnap/1-5-x-5-5-ft-single-sided-7451b0.jpg",
+"mask": "assets/qnap/1-5-x-5-5-ft-single-sided-7451b0.m.png",
+"outline": "assets/qnap/1-5-x-5-5-ft-single-sided-7451b0.o.json",
+"fullIn": [
+20.62,
+68.74
+],
+"visIn": [
+0.974,
+1.117,
+19.585,
+67.705
+],
+"safeIn": [
+1.489,
+1.69,
+19.098,
+67.218
+],
+"prodIn": [
+0.0,
+0.0,
+20.616,
+68.736
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.129
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Sail Flag",
+"path": "Sail Flag",
+"name": "2 x 11.5 Ft_Double sided",
+"panel": "Double sided",
+"sides": "double",
+"stated": [
+24.0,
+138.0,
+"ft"
+],
+"id": "2-x-11-5-ft-double-sided-5351b8",
+"src": "Custom Flags\\Sail Flag\\2 x 11.5 Ft_Double sided.psdt",
+"img": "assets/qnap/2-x-11-5-ft-double-sided-5351b8.jpg",
+"mask": "assets/qnap/2-x-11-5-ft-double-sided-5351b8.m.png",
+"outline": "assets/qnap/2-x-11-5-ft-double-sided-5351b8.o.json",
+"fullIn": [
+58.56,
+140.22
+],
+"visIn": [
+0.993,
+1.227,
+57.504,
+139.171
+],
+"safeIn": [
+1.519,
+1.753,
+56.978,
+138.703
+],
+"prodIn": [
+0.0,
+0.0,
+58.556,
+140.222
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.09
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Sail Flag",
+"path": "Sail Flag",
+"name": "2 x 11.5 Ft_Single sided",
+"panel": "Single sided",
+"sides": "single",
+"stated": [
+24.0,
+138.0,
+"ft"
+],
+"id": "2-x-11-5-ft-single-sided-f4eedb",
+"src": "Custom Flags\\Sail Flag\\2 x 11.5 Ft_Single sided.psdt",
+"img": "assets/qnap/2-x-11-5-ft-single-sided-f4eedb.jpg",
+"mask": "assets/qnap/2-x-11-5-ft-single-sided-f4eedb.m.png",
+"outline": "assets/qnap/2-x-11-5-ft-single-sided-f4eedb.o.json",
+"fullIn": [
+29.06,
+140.22
+],
+"visIn": [
+0.994,
+1.227,
+28.003,
+139.171
+],
+"safeIn": [
+1.52,
+1.753,
+27.477,
+138.703
+],
+"prodIn": [
+0.0,
+0.0,
+29.056,
+140.222
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.089
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Sail Flag",
+"path": "Sail Flag",
+"name": "2 x 7.58 Ft_Double Sided",
+"panel": "Double Sided",
+"sides": "double",
+"stated": [
+24.0,
+90.96,
+"ft"
+],
+"id": "2-x-7-58-ft-double-sided-30a5c4",
+"src": "Custom Flags\\Sail Flag\\2 x 7.58 Ft_Double Sided.psdt",
+"img": "assets/qnap/2-x-7-58-ft-double-sided-30a5c4.jpg",
+"mask": "assets/qnap/2-x-7-58-ft-double-sided-30a5c4.m.png",
+"outline": "assets/qnap/2-x-7-58-ft-double-sided-30a5c4.o.json",
+"fullIn": [
+53.03,
+93.11
+],
+"visIn": [
+0.97,
+1.125,
+52.023,
+92.103
+],
+"safeIn": [
+1.513,
+1.707,
+51.48,
+91.56
+],
+"prodIn": [
+0.0,
+0.0,
+53.032,
+93.112
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.102
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Sail Flag",
+"path": "Sail Flag",
+"name": "2 x 7.58 Ft_Single Sided",
+"panel": "Single Sided",
+"sides": "single",
+"stated": [
+24.0,
+90.96,
+"ft"
+],
+"id": "2-x-7-58-ft-single-sided-212253",
+"src": "Custom Flags\\Sail Flag\\2 x 7.58 Ft_Single Sided.psdt",
+"img": "assets/qnap/2-x-7-58-ft-single-sided-212253.jpg",
+"mask": "assets/qnap/2-x-7-58-ft-single-sided-212253.m.png",
+"outline": "assets/qnap/2-x-7-58-ft-single-sided-212253.o.json",
+"fullIn": [
+26.05,
+93.13
+],
+"visIn": [
+1.009,
+1.164,
+25.039,
+92.158
+],
+"safeIn": [
+1.553,
+1.746,
+24.534,
+91.615
+],
+"prodIn": [
+0.0,
+0.0,
+26.048,
+93.128
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.102
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Sail Flag",
+"path": "Sail Flag",
+"name": "2 x 9.5 Ft_Double Sided",
+"panel": "Double Sided",
+"sides": "double",
+"stated": [
+24.0,
+114.0,
+"ft"
+],
+"id": "2-x-9-5-ft-double-sided-7c9c15",
+"src": "Custom Flags\\Sail Flag\\2 x 9.5 Ft_Double Sided.psdt",
+"img": "assets/qnap/2-x-9-5-ft-double-sided-7c9c15.jpg",
+"mask": "assets/qnap/2-x-9-5-ft-double-sided-7c9c15.m.png",
+"outline": "assets/qnap/2-x-9-5-ft-double-sided-7c9c15.o.json",
+"fullIn": [
+52.54,
+117.16
+],
+"visIn": [
+0.977,
+1.22,
+51.559,
+116.135
+],
+"safeIn": [
+1.514,
+1.757,
+51.022,
+115.598
+],
+"prodIn": [
+0.0,
+0.0,
+52.536,
+117.16
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.097
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Sail Flag",
+"path": "Sail Flag",
+"name": "2 x 9.5 Ft_Single Sided",
+"panel": "Single Sided",
+"sides": "single",
+"stated": [
+24.0,
+114.0,
+"ft"
+],
+"id": "2-x-9-5-ft-single-sided-cfe066",
+"src": "Custom Flags\\Sail Flag\\2 x 9.5 Ft_Single Sided.psdt",
+"img": "assets/qnap/2-x-9-5-ft-single-sided-cfe066.jpg",
+"mask": "assets/qnap/2-x-9-5-ft-single-sided-cfe066.m.png",
+"outline": "assets/qnap/2-x-9-5-ft-single-sided-cfe066.o.json",
+"fullIn": [
+26.03,
+117.16
+],
+"visIn": [
+0.977,
+1.22,
+25.055,
+116.135
+],
+"safeIn": [
+1.514,
+1.757,
+24.518,
+115.598
+],
+"prodIn": [
+0.0,
+0.0,
+26.032,
+117.16
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.097
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Sail Flag",
+"path": "Sail Flag",
+"name": "2.5 x 15.5 Ft_Double SIded",
+"panel": "Double SIded",
+"sides": "double",
+"stated": [
+30.0,
+186.0,
+"ft"
+],
+"id": "2-5-x-15-5-ft-double-sided-8cf25a",
+"src": "Custom Flags\\Sail Flag\\2.5 x 15.5 Ft_Double SIded.psdt",
+"img": "assets/qnap/2-5-x-15-5-ft-double-sided-8cf25a.jpg",
+"mask": "assets/qnap/2-5-x-15-5-ft-double-sided-8cf25a.m.png",
+"outline": "assets/qnap/2-5-x-15-5-ft-double-sided-8cf25a.o.json",
+"fullIn": [
+64.56,
+187.26
+],
+"visIn": [
+1.015,
+1.326,
+63.541,
+186.25
+],
+"safeIn": [
+1.483,
+1.873,
+63.072,
+185.703
+],
+"prodIn": [
+0.0,
+0.0,
+64.556,
+187.264
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.078
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Sail Flag",
+"path": "Sail Flag",
+"name": "2.5 x 15.5 Ft_Single SIded",
+"panel": "Single SIded",
+"sides": "single",
+"stated": [
+30.0,
+186.0,
+"ft"
+],
+"id": "2-5-x-15-5-ft-single-sided-45f6a6",
+"src": "Custom Flags\\Sail Flag\\2.5 x 15.5 Ft_Single SIded.psdt",
+"img": "assets/qnap/2-5-x-15-5-ft-single-sided-45f6a6.jpg",
+"mask": "assets/qnap/2-5-x-15-5-ft-single-sided-45f6a6.m.png",
+"outline": "assets/qnap/2-5-x-15-5-ft-single-sided-45f6a6.o.json",
+"fullIn": [
+32.06,
+187.26
+],
+"visIn": [
+1.014,
+1.326,
+30.964,
+186.25
+],
+"safeIn": [
+1.482,
+1.873,
+30.496,
+185.703
+],
+"prodIn": [
+0.0,
+0.0,
+32.056,
+187.264
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.08
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Shark Fin Flags",
+"path": "Shark Fin Flags",
+"name": "Sharkfin Flag_2.42x6.67 Ft_29x80 In_Double Sided",
+"panel": "Sharkfin Flag Double Sided",
+"sides": "double",
+"stated": [
+29.04,
+80.04,
+"ft"
+],
+"id": "sharkfin-flag-2-42x6-67-ft-29x80-in-e53a95",
+"src": "Custom Flags\\Shark Fin Flags\\Sharkfin Flag_2.42x6.67 Ft_29x80 In_Double Sided.psdt",
+"img": "assets/qnap/sharkfin-flag-2-42x6-67-ft-29x80-in-e53a95.jpg",
+"mask": "assets/qnap/sharkfin-flag-2-42x6-67-ft-29x80-in-e53a95.m.png",
+"outline": "assets/qnap/sharkfin-flag-2-42x6-67-ft-29x80-in-e53a95.o.json",
+"fullIn": [
+60.0,
+82.0
+],
+"visIn": [
+2.631,
+1.948,
+57.369,
+79.198
+],
+"safeIn": [
+4.442,
+2.938,
+55.558,
+77.558
+],
+"prodIn": [
+0.547,
+0.957,
+59.453,
+81.078
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.13
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Shark Fin Flags",
+"path": "Shark Fin Flags",
+"name": "Sharkfin Flag_2.42x6.67 Ft_29x80 In_Single Sided",
+"panel": "Sharkfin Flag Single Sided",
+"sides": "single",
+"stated": [
+29.04,
+80.04,
+"ft"
+],
+"id": "sharkfin-flag-2-42x6-67-ft-29x80-in-64c19a",
+"src": "Custom Flags\\Shark Fin Flags\\Sharkfin Flag_2.42x6.67 Ft_29x80 In_Single Sided.psdt",
+"img": "assets/qnap/sharkfin-flag-2-42x6-67-ft-29x80-in-64c19a.jpg",
+"mask": "assets/qnap/sharkfin-flag-2-42x6-67-ft-29x80-in-64c19a.m.png",
+"outline": "assets/qnap/sharkfin-flag-2-42x6-67-ft-29x80-in-64c19a.o.json",
+"fullIn": [
+30.0,
+82.0
+],
+"visIn": [
+2.631,
+1.948,
+28.462,
+79.198
+],
+"safeIn": [
+4.442,
+2.938,
+27.437,
+77.558
+],
+"prodIn": [
+0.547,
+0.957,
+29.453,
+81.078
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.13
+},
+"layersFrom": "clipping mask layer",
+"front": [
+11.515,
+37.686,
+27.13,
+68.026
+],
+"frontSafe": [
+11.515,
+37.686,
+27.13,
+68.026
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Shark Fin Flags",
+"path": "Shark Fin Flags",
+"name": "Sharkfin Flag_3 x 9.75 Ft_36 x 117 in_Double Sided",
+"panel": "Sharkfin Flag Double Sided",
+"sides": "double",
+"stated": [
+36.0,
+117.0,
+"ft"
+],
+"id": "sharkfin-flag-3-x-9-75-ft-36-x-117-i-ce8511",
+"src": "Custom Flags\\Shark Fin Flags\\Sharkfin Flag_3 x 9.75 Ft_36 x 117 in_Double Sided.psdt",
+"img": "assets/qnap/sharkfin-flag-3-x-9-75-ft-36-x-117-i-ce8511.jpg",
+"mask": "assets/qnap/sharkfin-flag-3-x-9-75-ft-36-x-117-i-ce8511.m.png",
+"outline": "assets/qnap/sharkfin-flag-3-x-9-75-ft-36-x-117-i-ce8511.o.json",
+"fullIn": [
+82.69,
+120.01
+],
+"visIn": [
+4.45,
+2.35,
+78.245,
+116.764
+],
+"safeIn": [
+5.2,
+2.9,
+77.495,
+116.113
+],
+"prodIn": [
+2.55,
+1.35,
+80.145,
+118.614
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.103
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Shark Fin Flags",
+"path": "Shark Fin Flags",
+"name": "Sharkfin Flag_3 x 9.75 Ft_36 x 117 in_Single Sided",
+"panel": "Sharkfin Flag Single Sided",
+"sides": "single",
+"stated": [
+36.0,
+117.0,
+"ft"
+],
+"id": "sharkfin-flag-3-x-9-75-ft-36-x-117-i-1cbc5c",
+"src": "Custom Flags\\Shark Fin Flags\\Sharkfin Flag_3 x 9.75 Ft_36 x 117 in_Single Sided.psdt",
+"img": "assets/qnap/sharkfin-flag-3-x-9-75-ft-36-x-117-i-1cbc5c.jpg",
+"mask": "assets/qnap/sharkfin-flag-3-x-9-75-ft-36-x-117-i-1cbc5c.m.png",
+"outline": "assets/qnap/sharkfin-flag-3-x-9-75-ft-36-x-117-i-1cbc5c.o.json",
+"fullIn": [
+41.33,
+119.99
+],
+"visIn": [
+4.448,
+2.35,
+37.835,
+116.736
+],
+"safeIn": [
+5.198,
+2.85,
+37.335,
+116.087
+],
+"prodIn": [
+2.499,
+1.35,
+38.834,
+118.636
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.103
+},
+"layersFrom": "clipping mask layer",
+"front": [
+17.843,
+61.193,
+36.985,
+105.188
+],
+"frontSafe": [
+17.843,
+61.193,
+36.985,
+105.188
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Shark Fin Flags",
+"path": "Shark Fin Flags",
+"name": "Sharkfin Flag_3.67 x 14.67 Ft_44 x 176 in_Double Sided",
+"panel": "Sharkfin Flag Double Sided",
+"sides": "double",
+"stated": [
+44.04,
+176.04,
+"ft"
+],
+"id": "sharkfin-flag-3-67-x-14-67-ft-44-x-1-58aeaf",
+"src": "Custom Flags\\Shark Fin Flags\\Sharkfin Flag_3.67 x 14.67 Ft_44 x 176 in_Double Sided.psdt",
+"img": "assets/qnap/sharkfin-flag-3-67-x-14-67-ft-44-x-1-58aeaf.jpg",
+"mask": "assets/qnap/sharkfin-flag-3-67-x-14-67-ft-44-x-1-58aeaf.m.png",
+"outline": "assets/qnap/sharkfin-flag-3-67-x-14-67-ft-44-x-1-58aeaf.o.json",
+"fullIn": [
+92.0,
+180.0
+],
+"visIn": [
+2.849,
+2.775,
+89.151,
+176.25
+],
+"safeIn": [
+4.424,
+3.75,
+87.576,
+174.675
+],
+"prodIn": [
+0.825,
+1.725,
+91.25,
+178.2
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.082
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Shark Fin Flags",
+"path": "Shark Fin Flags",
+"name": "Sharkfin Flag_3.67 x 14.67 Ft_44 x 176 in_Single Sided",
+"panel": "Sharkfin Flag Single Sided",
+"sides": "single",
+"stated": [
+44.04,
+176.04,
+"ft"
+],
+"id": "sharkfin-flag-3-67-x-14-67-ft-44-x-1-aa09d2",
+"src": "Custom Flags\\Shark Fin Flags\\Sharkfin Flag_3.67 x 14.67 Ft_44 x 176 in_Single Sided.psdt",
+"img": "assets/qnap/sharkfin-flag-3-67-x-14-67-ft-44-x-1-aa09d2.jpg",
+"mask": "assets/qnap/sharkfin-flag-3-67-x-14-67-ft-44-x-1-aa09d2.m.png",
+"outline": "assets/qnap/sharkfin-flag-3-67-x-14-67-ft-44-x-1-aa09d2.o.json",
+"fullIn": [
+46.0,
+180.0
+],
+"visIn": [
+2.852,
+2.775,
+44.199,
+176.175
+],
+"safeIn": [
+4.427,
+3.75,
+43.223,
+174.675
+],
+"prodIn": [
+0.825,
+1.725,
+45.25,
+178.275
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.084
+},
+"layersFrom": "clipping mask layer",
+"front": [
+15.909,
+106.8,
+42.473,
+158.025
+],
+"frontSafe": [
+15.909,
+106.8,
+42.473,
+158.025
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Spinning Dart Banner",
+"path": "Spinning Dart Banner",
+"name": "Spinning Dart Banner_9 Ft",
+"panel": "Spinning Dart Banner",
+"sides": "",
+"stated": null,
+"id": "spinning-dart-banner-9-ft-2fa4bd",
+"src": "Custom Flags\\Spinning Dart Banner\\Spinning Dart Banner_9 Ft.psdt",
+"img": "assets/qnap/spinning-dart-banner-9-ft-2fa4bd.jpg",
+"mask": "assets/qnap/spinning-dart-banner-9-ft-2fa4bd.m.png",
+"outline": "assets/qnap/spinning-dart-banner-9-ft-2fa4bd.o.json",
+"fullIn": [
+130.2,
+69.46
+],
+"visIn": [
+0.271,
+0.271,
+129.983,
+69.247
+],
+"safeIn": [
+0.976,
+1.791,
+129.169,
+67.89
+],
+"prodIn": [
+0.271,
+0.271,
+129.983,
+69.247
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.002
+},
+"layersFrom": "clipping mask layer",
+"front": [
+17.577,
+9.009,
+112.514,
+60.944
+],
+"frontSafe": [
+17.577,
+9.009,
+112.514,
+60.944
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Suction Cup Banner",
+"path": "Suction Cup Banner",
+"name": "Suction Cup Blade Flag Template DF",
+"panel": "Suction Cup Blade Flag Template DF",
+"sides": "",
+"stated": null,
+"id": "suction-cup-blade-flag-template-df-eebff4",
+"src": "Custom Flags\\Suction Cup Banner\\Suction Cup Blade Flag Template DF.psdt",
+"img": "assets/qnap/suction-cup-blade-flag-template-df-eebff4.jpg",
+"mask": "assets/qnap/suction-cup-blade-flag-template-df-eebff4.m.png",
+"outline": "assets/qnap/suction-cup-blade-flag-template-df-eebff4.o.json",
+"fullIn": [
+24.44,
+29.22
+],
+"visIn": [
+0.998,
+0.998,
+23.442,
+27.536
+],
+"safeIn": [
+1.996,
+1.996,
+22.444,
+25.99
+],
+"prodIn": [
+0.0,
+0.0,
+24.44,
+29.216
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.157
+},
+"layersFrom": "clipping mask layer",
+"front": [
+4.552,
+5.393,
+19.888,
+25.99
+],
+"frontSafe": [
+4.552,
+5.393,
+19.888,
+25.99
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Suction Cup Banner",
+"path": "Suction Cup Banner",
+"name": "Suction Cup Blade Flag Template SF",
+"panel": "Suction Cup Blade Flag Template SF",
+"sides": "",
+"stated": null,
+"id": "suction-cup-blade-flag-template-sf-fe527c",
+"src": "Custom Flags\\Suction Cup Banner\\Suction Cup Blade Flag Template SF.psdt",
+"img": "assets/qnap/suction-cup-blade-flag-template-sf-fe527c.jpg",
+"mask": "assets/qnap/suction-cup-blade-flag-template-sf-fe527c.m.png",
+"outline": "assets/qnap/suction-cup-blade-flag-template-sf-fe527c.o.json",
+"fullIn": [
+13.25,
+29.22
+],
+"visIn": [
+1.023,
+0.998,
+12.25,
+27.536
+],
+"safeIn": [
+2.033,
+1.996,
+11.251,
+25.99
+],
+"prodIn": [
+0.024,
+0.0,
+13.248,
+29.216
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.225
+},
+"layersFrom": "clipping mask layer",
+"front": [
+4.335,
+5.77,
+8.974,
+24.237
+],
+"frontSafe": [
+4.335,
+5.77,
+8.974,
+24.237
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Suction Cup Banner",
+"path": "Suction Cup Banner",
+"name": "Suction Cup Rectangle Flag Template DF",
+"panel": "Suction Cup Rectangle Flag Template DF",
+"sides": "",
+"stated": null,
+"id": "suction-cup-rectangle-flag-template-15afc2",
+"src": "Custom Flags\\Suction Cup Banner\\Suction Cup Rectangle Flag Template DF.psdt",
+"img": "assets/qnap/suction-cup-rectangle-flag-template-15afc2.jpg",
+"mask": "assets/qnap/suction-cup-rectangle-flag-template-15afc2.m.png",
+"outline": "assets/qnap/suction-cup-rectangle-flag-template-15afc2.o.json",
+"fullIn": [
+19.0,
+22.0
+],
+"visIn": [
+0.495,
+0.495,
+18.505,
+21.505
+],
+"safeIn": [
+0.999,
+0.999,
+18.001,
+21.001
+],
+"prodIn": [
+0.0,
+0.0,
+19.0,
+22.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.145
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Suction Cup Banner",
+"path": "Suction Cup Banner",
+"name": "Suction Cup Rectangle Flag Template SF",
+"panel": "Suction Cup Rectangle Flag Template SF",
+"sides": "",
+"stated": null,
+"id": "suction-cup-rectangle-flag-template-49d942",
+"src": "Custom Flags\\Suction Cup Banner\\Suction Cup Rectangle Flag Template SF.psdt",
+"img": "assets/qnap/suction-cup-rectangle-flag-template-49d942.jpg",
+"mask": "assets/qnap/suction-cup-rectangle-flag-template-49d942.m.png",
+"outline": "assets/qnap/suction-cup-rectangle-flag-template-49d942.o.json",
+"fullIn": [
+10.0,
+22.0
+],
+"visIn": [
+0.752,
+0.752,
+9.248,
+21.248
+],
+"safeIn": [
+1.247,
+1.247,
+8.753,
+20.753
+],
+"prodIn": [
+0.0,
+0.0,
+10.0,
+22.0
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.208
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Suction Cup Banner",
+"path": "Suction Cup Banner",
+"name": "Suction Cup Teardrop Flag Template DF",
+"panel": "Suction Cup Teardrop Flag Template DF",
+"sides": "",
+"stated": null,
+"id": "suction-cup-teardrop-flag-template-d-cd8c48",
+"src": "Custom Flags\\Suction Cup Banner\\Suction Cup Teardrop Flag Template DF.psdt",
+"img": "assets/qnap/suction-cup-teardrop-flag-template-d-cd8c48.jpg",
+"mask": "assets/qnap/suction-cup-teardrop-flag-template-d-cd8c48.m.png",
+"outline": "assets/qnap/suction-cup-teardrop-flag-template-d-cd8c48.o.json",
+"fullIn": [
+14.27,
+35.58
+],
+"visIn": [
+1.008,
+1.008,
+13.16,
+34.057
+],
+"safeIn": [
+1.497,
+1.512,
+12.731,
+34.057
+],
+"prodIn": [
+0.0,
+0.015,
+14.242,
+35.569
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.315
+},
+"layersFrom": "cut line on the page"
+},
+{
+"group": "Custom Flags",
+"product": "Suction Cup Banner",
+"path": "Suction Cup Banner",
+"name": "Suction Cup Teardrop Flag Template SF",
+"panel": "Suction Cup Teardrop Flag Template SF",
+"sides": "",
+"stated": null,
+"id": "suction-cup-teardrop-flag-template-s-1b8ca1",
+"src": "Custom Flags\\Suction Cup Banner\\Suction Cup Teardrop Flag Template SF.psdt",
+"img": "assets/qnap/suction-cup-teardrop-flag-template-s-1b8ca1.jpg",
+"mask": "assets/qnap/suction-cup-teardrop-flag-template-s-1b8ca1.m.png",
+"outline": "assets/qnap/suction-cup-teardrop-flag-template-s-1b8ca1.o.json",
+"fullIn": [
+14.26,
+28.38
+],
+"visIn": [
+1.053,
+0.993,
+13.211,
+24.659
+],
+"safeIn": [
+1.549,
+1.502,
+12.679,
+23.027
+],
+"prodIn": [
+0.047,
+0.0,
+14.264,
+28.372
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.304
+},
+"layersFrom": "clipping mask layer",
+"front": [
+5.24,
+2.827,
+8.362,
+11.685
+],
+"frontSafe": [
+5.24,
+2.827,
+8.362,
+11.685
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Swooper Flags",
+"path": "Swooper Flags",
+"name": "Swooper_Flag_2.13 x 11.50 Ft (25.5 x 138 In)_US_CA",
+"panel": "Swooper Flag US CA",
+"sides": "",
+"stated": [
+25.56,
+138.0,
+"ft"
+],
+"id": "swooper-flag-2-13-x-11-50-ft-25-5-x-774490",
+"src": "Custom Flags\\Swooper Flags\\Swooper_Flag_2.13 x 11.50 Ft (25.5 x 138 In)_US_CA.psdt",
+"img": "assets/qnap/swooper-flag-2-13-x-11-50-ft-25-5-x-774490.jpg",
+"mask": "assets/qnap/swooper-flag-2-13-x-11-50-ft-25-5-x-774490.m.png",
+"outline": "assets/qnap/swooper-flag-2-13-x-11-50-ft-25-5-x-774490.o.json",
+"fullIn": [
+29.1,
+140.43
+],
+"visIn": [
+1.698,
+1.112,
+27.399,
+138.851
+],
+"safeIn": [
+2.166,
+1.638,
+26.931,
+138.266
+],
+"prodIn": [
+0.644,
+0.117,
+28.395,
+140.255
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.086
+},
+"layersFrom": "clipping mask layer",
+"front": [
+8.138,
+9.421,
+20.784,
+132.824
+],
+"frontSafe": [
+8.138,
+9.421,
+20.784,
+132.824
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Teardrop Flags",
+"path": "Teardrop Flags",
+"name": "2 x 5 Ft_Teardrop Flags_Double Sided",
+"panel": "Teardrop Flags Double Sided",
+"sides": "double",
+"stated": [
+24.0,
+60.0,
+"ft"
+],
+"id": "2-x-5-ft-teardrop-flags-double-sided-0da021",
+"src": "Custom Flags\\Teardrop Flags\\2 x 5 Ft_Teardrop Flags_Double Sided.psdt",
+"img": "assets/qnap/2-x-5-ft-teardrop-flags-double-sided-0da021.jpg",
+"mask": "assets/qnap/2-x-5-ft-teardrop-flags-double-sided-0da021.m.png",
+"outline": "assets/qnap/2-x-5-ft-teardrop-flags-double-sided-0da021.o.json",
+"fullIn": [
+28.02,
+79.8
+],
+"visIn": [
+1.13,
+1.13,
+26.894,
+78.703
+],
+"safeIn": [
+1.629,
+1.662,
+26.395,
+78.204
+],
+"prodIn": [
+0.133,
+0.133,
+27.891,
+79.7
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.154
+},
+"layersFrom": "template outline"
+},
+{
+"group": "Custom Flags",
+"product": "Teardrop Flags",
+"path": "Teardrop Flags",
+"name": "2 x 5 Ft_Teardrop Flags_Single Sided",
+"panel": "Teardrop Flags Single Sided",
+"sides": "single",
+"stated": [
+24.0,
+60.0,
+"ft"
+],
+"id": "2-x-5-ft-teardrop-flags-single-sided-865594",
+"src": "Custom Flags\\Teardrop Flags\\2 x 5 Ft_Teardrop Flags_Single Sided.psdt",
+"img": "assets/qnap/2-x-5-ft-teardrop-flags-single-sided-865594.jpg",
+"mask": "assets/qnap/2-x-5-ft-teardrop-flags-single-sided-865594.m.png",
+"outline": "assets/qnap/2-x-5-ft-teardrop-flags-single-sided-865594.o.json",
+"fullIn": [
+29.0,
+63.0
+],
+"visIn": [
+2.336,
+1.391,
+27.399,
+61.268
+],
+"safeIn": [
+3.097,
+1.89,
+26.874,
+59.614
+],
+"prodIn": [
+0.604,
+0.394,
+28.37,
+62.632
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.154
+},
+"layersFrom": "clipping mask layer",
+"front": [
+10.708,
+6.93,
+21.127,
+28.376
+],
+"frontSafe": [
+10.708,
+6.93,
+21.127,
+28.376
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Teardrop Flags",
+"path": "Teardrop Flags",
+"name": "2.5 x 5.5 Ft_Teardrop Flags_Double Sided",
+"panel": "Teardrop Flags Double Sided",
+"sides": "double",
+"stated": [
+30.0,
+66.0,
+"ft"
+],
+"id": "2-5-x-5-5-ft-teardrop-flags-double-s-99e7b9",
+"src": "Custom Flags\\Teardrop Flags\\2.5 x 5.5 Ft_Teardrop Flags_Double Sided.psdt",
+"img": "assets/qnap/2-5-x-5-5-ft-teardrop-flags-double-s-99e7b9.jpg",
+"mask": "assets/qnap/2-5-x-5-5-ft-teardrop-flags-double-s-99e7b9.m.png",
+"outline": "assets/qnap/2-5-x-5-5-ft-teardrop-flags-double-s-99e7b9.o.json",
+"fullIn": [
+33.09,
+85.74
+],
+"visIn": [
+1.108,
+1.108,
+31.98,
+84.636
+],
+"safeIn": [
+1.608,
+1.608,
+31.48,
+84.136
+],
+"prodIn": [
+0.107,
+0.107,
+32.981,
+85.637
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.136
+},
+"layersFrom": "template outline"
+},
+{
+"group": "Custom Flags",
+"product": "Teardrop Flags",
+"path": "Teardrop Flags",
+"name": "2.5 x 5.5 Ft_Teardrop Flags_Single Sided",
+"panel": "Teardrop Flags Single Sided",
+"sides": "single",
+"stated": [
+30.0,
+66.0,
+"ft"
+],
+"id": "2-5-x-5-5-ft-teardrop-flags-single-s-d3c384",
+"src": "Custom Flags\\Teardrop Flags\\2.5 x 5.5 Ft_Teardrop Flags_Single Sided.psdt",
+"img": "assets/qnap/2-5-x-5-5-ft-teardrop-flags-single-s-d3c384.jpg",
+"mask": "assets/qnap/2-5-x-5-5-ft-teardrop-flags-single-s-d3c384.m.png",
+"outline": "assets/qnap/2-5-x-5-5-ft-teardrop-flags-single-s-d3c384.o.json",
+"fullIn": [
+34.0,
+70.0
+],
+"visIn": [
+2.42,
+1.75,
+32.425,
+66.5
+],
+"safeIn": [
+3.178,
+2.246,
+31.93,
+65.012
+],
+"prodIn": [
+0.583,
+0.758,
+33.417,
+69.242
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.135
+},
+"layersFrom": "clipping mask layer",
+"front": [
+12.393,
+7.642,
+25.048,
+31.062
+],
+"frontSafe": [
+12.393,
+7.642,
+25.048,
+31.062
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Teardrop Flags",
+"path": "Teardrop Flags",
+"name": "3 x 7 Ft_Teardrop Flags_Double Sided",
+"panel": "Teardrop Flags Double Sided",
+"sides": "double",
+"stated": [
+36.0,
+84.0,
+"ft"
+],
+"id": "3-x-7-ft-teardrop-flags-double-sided-93aa32",
+"src": "Custom Flags\\Teardrop Flags\\3 x 7 Ft_Teardrop Flags_Double Sided.psdt",
+"img": "assets/qnap/3-x-7-ft-teardrop-flags-double-sided-93aa32.jpg",
+"mask": "assets/qnap/3-x-7-ft-teardrop-flags-double-sided-93aa32.m.png",
+"outline": "assets/qnap/3-x-7-ft-teardrop-flags-double-sided-93aa32.o.json",
+"fullIn": [
+39.02,
+107.63
+],
+"visIn": [
+0.0,
+0.0,
+39.024,
+107.632
+],
+"safeIn": [
+1.66,
+1.659,
+37.454,
+106.018
+],
+"prodIn": [
+0.0,
+0.0,
+39.024,
+107.632
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.099
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Teardrop Flags",
+"path": "Teardrop Flags",
+"name": "3 x 7 Ft_Teardrop Flags_Single Sided",
+"panel": "Teardrop Flags Single Sided",
+"sides": "single",
+"stated": [
+36.0,
+84.0,
+"ft"
+],
+"id": "3-x-7-ft-teardrop-flags-single-sided-a80711",
+"src": "Custom Flags\\Teardrop Flags\\3 x 7 Ft_Teardrop Flags_Single Sided.psdt",
+"img": "assets/qnap/3-x-7-ft-teardrop-flags-single-sided-a80711.jpg",
+"mask": "assets/qnap/3-x-7-ft-teardrop-flags-single-sided-a80711.m.png",
+"outline": "assets/qnap/3-x-7-ft-teardrop-flags-single-sided-a80711.o.json",
+"fullIn": [
+40.0,
+86.0
+],
+"visIn": [
+2.401,
+1.398,
+38.387,
+84.101
+],
+"safeIn": [
+3.118,
+1.899,
+37.885,
+82.703
+],
+"prodIn": [
+0.609,
+0.394,
+39.391,
+85.606
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.113
+},
+"layersFrom": "clipping mask layer",
+"front": [
+14.337,
+8.851,
+29.642,
+38.987
+],
+"frontSafe": [
+14.337,
+8.851,
+29.642,
+38.987
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Teardrop Flags",
+"path": "Teardrop Flags",
+"name": "3 x 7.75 Ft_Teardrop Flags_Double Sided",
+"panel": "Teardrop Flags Double Sided",
+"sides": "double",
+"stated": [
+36.0,
+93.0,
+"ft"
+],
+"id": "3-x-7-75-ft-teardrop-flags-double-si-a1780b",
+"src": "Custom Flags\\Teardrop Flags\\3 x 7.75 Ft_Teardrop Flags_Double Sided.psdt",
+"img": "assets/qnap/3-x-7-75-ft-teardrop-flags-double-si-a1780b.jpg",
+"mask": "assets/qnap/3-x-7-75-ft-teardrop-flags-double-si-a1780b.m.png",
+"outline": "assets/qnap/3-x-7-75-ft-teardrop-flags-double-si-a1780b.o.json",
+"fullIn": [
+43.14,
+119.72
+],
+"visIn": [
+1.097,
+1.097,
+42.039,
+118.623
+],
+"safeIn": [
+1.596,
+1.596,
+41.54,
+118.124
+],
+"prodIn": [
+0.1,
+0.1,
+43.036,
+119.62
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.102
+},
+"layersFrom": "template outline"
+},
+{
+"group": "Custom Flags",
+"product": "Teardrop Flags",
+"path": "Teardrop Flags",
+"name": "3 x 7.75 Ft_Teardrop Flags_Single Sided",
+"panel": "Teardrop Flags Single Sided",
+"sides": "single",
+"stated": [
+36.0,
+93.0,
+"ft"
+],
+"id": "3-x-7-75-ft-teardrop-flags-single-si-e15f8a",
+"src": "Custom Flags\\Teardrop Flags\\3 x 7.75 Ft_Teardrop Flags_Single Sided.psdt",
+"img": "assets/qnap/3-x-7-75-ft-teardrop-flags-single-si-e15f8a.jpg",
+"mask": "assets/qnap/3-x-7-75-ft-teardrop-flags-single-si-e15f8a.m.png",
+"outline": "assets/qnap/3-x-7-75-ft-teardrop-flags-single-si-e15f8a.o.json",
+"fullIn": [
+44.0,
+97.0
+],
+"visIn": [
+2.343,
+1.9,
+42.465,
+94.575
+],
+"safeIn": [
+3.071,
+2.385,
+41.939,
+93.201
+],
+"prodIn": [
+0.566,
+0.889,
+43.434,
+96.111
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.102
+},
+"layersFrom": "clipping mask layer",
+"front": [
+15.596,
+10.225,
+32.768,
+44.014
+],
+"frontSafe": [
+15.596,
+10.225,
+32.768,
+44.014
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Teardrop Flags",
+"path": "Teardrop Flags",
+"name": "4.5 x 11.6 Ft_Teardrop Flags_Single Sided",
+"panel": "Teardrop Flags Single Sided",
+"sides": "single",
+"stated": [
+54.0,
+139.2,
+"ft"
+],
+"id": "4-5-x-11-6-ft-teardrop-flags-single-be33d0",
+"src": "Custom Flags\\Teardrop Flags\\4.5 x 11.6 Ft_Teardrop Flags_Single Sided.psdt",
+"img": "assets/qnap/4-5-x-11-6-ft-teardrop-flags-single-be33d0.jpg",
+"mask": "assets/qnap/4-5-x-11-6-ft-teardrop-flags-single-be33d0.m.png",
+"outline": "assets/qnap/4-5-x-11-6-ft-teardrop-flags-single-be33d0.o.json",
+"fullIn": [
+59.0,
+144.0
+],
+"visIn": [
+2.341,
+1.8,
+57.439,
+141.3
+],
+"safeIn": [
+3.001,
+2.34,
+56.959,
+140.22
+],
+"prodIn": [
+0.54,
+0.84,
+58.46,
+143.22
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.075
+},
+"layersFrom": "clipping mask layer",
+"front": [
+20.407,
+14.34,
+44.355,
+65.46
+],
+"frontSafe": [
+20.407,
+14.34,
+44.355,
+65.46
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Triangle Flag",
+"path": "Triangle Flag",
+"name": "Triangle Flag 1.5 x 1 ft Double Sided",
+"panel": "Triangle Flag Double Sided",
+"sides": "double",
+"stated": [
+18.0,
+12.0,
+"ft"
+],
+"id": "triangle-flag-1-5-x-1-ft-double-side-f8bfb8",
+"src": "Custom Flags\\Triangle Flag\\Triangle Flag 1.5 x 1 ft Double Sided.psdt",
+"img": "assets/qnap/triangle-flag-1-5-x-1-ft-double-side-f8bfb8.jpg",
+"mask": "assets/qnap/triangle-flag-1-5-x-1-ft-double-side-f8bfb8.m.png",
+"outline": "assets/qnap/triangle-flag-1-5-x-1-ft-double-side-f8bfb8.o.json",
+"fullIn": [
+40.15,
+13.38
+],
+"visIn": [
+0.502,
+0.736,
+39.65,
+12.648
+],
+"safeIn": [
+1.004,
+1.405,
+39.148,
+11.979
+],
+"prodIn": [
+0.0,
+0.0,
+40.152,
+13.384
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.198
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Triangle Flag",
+"path": "Triangle Flag",
+"name": "Triangle Flag 1.5 x 1 ft Single Sided",
+"panel": "Triangle Flag Single Sided",
+"sides": "single",
+"stated": [
+18.0,
+12.0,
+"ft"
+],
+"id": "triangle-flag-1-5-x-1-ft-single-side-79a0e0",
+"src": "Custom Flags\\Triangle Flag\\Triangle Flag 1.5 x 1 ft Single Sided.psdt",
+"img": "assets/qnap/triangle-flag-1-5-x-1-ft-single-side-79a0e0.jpg",
+"mask": "assets/qnap/triangle-flag-1-5-x-1-ft-single-side-79a0e0.m.png",
+"outline": "assets/qnap/triangle-flag-1-5-x-1-ft-single-side-79a0e0.o.json",
+"fullIn": [
+20.07,
+13.38
+],
+"visIn": [
+0.502,
+0.711,
+18.384,
+12.672
+],
+"safeIn": [
+1.004,
+1.397,
+16.878,
+11.986
+],
+"prodIn": [
+0.0,
+0.0,
+20.065,
+13.383
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.197
+},
+"layersFrom": "clipping mask layer",
+"front": [
+1.004,
+5.362,
+12.914,
+8.022
+],
+"frontSafe": [
+1.004,
+5.362,
+12.914,
+8.022
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Triangle Flag",
+"path": "Triangle Flag",
+"name": "Triangle Flag 1x1 ft Double Sided",
+"panel": "Triangle Flag Double Sided",
+"sides": "double",
+"stated": [
+12.0,
+12.0,
+"ft"
+],
+"id": "triangle-flag-1x1-ft-double-sided-1a3ca4",
+"src": "Custom Flags\\Triangle Flag\\Triangle Flag 1x1 ft Double Sided.psdt",
+"img": "assets/qnap/triangle-flag-1x1-ft-double-sided-1a3ca4.jpg",
+"mask": "assets/qnap/triangle-flag-1x1-ft-double-sided-1a3ca4.m.png",
+"outline": "assets/qnap/triangle-flag-1x1-ft-double-sided-1a3ca4.o.json",
+"fullIn": [
+27.23,
+13.62
+],
+"visIn": [
+0.499,
+0.84,
+26.733,
+12.776
+],
+"safeIn": [
+0.999,
+1.623,
+26.233,
+11.993
+],
+"prodIn": [
+0.0,
+0.0,
+27.232,
+13.616
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.223
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Triangle Flag",
+"path": "Triangle Flag",
+"name": "Triangle Flag 1x1 ft Single Sided",
+"panel": "Triangle Flag Single Sided",
+"sides": "single",
+"stated": [
+12.0,
+12.0,
+"ft"
+],
+"id": "triangle-flag-1x1-ft-single-sided-2d18e3",
+"src": "Custom Flags\\Triangle Flag\\Triangle Flag 1x1 ft Single Sided.psdt",
+"img": "assets/qnap/triangle-flag-1x1-ft-single-sided-2d18e3.jpg",
+"mask": "assets/qnap/triangle-flag-1x1-ft-single-sided-2d18e3.m.png",
+"outline": "assets/qnap/triangle-flag-1x1-ft-single-sided-2d18e3.o.json",
+"fullIn": [
+13.62,
+13.62
+],
+"visIn": [
+0.499,
+0.828,
+12.459,
+12.788
+],
+"safeIn": [
+0.999,
+1.623,
+11.376,
+11.994
+],
+"prodIn": [
+0.0,
+0.0,
+13.611,
+13.617
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.223
+},
+"layersFrom": "clipping mask layer",
+"front": [
+0.999,
+5.509,
+8.788,
+8.108
+],
+"frontSafe": [
+0.999,
+5.509,
+8.788,
+8.108
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Triangle Flag",
+"path": "Triangle Flag",
+"name": "Triangle Flag 4x2 ft Double Sided",
+"panel": "Triangle Flag Double Sided",
+"sides": "double",
+"stated": [
+48.0,
+24.0,
+"ft"
+],
+"id": "triangle-flag-4x2-ft-double-sided-1589a6",
+"src": "Custom Flags\\Triangle Flag\\Triangle Flag 4x2 ft Double Sided.psdt",
+"img": "assets/qnap/triangle-flag-4x2-ft-double-sided-1589a6.jpg",
+"mask": "assets/qnap/triangle-flag-4x2-ft-double-sided-1589a6.m.png",
+"outline": "assets/qnap/triangle-flag-4x2-ft-double-sided-1589a6.o.json",
+"fullIn": [
+101.12,
+25.28
+],
+"visIn": [
+0.506,
+0.716,
+100.614,
+24.564
+],
+"safeIn": [
+1.517,
+1.938,
+99.603,
+23.342
+],
+"prodIn": [
+0.0,
+0.0,
+101.12,
+25.28
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.101
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Triangle Flag",
+"path": "Triangle Flag",
+"name": "Triangle Flag 4x2 ft Single Sided",
+"panel": "Triangle Flag Single Sided",
+"sides": "single",
+"stated": [
+48.0,
+24.0,
+"ft"
+],
+"id": "triangle-flag-4x2-ft-single-sided-7b0991",
+"src": "Custom Flags\\Triangle Flag\\Triangle Flag 4x2 ft Single Sided.psdt",
+"img": "assets/qnap/triangle-flag-4x2-ft-single-sided-7b0991.jpg",
+"mask": "assets/qnap/triangle-flag-4x2-ft-single-sided-7b0991.m.png",
+"outline": "assets/qnap/triangle-flag-4x2-ft-single-sided-7b0991.o.json",
+"fullIn": [
+50.56,
+25.28
+],
+"visIn": [
+0.506,
+0.674,
+48.095,
+24.606
+],
+"safeIn": [
+1.496,
+1.917,
+44.345,
+23.363
+],
+"prodIn": [
+0.0,
+0.0,
+50.518,
+25.28
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.098
+},
+"layersFrom": "clipping mask layer",
+"front": [
+1.496,
+9.965,
+33.707,
+15.315
+],
+"frontSafe": [
+1.496,
+9.965,
+33.707,
+15.315
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Triangle Flag",
+"path": "Triangle Flag",
+"name": "Triangle Flag 5x3 ft Double Sided",
+"panel": "Triangle Flag Double Sided",
+"sides": "double",
+"stated": [
+60.0,
+36.0,
+"ft"
+],
+"id": "triangle-flag-5x3-ft-double-sided-8be399",
+"src": "Custom Flags\\Triangle Flag\\Triangle Flag 5x3 ft Double Sided.psdt",
+"img": "assets/qnap/triangle-flag-5x3-ft-double-sided-8be399.jpg",
+"mask": "assets/qnap/triangle-flag-5x3-ft-double-sided-8be399.m.png",
+"outline": "assets/qnap/triangle-flag-5x3-ft-double-sided-8be399.o.json",
+"fullIn": [
+124.48,
+37.34
+],
+"visIn": [
+0.519,
+0.778,
+124.013,
+36.566
+],
+"safeIn": [
+1.504,
+2.023,
+122.976,
+35.321
+],
+"prodIn": [
+0.0,
+0.0,
+124.48,
+37.344
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.074
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Triangle Flag",
+"path": "Triangle Flag",
+"name": "Triangle Flag 5x3 ft Single Sided",
+"panel": "Triangle Flag Single Sided",
+"sides": "single",
+"stated": [
+60.0,
+36.0,
+"ft"
+],
+"id": "triangle-flag-5x3-ft-single-sided-85a5fa",
+"src": "Custom Flags\\Triangle Flag\\Triangle Flag 5x3 ft Single Sided.psdt",
+"img": "assets/qnap/triangle-flag-5x3-ft-single-sided-85a5fa.jpg",
+"mask": "assets/qnap/triangle-flag-5x3-ft-single-sided-85a5fa.m.png",
+"outline": "assets/qnap/triangle-flag-5x3-ft-single-sided-85a5fa.o.json",
+"fullIn": [
+62.24,
+37.34
+],
+"visIn": [
+0.493,
+0.726,
+60.113,
+36.618
+],
+"safeIn": [
+1.504,
+2.023,
+56.976,
+35.321
+],
+"prodIn": [
+0.0,
+0.0,
+62.214,
+37.344
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.07
+},
+"layersFrom": "clipping mask layer",
+"front": [
+1.504,
+14.497,
+43.153,
+22.847
+],
+"frontSafe": [
+1.504,
+14.497,
+43.153,
+22.847
+],
+"logoArea": "safe area"
+},
+{
+"group": "Custom Flags",
+"product": "Triangle Flag",
+"path": "Triangle Flag",
+"name": "Triangle Flag 6x4 ft Double Sided",
+"panel": "Triangle Flag Double Sided",
+"sides": "double",
+"stated": [
+72.0,
+48.0,
+"ft"
+],
+"id": "triangle-flag-6x4-ft-double-sided-4ea8d5",
+"src": "Custom Flags\\Triangle Flag\\Triangle Flag 6x4 ft Double Sided.psdt",
+"img": "assets/qnap/triangle-flag-6x4-ft-double-sided-4ea8d5.jpg",
+"mask": "assets/qnap/triangle-flag-6x4-ft-double-sided-4ea8d5.m.png",
+"outline": "assets/qnap/triangle-flag-6x4-ft-double-sided-4ea8d5.o.json",
+"fullIn": [
+148.15,
+49.38
+],
+"visIn": [
+0.494,
+0.802,
+147.658,
+48.582
+],
+"safeIn": [
+1.482,
+2.099,
+146.67,
+47.285
+],
+"prodIn": [
+0.0,
+0.0,
+148.152,
+49.384
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.059
+},
+"layersFrom": "clipping mask layer"
+},
+{
+"group": "Custom Flags",
+"product": "Triangle Flag",
+"path": "Triangle Flag",
+"name": "Triangle Flag 6x4 ft Single Sided",
+"panel": "Triangle Flag Single Sided",
+"sides": "single",
+"stated": [
+72.0,
+48.0,
+"ft"
+],
+"id": "triangle-flag-6x4-ft-single-sided-a3d409",
+"src": "Custom Flags\\Triangle Flag\\Triangle Flag 6x4 ft Single Sided.psdt",
+"img": "assets/qnap/triangle-flag-6x4-ft-single-sided-a3d409.jpg",
+"mask": "assets/qnap/triangle-flag-6x4-ft-single-sided-a3d409.m.png",
+"outline": "assets/qnap/triangle-flag-6x4-ft-single-sided-a3d409.o.json",
+"fullIn": [
+74.08,
+49.38
+],
+"visIn": [
+0.494,
+0.741,
+72.105,
+48.643
+],
+"safeIn": [
+1.512,
+2.099,
+69.296,
+47.285
+],
+"prodIn": [
+0.0,
+0.0,
+74.049,
+49.384
+],
+"kind": "layers",
+"source": "qnap",
+"layout": true,
+"areas": {
+"bleed": 0.055
+},
+"layersFrom": "clipping mask layer",
+"front": [
+1.512,
+19.013,
+52.35,
+30.371
+],
+"frontSafe": [
+1.512,
+19.013,
+52.35,
+30.371
+],
+"logoArea": "safe area"
+}
+]

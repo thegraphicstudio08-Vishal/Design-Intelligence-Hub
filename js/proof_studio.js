@@ -929,15 +929,18 @@ const ProofStudio = {
     // Only real or designer-uploaded files; generated pictures are no longer shown as templates/mockups
     const placeholder = (label) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
       `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180"><rect width="320" height="180" fill="#f8fafc" stroke="#cbd5e1" stroke-dasharray="6 4"/><text x="160" y="86" font-family="Arial" font-size="14" font-weight="700" fill="#64748b" text-anchor="middle">${label}</text><text x="160" y="108" font-family="Arial" font-size="11" fill="#94a3b8" text-anchor="middle">Upload it in the Proof Studio slot</text></svg>`);
-    // QNAP product template with the customer's artwork placed on it (safe / visible outlines), as on the canvas
+    // Product template (website / QNAP) with the customer's artwork placed on it and its outlines, as on the canvas —
+    // before the plain template picture; a designer-uploaded template always wins
     const qnapT = (typeof CanvasInspector !== 'undefined') ? CanvasInspector.productTemplate : null;
     const qnapComposite = !this.slots.template?.isCustom && qnapT && CanvasInspector.qnapComposite ? CanvasInspector.qnapComposite() : null;
-    const templateSrc = this.slots.template?.dataUrl
+    const templateSrc = (this.slots.template?.isCustom && this.slots.template.dataUrl)
       || qnapComposite
+      || this.slots.template?.dataUrl
       || (officialTemplate ? officialTemplate.templateFile : null)
       || placeholder('Real template not added yet');
+    const kindT = qnapT && typeof ProductTemplates !== 'undefined' ? ProductTemplates.kindName(qnapT).toLowerCase() : 'template';
     const templateCaption = this.slots.template?.isCustom ? dimsDisplay
-      : qnapComposite ? `Your artwork on the ${qnapT.product} template · green line = safe area, blue line = visible area`
+      : qnapComposite ? `Your artwork on the ${kindT} “${qnapT.name}” · red = cut line, blue = visible area, green dashed = safe area`
       : officialTemplate ? officialTemplate.dims : dimsDisplay;
 
     const mockupSrc = this.slots.mockup?.dataUrl

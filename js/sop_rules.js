@@ -42,7 +42,9 @@ const SopRules = {
   family(spec, parsed) {
     const t = this._text(spec, parsed);
     // Note: match "l-banner-stand", never bare "l-banner" (it is inside "vinyl-banners")
-    if (/roll-up|banner-stand|pop-up|backdrop|step-and-repeat|tension|trade-show-display|straight-display/.test(t)) return 'display';
+    // "Step and Repeat Banners" (vinyl / fabric banners) are banners; the step-and-repeat stands and backdrops are displays
+    if (/roll-up|banner-stand|pop-up|backdrop|tension|trade-show-display|straight-display/.test(t)
+      || (/step-and-repeat/.test(t) && /stand|backdrop|tension|frame|display|adjustable/.test(t))) return 'display';
     if (/flag/.test(t)) return 'flag';
     if (/banner/.test(t)) return 'banner';
     if (/magnet|poster|a-frame/.test(t)) return 'sign';
@@ -236,11 +238,12 @@ const SopRules = {
     }
     // Pole pockets: which sides (SOP: top · top & bottom · left & right)
     const sides = [];
-    if (hit(/ top (and|&|n) bottom pole pockets?| top bottom pole pockets?| pole pockets? (at|on) (the )?top (and|&) bottom/)) sides.push('top', 'bottom');
-    else if (hit(/ left (and|&|n) right pole pockets?| left right pole pockets?| pole pockets? (at|on) (the )?left (and|&) right/)) sides.push('left', 'right');
+    // (the side may come before or after the words: "Top & Bottom Pole Pockets", "Pole_Pockets_Top_Bottom")
+    if (hit(/ top (and|&|n) bottom pole pockets?| top bottom pole pockets?| pole pockets? (?:(at|on) (the )?)?top (?:(and|&|n) )?bottom/)) sides.push('top', 'bottom');
+    else if (hit(/ left (and|&|n) right pole pockets?| left right pole pockets?| pole pockets? (?:(at|on) (the )?)?left (?:(and|&|n) )?right/)) sides.push('left', 'right');
     else if (hit(/ 3 pole pockets at left side| pole sleeve( at left side)?/)) { f.flagSleeve = true; sides.push('left'); }
-    else if (hit(/ top pole pockets?| pole pockets? (at|on) (the )?top/)) sides.push('top');
-    else if (hit(/ bottom pole pockets?| pole pockets? (at|on) (the )?bottom/)) sides.push('bottom');
+    else if (hit(/ top pole pockets?| pole pockets? (?:(at|on) (the )?)?top /)) sides.push('top');
+    else if (hit(/ bottom pole pockets?| pole pockets? (?:(at|on) (the )?)?bottom /)) sides.push('bottom');
     else if (hit(/ pole pockets?/)) f.pocketSidesUnknown = true;
     if (sides.length || f.pocketSidesUnknown) {
       const m = t.match(/ (\d+(?:\.\d+)?) ?(?:in|inch|inches|") (?:top |bottom |left |right )?pole pockets?| pole pockets? (\d+(?:\.\d+)?) ?(?:in|inch|inches|") /);

@@ -93,7 +93,7 @@ const SafeZoneCheck = {
         const fx = (x0 + bw * (0.04 + 0.92 * i / 8)) / FW, fy = (y0 + bh * (0.04 + 0.92 * j / 8)) / FH;
         const v = ProductTemplates.maskAt(c, fx, fy);
         n++;
-        if (v < 255) { out++; sx += fx; sy += fy; if (v === 0) bleed++; }
+        if (v < 255) { out++; sx += fx; sy += fy; if (v < 128) bleed++; }   // 64 = bleed bars, 0 = outside / bleed
       }
     }
     // side: the template edge nearest to the part that lies outside the safe area
@@ -109,6 +109,12 @@ const SafeZoneCheck = {
   /** "0.25" safe zone" or "template safe area" */
   _zone(g) {
     return g && g.qnap ? 'template safe area' : g && g.safeIn ? `${this._fmt(g.safeIn)} safe zone` : 'safe zone';
+  },
+
+  /** The product template measured on: 'production standard template “…”', 'website design template “…”' or 'QNAP … “…”' */
+  _tplName(g, esc) {
+    const t = g.qnap.t, kind = typeof ProductTemplates !== 'undefined' ? ProductTemplates.kindName(t).toLowerCase() : 'template';
+    return `${kind} “${esc ? esc(t.name) : t.name}”`;
   },
 
   /** Measuring tolerance: OCR / pixel boxes are a pixel or two off, more on very large banners */
@@ -308,7 +314,7 @@ const SafeZoneCheck = {
     const size = obj.size || { w: 1, h: 1 };
     const turned = g.rot % 180 !== 0;
     const place = g.qnap
-      ? ProductTemplates.placement(g.qnap.t, turned ? (size.h || 1) : (size.w || 1), turned ? (size.w || 1) : (size.h || 1))
+      ? ProductTemplates.placement(g.qnap.t, turned ? (size.h || 1) : (size.w || 1), turned ? (size.w || 1) : (size.h || 1), g.rot)
       : this._placement(g, size.w || 1, size.h || 1);
     const tol = g.qnap ? 0 : this._tolerance(g);
     const measure = b => g.qnap ? this._measureQnap(b, g, place) : this._measure(b, g, place);
@@ -358,8 +364,8 @@ const SafeZoneCheck = {
     const spec = (report && report.spec) || {};
     const safeTxt = r.g && r.g.safeIn ? this._fmt(r.g.safeIn) : (spec.safeArea || '');
     const zone = r.g ? this._zone(r.g) : `${safeTxt} safe zone`;
-    const onWhat = r.g && r.g.qnap ? `the QNAP template “${r.g.qnap.t.name}”` : r.g ? `the ordered size ${this._fmt(r.g.W)} × ${this._fmt(r.g.H)}` : '';
-    base.required = r.g && r.g.qnap ? 'Text, logos and important graphics inside the template safe area (lavender)'
+    const onWhat = r.g && r.g.qnap ? `the ${this._tplName(r.g)}` : r.g ? `the ordered size ${this._fmt(r.g.W)} × ${this._fmt(r.g.H)}` : '';
+    base.required = r.g && r.g.qnap ? 'Text, logos and important graphics inside the template safe area (green dashed line)'
       : `Text, logos and important graphics at least ${safeTxt} inside the trim`;
     if (r.state === 'na') {
       return Object.assign(base, { status: 'WARNING', manual: true, found: 'Check by eye on the canvas',
@@ -386,7 +392,7 @@ const SafeZoneCheck = {
     }
     const n = r.items.length + (r.more || 0);
     const list = r.items.map(it => this.describe(it, g)).join(' · ') + (r.more ? ` · and ${r.more} more` : '');
-    const moveTo = g.qnap ? 'inside the lavender safe area of the template' : `at least ${safeTxt} inside the trim`;
+    const moveTo = g.qnap ? 'inside the safe area of the template (green dashed line)' : `at least ${safeTxt} inside the trim`;
     // Text read on the artwork is certain → Critical. Graphics alone may be decoration (frames, ornaments) → marked,
     // and confirmed by eye
     if (!r.items.some(it => it.kind === 'text')) {
@@ -490,7 +496,7 @@ const SafeZoneCheck = {
         : `${n} graphic${n > 1 ? 's' : ''} outside the ${zone} — check by eye`}</span>
         <button class="spell-alert-close" title="Close" onclick="SafeZoneCheck.closeAlert()">×</button></div>
       <div class="spell-alert-note">${r.g.qnap
-        ? `Measured on the QNAP template “${esc(r.g.qnap.t.name)}”: important text and logos must stay inside its lavender safe area — outside it they can be cut off, hemmed or hidden by the hardware.`
+        ? `Measured on the ${this._tplName(r.g, esc)}: important text and logos must stay inside its safe area (green dashed line) — outside it they can be cut off, hemmed, folded under or hidden by the hardware.`
         : `Important text and logos must stay ${this._fmt(r.g.safeIn)} inside the trim — closer to the edge they can be cut off, hemmed or grommeted.`}</div>
       ${r.items.slice(0, 5).map((it, i) => `
         <div class="spell-alert-row">

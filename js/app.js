@@ -946,15 +946,23 @@ async function runPreCheck() {
 
     // QNAP product template whose panel is not the ordered product size (a canopy wall 117" × 42" on a 10 × 10 ft
     // tent): size, resolution and orientation are measured on the template panel the artwork is made for
+    // A shaped artwork (table cover cross, flag outline…) is matched to its template by its outline first
     let checkDims = appState.userDims;
     if (typeof ProductTemplates !== 'undefined' && analysis && analysis.pixelWidth && appState.userDims) {
       const pf = appState.parsedFilename;
       const fname = (pf && pf.fname) || (appState.file && appState.file.name) || '';
-      const panel = ProductTemplates.panelFor(effectiveSpec, appState.userDims, pf, fname, analysis.pixelWidth, analysis.pixelHeight);
+      let match = null;
+      try {
+        match = await Promise.race([
+          ProductTemplates.autoMatch(appState.product, appState.userDims, pf, fname, artSrc),
+          new Promise(res => setTimeout(() => res(null), 6000))
+        ]);
+      } catch (e) { match = null; }
+      const panel = ProductTemplates.panelFor(effectiveSpec, appState.userDims, pf, fname, analysis.pixelWidth, analysis.pixelHeight, match);
       if (panel) {
         checkDims = Object.assign({}, appState.userDims, { widthIn: panel.w, heightIn: panel.h });
         FileAnalyzer._evaluateMeasurementsAndOrientation(analysis, panel.w, panel.h);
-        analysis.templatePanel = { w: panel.w, h: panel.h, on: panel.on, name: panel.t.name, product: panel.t.product };
+        analysis.templatePanel = { w: panel.w, h: panel.h, on: panel.on, name: panel.t.name, product: panel.t.product, web: ProductTemplates.isWebsite(panel.t), kind: ProductTemplates.kindName(panel.t).toLowerCase(), area: ProductTemplates.logoArea(panel.t) };
       }
     }
 
