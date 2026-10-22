@@ -127,10 +127,15 @@ const SafeZoneCheck = {
    * OCR words → text lines (words side by side on one row joined), boxes in fractions of the upright artwork.
    * Misreads are left out: stray "|" marks, short words read with low certainty, and boxes whose shape cannot hold
    * the letters read (e.g. "THE" in a box taller than it is wide — a logo or picture read as text).
+   * angle: the turn the text was read at (sideways / upside-down artwork). The words are grouped the way the text
+   * runs, and the line boxes turned back to the artwork as supplied.
    */
-  _textLines(words, size) {
-    const aw = (size && size.w) || 1, ah = (size && size.h) || 1;
-    const good = (words || []).map(w => w && Object.assign({}, w, { text: String(w.text || '').replace(/[|¦]+/g, '').trim() }))
+  _textLines(words, size, angle) {
+    const a = (((angle || 0) % 360) + 360) % 360;
+    const turnIn = b => a ? this._rotBox(b, a) : b, turnBack = b => a ? this._rotBox(b, (360 - a) % 360) : b;
+    const aw = ((a % 180 ? size && size.h : size && size.w)) || 1, ah = ((a % 180 ? size && size.w : size && size.h)) || 1;
+    const good = (words || []).map(w => w && Object.assign({}, w, { text: String(w.text || '').replace(/[|¦]+/g, '').trim(),
+      box: w.box && turnIn(w.box) }))
       .filter(w => {
         if (!w || !w.box || !(w.box.w > 0 && w.box.h > 0)) return false;
         const letters = (w.text.match(/[A-Za-z0-9]/g) || []).length;
@@ -151,7 +156,7 @@ const SafeZoneCheck = {
       if (ln) { ln.words.push(w.text); ln.x1 = Math.max(ln.x1, w.x1); ln.y0 = Math.min(ln.y0, w.y0); ln.y1 = Math.max(ln.y1, w.y1); }
       else lines.push({ words: [w.text], x0: w.x0, y0: w.y0, x1: w.x1, y1: w.y1, h0: h });
     });
-    return lines.map(l => ({ text: l.words.join(' '), box: { x: l.x0, y: l.y0, w: l.x1 - l.x0, h: l.y1 - l.y0 } }));
+    return lines.map(l => ({ text: l.words.join(' '), box: turnBack({ x: l.x0, y: l.y0, w: l.x1 - l.x0, h: l.y1 - l.y0 }) }));
   },
 
   // ── design elements ────────────────────────────────────────────────────
@@ -494,7 +499,8 @@ const SafeZoneCheck = {
       });
       return a >= 0.5 * b.w * b.h;
     };
-    const lines = (textWords ? this._textLines(textWords, size) : [])
+    const readAt = ai && ai.textResult && ai.textResult.orientation ? ai.textResult.orientation.angle : 0;
+    const lines = (textWords ? this._textLines(textWords, size, readAt) : [])
       .filter(l => !(pat.length && (l.text.match(/[A-Za-z0-9]/g) || []).length <= 4 && onPattern(l.box)));
     lines.forEach(l => {
       const m = measure(l.box), it = Object.assign({ kind: 'text', text: l.text, box: l.box }, m);
@@ -649,9 +655,13 @@ const SafeZoneCheck = {
       width: (art.w * sx) + 'px', height: (art.h * sy) + 'px' });
     const pct = v => (v * 100).toFixed(2) + '%';
     const tag = { text: 'TEXT OUTSIDE SAFE ZONE', lettering: 'TEXT / LOGO OUTSIDE SAFE ZONE', object: 'GRAPHIC IN THE MARGIN — CHECK' };
-    ov.innerHTML = r.items.map((it, i) => `
-      <div class="sz-mark${it.kind === 'object' ? ' sz-obj' : ''}" id="sz-mark-${i}" style="left:${pct(it.box.x)}; top:${pct(it.box.y)}; width:${pct(it.box.w)}; height:${pct(it.box.h)};">
-        <span class="sz-tag">${tag[it.kind] || tag.object}</span></div>`).join('');
+    const rot = (ci && ci.artRot) || 0;               // artwork turned on the canvas: the marks turn with it
+    ov.innerHTML = r.items.map((it, i) => {
+      const b = this._rotBox(it.box, rot);
+      return `
+      <div class="sz-mark${it.kind === 'object' ? ' sz-obj' : ''}" id="sz-mark-${i}" style="left:${pct(b.x)}; top:${pct(b.y)}; width:${pct(b.w)}; height:${pct(b.h)};">
+        <span class="sz-tag">${tag[it.kind] || tag.object}</span></div>`;
+    }).join('');
   },
 
   /** Scroll to the canvas and flash one mark */

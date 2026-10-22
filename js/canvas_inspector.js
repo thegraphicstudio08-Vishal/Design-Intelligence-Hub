@@ -1369,6 +1369,7 @@ const CanvasInspector = {
       const boxH = isRotated ? tw : th;
       const r = this._fitRect(img.naturalWidth || boxW, img.naturalHeight || boxH, boxW, boxH);
       ctx.drawImage(img, r.x - boxW / 2, r.y - boxH / 2, r.w, r.h);
+      this._setTurnedArtRect(tx + tw / 2, ty + th / 2, r);
     } else {
       const r = this._fitRect(img.naturalWidth || tw, img.naturalHeight || th, tw, th);
       ctx.drawImage(img, tx + r.x, ty + r.y, r.w, r.h);
@@ -1550,10 +1551,22 @@ const CanvasInspector = {
   },
 
   /**
+   * Where the turned artwork lies on the canvas (px), from the centre it is drawn around and its fitted size before
+   * the turn. artRot tells the overlays (markers, safe-zone marks) to turn their positions the same way.
+   */
+  _setTurnedArtRect(cx, cy, r) {
+    const side = this.currentRotation % 180 !== 0;
+    const w = side ? r.h : r.w, h = side ? r.w : r.h;
+    this.artRect = { x: cx - w / 2, y: cy - h / 2, w, h };
+    this.artRot = this.currentRotation;
+  },
+
+  /**
    * Redraw the canvas, artwork, and product template overlays
    */
   redraw() {
     this.artRect = null;
+    this.artRot = 0;
     this._loupeCanvasUrl = null;   // the zoom loupe's picture of the canvas is out of date
     this.legend = null;            // set again by the print sheet / banner layout when it draws
     this._redrawCanvas();
@@ -1712,6 +1725,7 @@ const CanvasInspector = {
       const boxH = isRotated ? w : h;
       const r = this._fitRect(img.naturalWidth || boxW, img.naturalHeight || boxH, boxW, boxH);
       ctx.drawImage(img, r.x - boxW / 2, r.y - boxH / 2, r.w, r.h);
+      this._setTurnedArtRect(ox + w / 2, oy + h / 2, r);
     } else {
       const r = this._fitRect(img.naturalWidth || w, img.naturalHeight || h, w, h);
       ctx.drawImage(img, r.x, r.y, r.w, r.h);
@@ -2063,7 +2077,8 @@ const CanvasInspector = {
       }
       ctx.restore();
     }
-    if (!this.currentRotation) this.artRect = { x: px * k, y: py * k, w: pw * k, h: ph * k };   // canvas px
+    this.artRect = { x: px * k, y: py * k, w: pw * k, h: ph * k };   // canvas px (the turned artwork fills the placement too)
+    this.artRot = this.currentRotation || 0;
 
     // fit check on the Front panel layout: the panel's safe area the logo is centred in
     if (view === 'fit' && p.on === 'front' && t.frontSafe) {
@@ -4856,8 +4871,9 @@ const CanvasInspector = {
 
       const img = this.currentImg, art = this.artRect;
       let mode, sizes, positions, label;
-      if (art && img.naturalWidth > 0 && img.naturalHeight > 0) {
+      if (art && !this.artRot && img.naturalWidth > 0 && img.naturalHeight > 0) {
         // Artwork view: the real artwork pixels, in their own proportions (never stretched to the canvas).
+        // A turned artwork is magnified from the canvas picture instead (the file's pixels are not turned).
         // 100% = one artwork pixel per screen pixel, as in Photoshop; low-resolution artwork is shown 2×.
         const artX = art.x / kx, artY = art.y / ky, artW = art.w / kx, artH = art.h / ky;
         const actual = img.naturalWidth / artW;

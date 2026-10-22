@@ -806,20 +806,34 @@ const ColorCheck = {
       action: action.join(' '), colour: r, visual: this.compareHtml(r, src, { height: 150 }) });
   },
 
-  /** Screen (RGB) and print (CMYK, SWOP v2) side by side, with the problem areas marked */
+  /**
+   * Screen (RGB) and print (CMYK, SWOP v2) side by side, with the problem areas marked.
+   * opts.rot: the artwork turned on the canvas (90 / 180 / 270) — both pictures and their marks are shown turned the
+   * same way, so the proof matches the canvas and the Entire Artwork Proof.
+   */
   compareHtml(r, src, opts) {
     const hgt = (opts && opts.height) || 180;
+    const rot = (((opts && opts.rot) || 0) % 360 + 360) % 360;
     const C = this.COLOURS;
     const boxes = [];
     if (r.issues.gamut) r.gamut.boxes.forEach(b => boxes.push([b, C.gamut]));
     if (r.issues.merge) r.merge.boxes.forEach(b => boxes.push([b, C.merge]));
     if (r.issues.opacity) r.opacity.boxes.forEach(b => boxes.push([b, C.opacity]));
     const marks = boxes.map(([b, col]) => `<div style="position:absolute; left:${(b.x * 100).toFixed(2)}%; top:${(b.y * 100).toFixed(2)}%; width:${(b.w * 100).toFixed(2)}%; height:${(b.h * 100).toFixed(2)}%; border:2px dashed ${col}; border-radius:3px; box-shadow:0 0 0 1px rgba(255,255,255,0.7); pointer-events:none; box-sizing:border-box;"></div>`).join('');
+    // turned: a frame of the turned size, the picture (with its marks) turned inside it
+    const turnedBox = (img, label, bg) => {
+      const W0 = r.width || 1, H0 = r.height || 1, side = rot % 180 !== 0;
+      const tw = side ? H0 : W0, th = side ? W0 : H0, s = Math.min(hgt / th, 330 / tw);
+      return `<div style="display:inline-block; position:relative; width:${Math.round(tw * s)}px; height:${Math.round(th * s)}px; background:${bg}; box-shadow:0 1px 4px rgba(15,23,42,0.18);">
+          <div style="position:absolute; left:50%; top:50%; width:${Math.round(W0 * s)}px; height:${Math.round(H0 * s)}px; line-height:0; transform:translate(-50%, -50%) rotate(${rot}deg);">
+            <img src="${img}" alt="${label}" style="display:block; width:100%; height:100%;" />${marks}
+          </div></div>`;
+    };
     const panel = (img, label, bg, info) => `
       <div style="flex:1; min-width:0; text-align:center;">
-        <div style="display:inline-block; position:relative; line-height:0; max-width:100%; background:${bg}; box-shadow:0 1px 4px rgba(15,23,42,0.18);">
+        ${rot ? turnedBox(img, label, bg) : `<div style="display:inline-block; position:relative; line-height:0; max-width:100%; background:${bg}; box-shadow:0 1px 4px rgba(15,23,42,0.18);">
           <img src="${img}" alt="${label}" style="display:block; max-width:100%; max-height:${hgt}px; object-fit:contain;" />${marks}
-        </div>
+        </div>`}
         <div style="font-size:10.5px; font-weight:800; color:#334155; margin-top:6px; letter-spacing:0.02em;">${label}</div>
         ${info || ''}
       </div>`;

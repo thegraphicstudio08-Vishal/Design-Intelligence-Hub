@@ -924,12 +924,21 @@ const AgenticAiInspector = {
     const early = !!(opts && opts.early);
     const analysis = (typeof appState !== 'undefined' && !early) ? appState.analysis : null;
     const fileName = (typeof appState !== 'undefined' && appState.file && appState.file.name) || '';
-    const ext = ((analysis && analysis.fileExt) || (early ? fileName.split('.').pop() : '') || '').toLowerCase();
+    // after "Clear" + a new upload the canvas draws the artwork before the pre-check stores its analysis: the
+    // uploaded file's name then gives the type
+    const ext = ((analysis && analysis.fileExt) || (fileName.includes('.') ? fileName.split('.').pop() : '') || '').toLowerCase();
     const realSrc = analysis ? analysis.previewDataUrl : null;
     const loaded = !!(img && img.naturalWidth > 0);
     const src = (img && img.src) || realSrc || '';
 
     if (this._lastScannedSrc === src && (this.scanResult || this.scanSkipReason)) {
+      this.renderOverlay();
+      this.updateControlsUI();
+      return this.defects;
+    }
+
+    // File type not known yet (no file, no analysis): decide on a later call instead of keeping "cannot check"
+    if (!ext && !(analysis && analysis.renderedFromPdf)) {
       this.renderOverlay();
       this.updateControlsUI();
       return this.defects;
@@ -1337,8 +1346,9 @@ const AgenticAiInspector = {
 
   /**
    * Markers are placed in artwork coordinates, so the overlay covers exactly the rectangle where the
-   * artwork is drawn (inside hem / bleed / letterbox). In template or mockup view, or when rotated,
-   * the artwork is not drawn 1:1, so markers are hidden rather than shown in the wrong place.
+   * artwork is drawn (inside hem / bleed / letterbox). Turned artwork (Rotate Artwork): the overlay covers the
+   * turned artwork and each marker is turned with it (_turnMarker). In template or mockup view the artwork is
+   * not drawn 1:1, so markers are hidden rather than shown in the wrong place.
    * artRect undefined = an older canvas_inspector.js (no artwork rectangle): fall back to the whole canvas
    */
   _placeOverlay(overlay, canvas) {
@@ -1383,6 +1393,25 @@ const AgenticAiInspector = {
   },
 
   /**
+   * A marker's position (percent of the artwork as supplied) on the artwork turned clockwise by rot:
+   * box, circle centre and edge sides. Labels stay upright because only the positions turn.
+   */
+  _turnMarker(d, rot) {
+    const m = { xPercent: d.xPercent, yPercent: d.yPercent, wPercent: d.wPercent, hPercent: d.hPercent,
+      cxPercent: d.cxPercent, cyPercent: d.cyPercent, sides: d.sides };
+    if (!rot) return m;
+    const x = d.xPercent, y = d.yPercent, w = d.wPercent, h = d.hPercent, cx = d.cxPercent, cy = d.cyPercent;
+    const SIDES = { 90: { top: 'right', right: 'bottom', bottom: 'left', left: 'top' },
+                    180: { top: 'bottom', right: 'left', bottom: 'top', left: 'right' },
+                    270: { top: 'left', right: 'top', bottom: 'right', left: 'bottom' } }[rot] || {};
+    if (rot === 90) Object.assign(m, { xPercent: 100 - y - h, yPercent: x, wPercent: h, hPercent: w, cxPercent: 100 - cy, cyPercent: cx });
+    else if (rot === 180) Object.assign(m, { xPercent: 100 - x - w, yPercent: 100 - y - h, cxPercent: 100 - cx, cyPercent: 100 - cy });
+    else if (rot === 270) Object.assign(m, { xPercent: y, yPercent: 100 - x - w, wPercent: h, hPercent: w, cxPercent: cy, cyPercent: 100 - cx });
+    m.sides = (d.sides || []).map(s => SIDES[s] || s);
+    return m;
+  },
+
+  /**
    * Render interactive animated blinking highlights directly over the artwork canvas
    */
   renderOverlay(containerEl, canvasEl) {
@@ -1419,9 +1448,12 @@ const AgenticAiInspector = {
     const isBlinking = this.options.blinking;
     // Labels only where they help: the selected marker, or every marker when there are only a few
     const showAllTags = visibleDefects.length <= 6;
+    const ci = (typeof CanvasInspector !== 'undefined') ? CanvasInspector : null;
+    const rot = (ci && ci.artRot) || 0;              // artwork turned on the canvas: markers turn with it
     let html = '';
 
     visibleDefects.forEach(defect => {
+      const m = this._turnMarker(defect, rot);
       const isActive = (this._activeDefectId === defect.id);
       const isIntentional = defect.intentional;
       const showTag = showAllTags || isActive;
@@ -1430,7 +1462,7 @@ const AgenticAiInspector = {
 
       if (defect.shape === 'edges') {
         const col = isIntentional ? '#22c55e' : '#0ea5e9';
-        (defect.sides || []).forEach(side => {
+        (m.sides || []).forEach(side => {
           const pos = side === 'top' ? 'left:0; top:0; width:100%; height:6px;'
             : side === 'bottom' ? 'left:0; bottom:0; width:100%; height:6px;'
             : side === 'left' ? 'left:0; top:0; width:6px; height:100%;'
@@ -1440,7 +1472,7 @@ const AgenticAiInspector = {
         });
         if (showTag) {
           // Put the label next to the edge it describes
-          const first = (defect.sides || ['top'])[0];
+          const first = (m.sides || ['top'])[0];
           const at = first === 'bottom' ? 'left:50%; top:calc(100% - 34px);'
             : first === 'left' ? 'left:16px; top:50%;'
             : first === 'right' ? 'left:calc(100% - 16px); top:50%;'
@@ -1458,7 +1490,7 @@ const AgenticAiInspector = {
         html += `
           <div class="ai-highlight-item ai-highlight-circle ${blinkClass} ${activeClass}" 
                id="marker-${defect.id}"
-               style="left:${defect.cxPercent}%; top:${defect.cyPercent}%; transform:translate(-50%, -50%); border-color:${isIntentional ? '#22c55e' : '#ef4444'};"
+               style="left:${m.cxPercent}%; top:${m.cyPercent}%; transform:translate(-50%, -50%); border-color:${isIntentional ? '#22c55e' : '#ef4444'};"
                onclick="AgenticAiInspector.handleMarkerClick('${defect.id}', event)"
                title="${tip}">
             <div class="ai-circle-core" style="background:${isIntentional ? '#22c55e' : '#ef4444'};"></div>
@@ -1481,14 +1513,14 @@ const AgenticAiInspector = {
           : isTypo ? `<span class="ai-tag-wrong">✗ ${esc(defect.details.word)}</span> → <span class="ai-tag-right">✓ ${esc(defect.details.suggestion)}</span>`
           : `${defect.title}${confTxt}`;
         // Label below the box when the word is at the very top of the artwork
-        const tagPos = isTypo && defect.yPercent < 10 ? 'bottom:auto; top:calc(100% + 6px);' : '';
+        const tagPos = isTypo && m.yPercent < 10 ? 'bottom:auto; top:calc(100% + 6px);' : '';
         // Pad the box so a 1 px line is still easy to see
         const padX = 0.6, padY = 0.8;
 
         html += `
           <div class="ai-highlight-item ${blinkClass} ${activeClass}"
                id="marker-${defect.id}"
-               style="left:${Math.max(0, defect.xPercent - padX)}%; top:${Math.max(0, defect.yPercent - padY)}%; width:${defect.wPercent + 2 * padX}%; height:${defect.hPercent + 2 * padY}%; border:${isTypo ? 3 : 2.5}px solid ${boxBorderColor}; background:${isTypo ? 'rgba(220,38,38,0.10)' : 'rgba(0,0,0,0.05)'}; border-radius:4px;"
+               style="left:${Math.max(0, m.xPercent - padX)}%; top:${Math.max(0, m.yPercent - padY)}%; width:${m.wPercent + 2 * padX}%; height:${m.hPercent + 2 * padY}%; border:${isTypo ? 3 : 2.5}px solid ${boxBorderColor}; background:${isTypo ? 'rgba(220,38,38,0.10)' : 'rgba(0,0,0,0.05)'}; border-radius:4px;"
                onclick="AgenticAiInspector.handleMarkerClick('${defect.id}', event)"
                title="${tip}">
             ${showTag || isTypo ? `<div class="ai-marker-tag${isTypo ? ' ai-tag-spelling' : ''}" style="background:${tagBg}; color:#ffffff; ${tagPos}">${tagHtml}</div>` : ''}

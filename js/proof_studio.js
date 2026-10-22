@@ -1114,6 +1114,8 @@ const ProofStudio = {
     // ── Colour preview · screen (RGB) vs print (CMYK) — bright RGB colours, colours merging, opacity ──
     const colourSrc = analysis?.previewDataUrl || realArtSrc;
     const colourRes = (typeof ColorCheck !== 'undefined') ? ColorCheck.resultFor(colourSrc) : null;
+    // the customer's artwork turned on the canvas: the colour preview shows it turned too, like Proof 01
+    const colourRot = ci && ci.currentImg && ci.currentImg.src === colourSrc ? (ci.currentRotation || 0) : 0;
     const cv = this.options.colourSection;
     const showColour = !!(colourRes && colourRes.ok) && (cv === 'auto' || cv === undefined ? colourRes.any : !!cv);
     if (showColour) {
@@ -1126,7 +1128,7 @@ const ProofStudio = {
       sections.push(card('COLOUR', 'Colour Preview — Screen vs Print',
         sub(notes.join(' '), colourRes.any ? '#9d174d' : MUTED, colourRes.any) + sub('Print colours show the CMYK conversion used for printing (U.S. Web Coated SWOP v2). Printed colours may vary slightly with the material and your screen.'),
         rightGroup(smallBtn('Hide', 'ProofStudio.setColourSection(false)')),
-        ColorCheck.compareHtml(colourRes, colourSrc, { height: 190 }) + ColorCheck.swatchesHtml(colourRes)));
+        ColorCheck.compareHtml(colourRes, colourSrc, { height: 190, rot: colourRot }) + ColorCheck.swatchesHtml(colourRes)));
     }
 
     // ── Proof 02 · Template based proof (template products) ──
