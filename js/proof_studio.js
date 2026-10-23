@@ -22,7 +22,7 @@ const ProofStudio = {
   options: {
     printPreview: 'auto', // Proof 03 print preview screenshot: 'auto' (SOP: only for low resolution) / true / false
     showTemplate: 'auto', // Proof 02 template section: 'auto' (template-based products) / true / false
-    colourSection: 'auto', // Colour preview screen vs print: 'auto' (bright RGB / merge / opacity found) / true / false
+    colourSection: false,  // Colour concern proof (screen vs print): only when the designer ticks it — never automatic
     cropX: null,          // Default null -> dynamically centered based on product orientation
     cropY: null,          // Default null -> dynamically centered based on product orientation
     cropZoomManual: null, // Optional manual override, default null (uses SOP auto calculation)
@@ -203,7 +203,7 @@ const ProofStudio = {
    */
   _proofPlan(spec, analysis, artworkSrc) {
     const key = (artworkSrc || '').length + ':' + (artworkSrc || '').slice(-40);
-    if (this._planKey !== key) { this._planKey = key; this.options.printPreview = 'auto'; this.options.showTemplate = 'auto'; this.options.colourSection = 'auto'; }
+    if (this._planKey !== key) { this._planKey = key; this.options.printPreview = 'auto'; this.options.showTemplate = 'auto'; this.options.colourSection = false; }
     const rep = (typeof appState !== 'undefined' && appState.report) ? appState.report : null;
     const pp = rep && Array.isArray(rep.checks) ? rep.checks.find(c => c.id === 'proofPlan') : null;
     const resConcern = pp && pp.resConcern ? pp.resConcern : null;
@@ -238,10 +238,15 @@ const ProofStudio = {
     this.refreshCurrentProof();
   },
 
-  /** Designer switch for the colour preview section (screen RGB vs print CMYK); 'auto' follows the colour check */
+  /**
+   * Designer switch for the colour concern proof (screen RGB vs print CMYK). Off by default — the normal proof
+   * process; the designer adds it for a specific colour concern (Proof Studio box 5, shown when the colour check
+   * found a colour issue).
+   */
   setColourSection(on) {
-    this.options.colourSection = on;
+    this.options.colourSection = !!on;
     this.refreshCurrentProof();
+    this.updateSidebarControls();
   },
 
   /**
@@ -463,6 +468,19 @@ const ProofStudio = {
     }
     const panel = document.getElementById('crop-shot-panel');
     if (panel) panel.style.display = plan.showPrintPreview ? 'block' : 'none';
+    // Box 5 · colour concern proof: only when the colour check found a colour issue; the designer ticks it
+    const col = this._lastColour || { available: false, on: false, found: '' };
+    const slot = document.getElementById('colour-proof-slot');
+    if (slot) slot.style.display = col.available ? 'block' : 'none';
+    const cchk = document.getElementById('check-colour-proof');
+    if (cchk) cchk.checked = !!col.on;
+    const cbadge = document.getElementById('colour-status-badge');
+    if (cbadge) {
+      const t = col.on ? ['ON · BY DESIGNER', '#fce7f3', '#be185d'] : ['COLOUR ISSUE FOUND', '#fef3c7', '#b45309'];
+      cbadge.textContent = t[0]; cbadge.style.background = t[1]; cbadge.style.color = t[2];
+    }
+    const found = document.getElementById('colour-proof-found');
+    if (found) found.textContent = col.found ? 'Found: ' + col.found : '';
   },
 
   refreshCurrentProof() {
@@ -1116,8 +1134,14 @@ const ProofStudio = {
     const colourRes = (typeof ColorCheck !== 'undefined') ? ColorCheck.resultFor(colourSrc) : null;
     // the customer's artwork turned on the canvas: the colour preview shows it turned too, like Proof 01
     const colourRot = ci && ci.currentImg && ci.currentImg.src === colourSrc ? (ci.currentRotation || 0) : 0;
-    const cv = this.options.colourSection;
-    const showColour = !!(colourRes && colourRes.ok) && (cv === 'auto' || cv === undefined ? colourRes.any : !!cv);
+    // Colour concern proof: offered only when the colour check found an issue, and shown only when the designer
+    // ticked it (Proof Studio box 5) — otherwise the normal proof process
+    const colourIssue = !!(colourRes && colourRes.ok && colourRes.any);
+    const showColour = colourIssue && this.options.colourSection === true;
+    this._lastColour = { available: colourIssue, on: showColour,
+      found: colourIssue ? [colourRes.issues.gamut ? `bright RGB colours that print duller (${colourRes.gamut.pct}%)` : '',
+        colourRes.issues.merge ? `colours that merge in print (${colourRes.merge.boxes.length} area${colourRes.merge.boxes.length > 1 ? 's' : ''})` : '',
+        colourRes.issues.opacity ? `semi-transparent areas (${colourRes.semiPct}%)` : ''].filter(Boolean).join(' · ') : '' };
     if (showColour) {
       const notes = [];
       if (colourRes.issues.gamut) notes.push('Some bright colours in your artwork (marked in pink) are brighter than printing inks can reproduce — they will print slightly duller, as shown on the right.');
@@ -1187,7 +1211,7 @@ const ProofStudio = {
     // Designer shortcuts (never printed)
     const tools = [
       !plan.showTemplate ? smallBtn('+ Template &amp; mockup section', 'ProofStudio.setTemplateSection(true)') : '',
-      !showColour && colourRes && colourRes.ok ? smallBtn('+ Colour preview (screen vs print)', 'ProofStudio.setColourSection(true)') : '',
+      !showColour && colourIssue ? smallBtn('+ Colour concern proof (screen vs print)', 'ProofStudio.setColourSection(true)') : '',
       !plan.showPrintPreview ? smallBtn('+ Print preview screenshot (print-quality concern)', 'ProofStudio.setPrintPreview(true)') : ''
     ].filter(Boolean).join('');
     const visualSectionsHtml = sections.join('') + (tools ? `<div class="no-print" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; margin:-4px 0 10px;">${tools}</div>` : '');

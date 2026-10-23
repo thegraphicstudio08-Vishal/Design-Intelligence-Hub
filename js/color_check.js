@@ -779,13 +779,13 @@ const ColorCheck = {
       found.push(`Bright RGB colours on ${r.gamut.pct}% of the artwork will print duller`);
       detail.push('These colours are outside what CMYK inks can print and shift on press: ' + r.gamut.swatches.map(s =>
         `${chip(s.rgb)} → ${chip(s.print)} (C${s.cmyk[0]} M${s.cmyk[1]} Y${s.cmyk[2]} K${s.cmyk[3]}, ΔE ${s.de})`).join(' · ') + '.');
-      action.push('The proof shows the customer the screen (RGB) and print (CMYK) look side by side, with the areas marked — added automatically.');
+      action.push('To show the customer, tick "Colour Concern Proof" in Proof Studio: the screen (RGB) and print (CMYK) look side by side, with the areas marked. It is not added automatically — the normal proof goes out otherwise.');
     }
     if (r.issues.merge) {
       found.push(`${r.merge.boxes.length} area${r.merge.boxes.length > 1 ? 's' : ''} where colours merge in print`);
       detail.push('Colours that are clearly different on screen become almost the same in print, so text or shapes may blend into their background: '
         + r.merge.pairs.map(p => `${chip(p.a)} next to ${chip(p.b)} (ΔE ${p.deScreen} on screen → ${p.dePrint} in print)`).join(' · ') + '.');
-      action.push('Marked on the proof for the customer; suggest more contrast (e.g. a darker or lighter text colour, or an outline).');
+      action.push('Suggest more contrast (e.g. a darker or lighter text colour, or an outline); the Colour Concern Proof marks these areas for the customer.');
     }
     if (r.issues.opacity) {
       found.push(`Semi-transparent areas (${r.semiPct}% of the artwork)`);

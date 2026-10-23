@@ -1963,6 +1963,11 @@ function onCropShotToggle(checked) {
   if (typeof ProofStudio !== 'undefined' && ProofStudio.setPrintPreview) ProofStudio.setPrintPreview(checked);
 }
 
+// Colour concern proof: only the designer adds it (box shown when the colour check found a colour issue)
+function onColourProofToggle(checked) {
+  if (typeof ProofStudio !== 'undefined' && ProofStudio.setColourSection) ProofStudio.setColourSection(checked);
+}
+
 /**
  * Product Rules Catalog Table
  */

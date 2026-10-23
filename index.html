@@ -374,6 +374,22 @@
             </div>
           </div>
 
+          <!-- Slot 5: Colour concern proof — shown only when the colour check found a colour issue; never added on its
+               own: the normal proof goes out unless the designer ticks it for a specific colour concern -->
+          <div class="slot" id="colour-proof-slot" style="display:none; margin-bottom:12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:6px;">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; font-weight:700; color:var(--text-primary); margin:0;">
+                <input type="checkbox" id="check-colour-proof" onchange="onColourProofToggle(this.checked)" style="width:16px; height:16px; cursor:pointer; accent-color:#db2777;" />
+                <span>5. Colour Concern Proof (Screen vs Print)</span>
+              </label>
+              <span id="colour-status-badge" style="font-size:9.5px; font-weight:800; color:#be185d; background:#fce7f3; padding:2px 6px; border-radius:3px; white-space:nowrap;">COLOUR ISSUE FOUND</span>
+            </div>
+            <div style="font-size:10.5px; color:#64748b; line-height:1.35;">
+              Not added automatically — the normal proof goes out unless you tick this. Tick it to show the customer a specific colour concern: the artwork on screen (RGB) and in print (CMYK) side by side, with the areas marked.
+            </div>
+            <div id="colour-proof-found" style="font-size:10.5px; color:#9d174d; font-weight:600; line-height:1.35; margin-top:6px;"></div>
+          </div>
+
           <div class="fg" style="margin-top:14px;">
             <label class="fl" for="proof-note">Customer Note on Proof</label>
             <input type="text" class="fi" id="proof-note" placeholder="e.g. Logo vectorized to ensure sharp print output." oninput="generateProofView()" />
@@ -600,14 +616,14 @@
   <script src="js/file_analyzer.js?v=20261017c"></script>
   <script src="js/artwork_text_check.js?v=20261009b"></script>
   <script src="js/agentic_ai_inspector.js?v=20261022b"></script>
-  <script src="js/color_check.js?v=20261022b"></script>
+  <script src="js/color_check.js?v=20261023a"></script>
   <script src="js/safe_zone_check.js?v=20261022b"></script>
   <script src="js/precheck_engine.js?v=20261017f"></script>
   <script src="js/previous_orders.js"></script>
   <script src="js/qnap_templates.js?v=20261017d"></script>
   <script src="js/product_templates.js?v=20261017c"></script>
   <script src="js/canvas_inspector.js?v=20261022b"></script>
-  <script src="js/proof_studio.js?v=20261022b"></script>
-  <script src="js/app.js?v=20261017f"></script>
+  <script src="js/proof_studio.js?v=20261023a"></script>
+  <script src="js/app.js?v=20261023a"></script>
 </body>
 </html>
