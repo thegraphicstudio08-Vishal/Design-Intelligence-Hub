@@ -476,6 +476,23 @@ const ArtworkMarkDetector = {
     const marks = raw.filter((m, i) => !used.has(i));
     if (this.DEBUG) this._debug = { W, H, bw, bh, bType, busy, bRef, comps, label, isoPx, dotMax, lineMin, markMax, rejected };
 
+    // Photo detail close by (detailed blocks ≥ 5 % within 12 % of the short side): a speck there may belong to the
+    // photo — a highlight, a button, a speck of the picture (real design PDFs: on a dark uniform next to a face)
+    const nearR = Math.ceil(short * 0.12 / B);
+    const photoNear = m => {
+      const bx = Math.floor(m.cx / B), by = Math.floor(m.cy / B);
+      let n = 0, det = 0;
+      for (let yy = Math.max(0, by - nearR); yy <= Math.min(bh - 1, by + nearR); yy++)
+        for (let xx = Math.max(0, bx - nearR); xx <= Math.min(bw - 1, bx + nearR); xx++) {
+          const t = bType[yy * bw + xx];
+          if (!t) continue;
+          n++; if (t === 3) det++;
+        }
+      return det / Math.max(1, n) >= 0.05;
+    };
+    marks.forEach(m => { m.nearPhoto = photoNear(m); });
+    textRow.forEach(m => { m.nearPhoto = photoNear(m); });
+
     // ── 6. Thin lines along the outer edges ──────────────────────────────
     const edgeLines = this._edgeLines(data, lum, opaque, W, H);
 
@@ -548,6 +565,15 @@ const ArtworkMarkDetector = {
       if (thick > 2) return;                         // a wider band is a design border, not a sliver
       out.push({ side: s.name, thicknessPx: thick, color: outer.color.map(Math.round) });
     });
+    // A print layout's page frame: a thin line on all four sides with a plain white margin inside it (the artwork
+    // starts further in) — drawn by the print layout, not a sliver left on the artwork after cropping
+    if (out.length === 4) {
+      const depth = Math.max(12, Math.round(Math.min(W, H) * 0.008));
+      out.frame = sides.every(s => [4, REF, depth].every(t => {
+        const st = lineStats(s, t);
+        return st && st.uniform && st.color.every(c => c >= 235);
+      }));
+    }
     return out;
   }
 };
@@ -1012,22 +1038,30 @@ const AgenticAiInspector = {
   getCheckSummary() {
     const marks = this.defects.filter(d => d.type !== 'spelling');
     const active = marks.filter(d => !d.dismissed && !d.intentional);
-    const lines = active.filter(d => d.type === 'stray_line');
-    const dots = active.filter(d => d.type === 'stray_dot');
+    // Marks beside photo detail may belong to the photo: listed and marked, but a look by eye — not Critical
+    const besidePhoto = active.filter(d => (d.type === 'stray_dot' || d.type === 'stray_line') && d.nearPhoto);
+    const lines = active.filter(d => d.type === 'stray_line' && !d.nearPhoto);
+    const dots = active.filter(d => d.type === 'stray_dot' && !d.nearPhoto);
     const edges = active.filter(d => d.type === 'edge_line');
     const typos = [];
     const r = this.scanResult;
     const plural = (n, w) => `${n} ${w}${n !== 1 ? 's' : ''}`;
 
     const closed = marks.filter(d => d.dismissed).length;
-    const intentional = marks.filter(d => !d.dismissed && d.intentional).length;
+    const intentional = marks.filter(d => !d.dismissed && d.intentional && !d.finishing).length;
     // Findings the designer closed or confirmed are reported as such — never as "nothing found"
     const reviewed = [closed ? `${closed} closed` : '', intentional ? `${intentional} marked intentional` : ''].filter(Boolean).join(', ');
-    const closedNote = reviewed ? ` · ${reviewed} by designer` : '';
+    // Print-layout marks the tool recognised itself (grommet / eyelet marks, page frame) are named, not counted as strays
+    const fin = marks.filter(d => !d.dismissed && d.finishing);
+    const finDots = fin.filter(d => d.type !== 'edge_line').length;
+    const finNote = fin.length ? ` · recognised as print-layout marks: ${[finDots ? plural(finDots, 'grommet / eyelet mark') : '', fin.some(d => d.type === 'edge_line') ? 'page frame line' : ''].filter(Boolean).join(' + ')}` : '';
+    const closedNote = (reviewed ? ` · ${reviewed} by designer` : '') + finNote;
+    // A thin edge line on a design file with bleed lies in the bleed — trimmed off or hemmed: a look by eye
+    const inBleed = this._edgeInBleed(edges);
     const parts = [];
     if (dots.length) parts.push(plural(dots.length, 'stray dot/mark'));
     if (lines.length) parts.push(plural(lines.length, 'stray line'));
-    if (edges.length) parts.push('thin edge line');
+    if (edges.length && !inBleed) parts.push('thin edge line');
     if (typos.length) parts.push(plural(typos.length, 'spelling note'));
 
     if (!r && !this.scanSkipReason) {
@@ -1054,13 +1088,25 @@ const AgenticAiInspector = {
       : '';
     const hasFatal = active.some(d => d.severity === 'Fatal');
 
+    // Findings for a look by eye: a thin line inside the bleed, possible marks beside photo detail
+    const toConfirm = [inBleed ? `thin line along the ${inBleed}` : '',
+      besidePhoto.length ? `${plural(besidePhoto.length, 'possible stray mark')} beside photo detail` : ''].filter(Boolean);
     if (parts.length) {
       return {
         status: hasFatal ? 'FAIL' : 'WARNING', manual: false,   // stray marks found → Critical
-        found: `${parts.join(', ')} · checked ${r.checkedPct}% of the artwork${closedNote}`,
+        found: `${parts.join(', ')} · checked ${r.checkedPct}% of the artwork${closedNote}${toConfirm.length ? ` · to confirm by eye: ${toConfirm.join(', ')}` : ''}`,
         detail: coverage + patternNote,
         action: 'Click a marker on the canvas (or 🎯 Locate) to zoom in. Remove real marks, or mark them intentional.'
           + (r.artworkType !== 'flat' ? ' Photo and illustration areas are not auto-checked — look over them at 100% zoom.' : '')
+      };
+    }
+    if (toConfirm.length) {
+      return {
+        status: 'WARNING', manual: true,
+        found: `No clear stray marks · ${toConfirm.join(' · ')} — confirm by eye · checked ${r.checkedPct}% of the artwork${closedNote}`,
+        detail: coverage + patternNote,
+        action: [besidePhoto.length ? 'Click the markers on the canvas: a highlight or detail of the photo is fine — remove it only if it is a speck or dust.' : '',
+          inBleed ? 'The edge line lies in the bleed, which is trimmed off or hemmed — confirm it does not reach the finished edge.' : ''].filter(Boolean).join(' ')
       };
     }
     if (r.checkedPct < 40) {
@@ -1075,12 +1121,35 @@ const AgenticAiInspector = {
     }
     return {
       status: 'PASS', manual: false,
-      found: reviewed
+      found: (reviewed
         ? `All findings reviewed by designer (${reviewed}) · checked ${r.checkedPct}% of the artwork`
-        : `No stray lines or dots found · checked ${r.checkedPct}% of the artwork`,
+        : `No stray lines or dots found · checked ${r.checkedPct}% of the artwork`) + finNote,
       detail: coverage + patternNote,
       action: ''
     };
+  },
+
+  /**
+   * For a PDF design file with bleed (page larger than the order): the edge sides whose thin line is narrower than
+   * the bleed there, e.g. 'top edge, inside the 1.75" bleed' — '' when not every side qualifies.
+   */
+  _edgeInBleed(edges) {
+    const des = typeof appState !== 'undefined' && appState.analysis && appState.analysis.design;
+    const r = this.scanResult, o = typeof appState !== 'undefined' && appState.userDims;
+    if (!edges.length || !des || !des.r || !r || !o || !(o.widthIn > 0 && o.heightIn > 0)) return '';
+    const pg = des.r.pageIn;
+    const turned = (pg.w > pg.h) !== (o.widthIn > o.heightIn);
+    const ow = turned ? o.heightIn : o.widthIn, oh = turned ? o.widthIn : o.heightIn;
+    const bleed = { left: (pg.w - ow) / 2, right: (pg.w - ow) / 2, top: (pg.h - oh) / 2, bottom: (pg.h - oh) / 2 };
+    const sides = [...new Set(edges.flatMap(d => d.sides || []))];
+    const ok = sides.length && sides.every(s => {
+      const e = (r.edgeLines || []).find(l => l.side === s);
+      const across = s === 'top' || s === 'bottom';
+      return e && bleed[s] >= 0.25 && e.thicknessPx / (across ? r.height : r.width) * (across ? pg.h : pg.w) < bleed[s];
+    });
+    if (!ok) return '';
+    const b = Math.min(...sides.map(s => bleed[s]));
+    return `${sides.join(', ')} edge${sides.length > 1 ? 's' : ''}, inside the ${+b.toFixed(2)}" bleed`;
   },
 
   syncPrecheckReport() {
@@ -1240,10 +1309,12 @@ const AgenticAiInspector = {
 
     this._textRowMarks = res.textRowMarks || [];
     res.marks.forEach((m, i) => this.defects.push(this._markDefect(m, `${i + 1}`, W, H)));
+    this._tagFinishingMarks();
 
     if (res.edgeLines.length) {
       const sides = res.edgeLines.map(e => e.side);
       const thick = Math.max(...res.edgeLines.map(e => e.thicknessPx));
+      const frame = !!res.edgeLines.frame;
       this.defects.push({
         id: 'edge_1',
         type: 'edge_line',
@@ -1251,22 +1322,68 @@ const AgenticAiInspector = {
         shape: 'edges',
         sides,
         severity: 'Review',
-        title: `Thin line along the ${sides.length === 4 ? 'whole border' : sides.join(', ') + ' edge' + (sides.length > 1 ? 's' : '')}`,
+        title: frame ? 'Page frame line around a white margin' : `Thin line along the ${sides.length === 4 ? 'whole border' : sides.join(', ') + ' edge' + (sides.length > 1 ? 's' : '')}`,
         confidence: null,
         details: {
-          description: `A ${thick} px line runs along the ${sides.join(', ')} edge${sides.length > 1 ? 's' : ''} and differs from the artwork next to it. If it is not a planned border (e.g. a white or grey sliver left after cropping), remove it or extend the background — after trimming it can show unevenly.`
+          description: frame
+            ? `A ${thick} px frame runs round the whole page with a plain white margin inside it — the page frame of a print layout, not part of the printed artwork.`
+            : `A ${thick} px line runs along the ${sides.join(', ')} edge${sides.length > 1 ? 's' : ''} and differs from the artwork next to it. If it is not a planned border (e.g. a white or grey sliver left after cropping), remove it or extend the background — after trimming it can show unevenly.`
         },
-        intentional: false,
+        finishing: frame,
+        intentional: frame,
         dismissed: false
       });
     }
   },
 
+  /**
+   * Tag the grommet / eyelet marks among the reported dots (incl. the ones restored after the text reading — marks
+   * on one row are held back until then): the tool recognises them itself, so they are not counted as strays.
+   */
+  _tagFinishingMarks() {
+    const r = this.scanResult;
+    if (!r) return;
+    const ds = this.defects.filter(d => d._mark && (d.type === 'stray_dot' || d.type === 'stray_line') && !d.dismissed);
+    const fin = this._finishingMarks(ds.map(d => d._mark), r.width, r.height);
+    ds.filter(d => fin.has(d._mark)).forEach(d => {
+      Object.assign(d, { finishing: true, intentional: true, severity: 'Review', title: 'Grommet / eyelet mark' });
+      d.details.description = `One of ${fin.size} same-size marks placed in mirror pairs along the edges — the grommet / eyelet positions of a print layout, not a stray mark. Check they match the finishing in the file name.`;
+    });
+  },
+
+  /**
+   * Grommet / eyelet position marks of a print layout: three or more marks of one size and colour near the edges,
+   * each with a mirror partner across the page (corners, edge middles). Returns the set of such marks.
+   */
+  _finishingMarks(marks, W, H) {
+    const out = new Set();
+    const near = m => Math.min(m.cx, W - m.cx) / W <= 0.12 || Math.min(m.cy, H - m.cy) / H <= 0.12;
+    const cand = (marks || []).filter(m => m.kind !== 'line' && near(m));
+    const size = m => Math.max(m.w, m.h);
+    const alike = (a, b) => Math.max(size(a), size(b)) <= 1.6 * Math.min(size(a), size(b))
+      && a.color.every((c, i) => Math.abs(c - b.color[i]) <= 40);
+    const used = new Set();
+    cand.forEach(m => {
+      if (used.has(m)) return;
+      const group = cand.filter(o => !used.has(o) && alike(m, o));
+      if (group.length < 3) return;
+      const tx = 0.015 * W, ty = 0.015 * H;
+      const mirrored = group.filter(a => group.some(b => b !== a && (
+        (Math.abs(b.cx - (W - a.cx)) <= tx && Math.abs(b.cy - a.cy) <= ty) ||
+        (Math.abs(b.cy - (H - a.cy)) <= ty && Math.abs(b.cx - a.cx) <= tx))));
+      if (mirrored.length >= 3 && mirrored.length >= group.length * 0.75) {
+        group.forEach(o => { used.add(o); out.add(o); });
+      }
+    });
+    return out;
+  },
+
   /** One stray-mark finding (dot, line or smudge) in the defect format used by the panel and overlay */
   _markDefect(m, idSuffix, W, H, note) {
     const pct = v => +(v * 100).toFixed(2);
-    const likely = m.confidence >= 0.8;
-    const where = m.onSolidColour ? 'on a solid-colour area' : 'on a smooth / gradient area';
+    const likely = m.confidence >= 0.8 && !m.nearPhoto;
+    const where = (m.onSolidColour ? 'on a solid-colour area' : 'on a smooth / gradient area')
+      + (m.nearPhoto ? ', with photo detail close by — it may belong to the photo (a highlight, a button)' : '');
     const sizeTxt = m.kind === 'line' ? `${m.lengthPx} px long, ${m.thicknessPx} px thick` : `${m.w} × ${m.h} px`;
     const name = m.kind === 'line' ? 'stray line' : m.kind === 'mark' ? 'stray mark / smudge' : 'stray dot';
     const isLine = m.kind === 'line';
@@ -1276,8 +1393,9 @@ const AgenticAiInspector = {
       kind: m.kind,
       category: 'Stray Elements',
       shape: m.kind === 'dot' ? 'circle' : 'box',
-      // A mark on solid colour is almost always unwanted; on a gradient it may be part of the image
-      severity: m.onSolidColour ? 'Minor' : 'Review',
+      // A mark on solid colour is almost always unwanted; on a gradient or beside a photo it may be part of the image
+      severity: m.onSolidColour && !m.nearPhoto ? 'Minor' : 'Review',
+      nearPhoto: !!m.nearPhoto,
       title: `${likely ? 'Likely' : 'Possible'} ${name}`,
       confidence: m.confidence,
       cxPercent: pct(m.cx / W),
@@ -1294,7 +1412,8 @@ const AgenticAiInspector = {
         description: `${sizeTxt} at (${m.x}, ${m.y}) px, ${where}. Nothing else within ${m.isolationPx} px; colour rgb(${m.color.join(', ')}) stands out from its surround (contrast ${m.contrast}).${note ? ' ' + note : ''} Zoom in to confirm, then remove it or mark it intentional.`
       },
       intentional: false,
-      dismissed: false
+      dismissed: false,
+      _mark: m
     };
   },
 
@@ -1320,6 +1439,7 @@ const AgenticAiInspector = {
       });
       if (!besideText) this.defects.push(this._markDefect(m, `r${i + 1}`, W, H, 'No words beside it, so it is not punctuation or a divider.'));
     });
+    this._tagFinishingMarks();
   },
 
   /**
@@ -1479,7 +1599,7 @@ const AgenticAiInspector = {
             : 'left:50%; top:10px;';
           const shift = first === 'left' ? 'left:0; transform:none;' : first === 'right' ? 'left:auto; right:0; transform:none;' : '';
           html += `<div class="ai-highlight-item" style="${at} width:0; height:0;">
-                     <div class="ai-marker-tag" style="background:${isIntentional ? '#15803d' : '#0369a1'}; color:#ffffff; bottom:auto; top:0; ${shift}">${isIntentional ? '🟢 Marked as planned border' : '🔵 ' + defect.title}</div>
+                     <div class="ai-marker-tag" style="background:${isIntentional ? '#15803d' : '#0369a1'}; color:#ffffff; bottom:auto; top:0; ${shift}">${isIntentional ? (defect.finishing ? '🟢 ' + defect.title : '🟢 Marked as planned border') : '🔵 ' + defect.title}</div>
                    </div>`;
         }
       } else if (defect.shape === 'circle') {
@@ -1495,7 +1615,7 @@ const AgenticAiInspector = {
                title="${tip}">
             <div class="ai-circle-core" style="background:${isIntentional ? '#22c55e' : '#ef4444'};"></div>
             ${showTag ? `<div class="ai-marker-tag" style="background:${tagColor}; color:#ffffff;">
-              ${isIntentional ? '🟢 Marked intentional' : `${defect.title}${confTxt}`}
+              ${isIntentional ? (defect.finishing ? '🟢 ' + defect.title : '🟢 Marked intentional') : `${defect.title}${confTxt}`}
             </div>` : ''}
           </div>
         `;
@@ -1509,7 +1629,7 @@ const AgenticAiInspector = {
         const tagBg = isIntentional ? '#15803d' : isFatal ? '#991b1b' : isTypo ? '#991b1b' : defect.severity === 'Review' ? '#475569' : '#c2410c';
         const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         // A spelling marker always shows the wrong word and the correct spelling
-        const tagHtml = isIntentional ? '🟢 Marked intentional'
+        const tagHtml = isIntentional ? (defect.finishing ? '🟢 ' + defect.title : '🟢 Marked intentional')
           : isTypo ? `<span class="ai-tag-wrong">✗ ${esc(defect.details.word)}</span> → <span class="ai-tag-right">✓ ${esc(defect.details.suggestion)}</span>`
           : `${defect.title}${confTxt}`;
         // Label below the box when the word is at the very top of the artwork

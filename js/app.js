@@ -452,6 +452,12 @@ function checkAndApplyAutoOrientation(artW, artH) {
  * Handle Uploaded File
  */
 function handleFile(file) {
+  // This phase reads JPG, PNG and PDF: customer artwork, and the designer's PDF design file
+  const fileExt = (file.name.split('.').pop() || '').toLowerCase();
+  if (!['jpg', 'jpeg', 'png', 'pdf'].includes(fileExt)) {
+    alert(`"${file.name}" is a .${fileExt.toUpperCase()} file. OPS-Intel reads JPG, PNG and PDF files in this phase — save the artwork as PDF (or JPG / PNG) and upload it again.`);
+    return;
+  }
   appState.file = file;
   const ext = (file.name.split('.').pop() || '').toUpperCase();
   const sizeKB = (file.size / 1024).toFixed(1);
@@ -869,6 +875,32 @@ function updateBreadcrumbs() {
 /**
  * Execute the AI SOP Pre-Check
  */
+/** DetailCheck on the uploaded raster artwork (null when it cannot be read) */
+async function measureArtworkDetail(src) {
+  try {
+    const img = new Image();
+    img.src = src;
+    await img.decode();
+    return await DetailCheck.measure(img);
+  } catch (e) {
+    console.warn('Detail check skipped:', e);
+    return null;
+  }
+}
+
+/** A PDF design file read by PostCheck, once per file (null for other files, or when the PDF cannot be read) */
+function designAnalysisFor(file, step) {
+  if (!file || !/\.pdf$/i.test(file.name) || typeof PostCheck === 'undefined') return Promise.resolve(null);
+  const cache = appState.designCache || (appState.designCache = new WeakMap());
+  if (!cache.has(file)) {
+    cache.set(file, PostCheck.analyze(file, step).catch(e => {
+      console.warn('Design file could not be read:', e);
+      return null;
+    }));
+  }
+  return cache.get(file);
+}
+
 async function runPreCheck() {
   if (!appState.file || !appState.product) return;
   clearTimeout(scheduleRecheckAfterSizeChange._timer);   // this run already uses the latest size
@@ -901,11 +933,14 @@ async function runPreCheck() {
       : appState.product;
 
     // 1. Analyze File
-    let analysis = await FileAnalyzer.analyze(appState.file, effectiveSpec, appState.userDims);
+    // A PDF design file is read once (PostCheck): what the page is made of, every picture's placed PPI and real
+    // detail, colour mode, fonts — and the page drawn in that pass is the artwork every other check works on
+    const design = await designAnalysisFor(appState.file, t => { btnText.textContent = t; });
+    let analysis = await FileAnalyzer.analyze(appState.file, effectiveSpec, appState.userDims, design);
     if (analysis && analysis.pixelWidth && analysis.pixelHeight) {
       const swapped = checkAndApplyAutoOrientation(analysis.pixelWidth, analysis.pixelHeight);
       if (swapped) {
-        analysis = await FileAnalyzer.analyze(appState.file, effectiveSpec, appState.userDims);
+        analysis = await FileAnalyzer.analyze(appState.file, effectiveSpec, appState.userDims, design);
       }
     }
     appState.analysis = analysis;
@@ -971,6 +1006,20 @@ async function runPreCheck() {
       }
     }
 
+    // 1.9 Real detail of a raster artwork (a small picture enlarged to a high PPI still prints soft) — measured once
+    // per file on its own pixels; the size / resolution check reads it
+    if (analysis && !analysis.isVector && typeof DetailCheck !== 'undefined' && artSrc && !String(artSrc).includes('PDF VECTOR')) {
+      const cache = appState.detailCache || (appState.detailCache = new WeakMap());
+      if (!cache.has(appState.file)) cache.set(appState.file, measureArtworkDetail(artSrc));
+      analysis.detail = await cache.get(appState.file);
+    }
+
+    // 1.95 Design file (PDF): page size, picture resolution and real detail, colour mode, fonts — these cards replace
+    // the artwork size / resolution cards in the report
+    if (design && analysis && typeof PostCheck !== 'undefined') {
+      analysis.design = PostCheck.checksFor(design, { spec: effectiveSpec, dims: checkDims, parsed: appState.parsedFilename, req: sopReq });
+    }
+
     // 2. Evaluate SOP Checkpoints
     const report = PrecheckEngine.evaluate(analysis, effectiveSpec, checkDims, appState.overrides);
     appState.report = report;
@@ -1005,7 +1054,7 @@ async function runPreCheck() {
   } finally {
     btn.disabled = false;
     btnIcon.textContent = '⚡';
-    btnText.textContent = 'Run Pre-Check';
+    btnText.textContent = 'Run OPS-Intel Check';
   }
 }
 
@@ -1138,9 +1187,11 @@ function renderSummaryCard(report) {
   const counts = report.counts || { passes: 0, fails: 0, manual: 0 };
   updateFailBadges(counts.fails);
 
-  // VECTOR "GOOD FOR PRINT" HERO BANNER
+  // VECTOR "GOOD FOR PRINT" HERO BANNER — a PDF design file shows what its page is made of instead
   let vectorBannerHtml = '';
-  if (analysis.isVector) {
+  if (analysis.design && typeof PostCheck !== 'undefined') {
+    vectorBannerHtml = PostCheck.panelHtml(analysis.design);
+  } else if (analysis.isVector) {
     const isHybrid = !!analysis.embeddedRasterFound;
     const heroTitle = isHybrid
       ? 'Hybrid Vector + Raster Artwork Identified'
@@ -1227,7 +1278,7 @@ function renderSummaryCard(report) {
       <span>Order <strong>#${appState.orderNum || 'US-DRAFT'}</strong> · Customer: <strong>${appState.customerName || 'Customer'}</strong> · Product: <strong>${spec.name}</strong> · Size: <strong>${dimensions.widthIn}" × ${dimensions.heightIn}"</strong> · Checked: <strong>${new Date().toLocaleTimeString()}</strong></span>
       <span class="summary-actions">
         ${counts.manual ? `<button type="button" class="summary-link" onclick="focusCheck('manual-group')">${counts.manual} to confirm by eye ›</button>` : ''}
-        <button type="button" class="btn btn-orange btn-sm" onclick="setSubnav(document.querySelectorAll('.subnav-item')[2], 'proof')">Create proof ›</button>
+        <button type="button" class="btn btn-orange btn-sm" onclick="setSubnav(document.querySelector('.subnav-item[data-view=proof]'), 'proof')">Create proof ›</button>
       </span>
     </div>
   `;
@@ -1314,7 +1365,8 @@ function renderCheckCard(c, report) {
               <span class="cc-item-text">${it.text ? `<strong>${esc(it.text.length > 32 ? it.text.slice(0, 30) + '…' : it.text)}</strong> · ` : ''}${SafeZoneCheck.where(it, sz.g)}</span>
               <button type="button" class="cc-show" onclick="SafeZoneCheck.show(${i})">Show</button></li>`).join('')}
           ${sz.items.length + (sz.more || 0) > 6 ? `<li class="cc-item cc-item-more">+ ${sz.items.length + (sz.more || 0) - 6} more marked on the canvas</li>` : ''}
-        </ul>` : '';
+        </ul>` : (issue || manual) && c.items && c.items.length ? `
+        <ul class="cc-items">${c.items.map(t => `<li class="cc-item"><span class="cc-item-text">${t}</span></li>`).join('')}</ul>` : '';
 
   return `
     <div class="check-card ${st}" id="cc-${c.id}">

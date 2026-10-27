@@ -10,9 +10,10 @@ const FileAnalyzer = {
    * @param {File} file 
    * @param {Object} targetSpec - Product SOP specification { defaultW, defaultH, resolution, safeArea, bleed }
    * @param {Object} userDims - { widthIn, heightIn, unit }
+   * @param {Object} [design] - PostCheck reading of a PDF (its drawn page is reused, the PDF is not read twice)
    * @returns {Promise<Object>} Analysis result
    */
-  async analyze(file, targetSpec, userDims) {
+  async analyze(file, targetSpec, userDims, design) {
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     const sizeMB = file.size / (1024 * 1024);
     const targetW = userDims?.widthIn || targetSpec?.defaultW || 36;
@@ -49,7 +50,7 @@ const FileAnalyzer = {
     if (['svg'].includes(ext)) {
       return await this._analyzeSvg(file, baseResult, targetW, targetH);
     } else if (['pdf', 'ai'].includes(ext)) {
-      return await this._analyzePdfOrAi(file, baseResult, targetW, targetH);
+      return await this._analyzePdfOrAi(file, baseResult, targetW, targetH, design);
     } else if (['eps'].includes(ext)) {
       return await this._analyzeEps(file, baseResult, targetW, targetH);
     } else if (file.type.startsWith('image/') || ['jpg','jpeg','png','webp','tif','tiff','bmp','gif'].includes(ext)) {
@@ -147,7 +148,7 @@ const FileAnalyzer = {
    * Analyze PDF or Adobe Illustrator (.AI) Files
    * Deep scans for both Vector Artboard dimensions and embedded inside raster parts (/Subtype /Image).
    */
-  async _analyzePdfOrAi(file, res, targetW, targetH) {
+  async _analyzePdfOrAi(file, res, targetW, targetH, design) {
     res.isVector = true;
     res.isGoodForPrint = true;
     const isAi = res.fileExt === 'ai';
@@ -278,8 +279,15 @@ const FileAnalyzer = {
       res.previewDataUrl = this._generateVectorPreviewSvg(res, file.name, targetW, targetH);
     }
 
-    // Real page picture (PDF and PDF-compatible .AI files) so every check works on the actual artwork
-    const page = await this._renderPdfPage(file);
+    // Real page picture (PDF and PDF-compatible .AI files) so every check works on the actual artwork — the page the
+    // design-file reader already drew when there is one (its size includes the /UserUnit page scale)
+    const page = design && design.preview
+      ? { dataUrl: design.preview, w: design.previewW, h: design.previewH, ptW: design.pageIn.w * 72, ptH: design.pageIn.h * 72, pages: design.pages }
+      : await this._renderPdfPage(file);
+    if (design && design.pageIn) {
+      res.detectedInchesW = design.pageIn.w;
+      res.detectedInchesH = design.pageIn.h;
+    }
     if (page) {
       res.previewDataUrl = page.dataUrl;
       res.renderedFromPdf = true;
@@ -305,14 +313,15 @@ const FileAnalyzer = {
 
   async _loadPdfJs() {
     if (window.pdfjsLib) return window.pdfjsLib;
-    await new Promise((resolve, reject) => {
+    // One load for everyone: two loads at once would replace pdfjsLib under a document already opening
+    this._pdfjsLoading = this._pdfjsLoading || new Promise((resolve, reject) => {
       const el = document.createElement('script');
       el.src = this.PDFJS.lib;
-      el.onload = resolve;
-      el.onerror = () => reject(new Error('pdf.js could not be loaded'));
+      el.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = this.PDFJS.worker; resolve(); };
+      el.onerror = () => { this._pdfjsLoading = null; reject(new Error('pdf.js could not be loaded')); };
       document.head.appendChild(el);
     });
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc = this.PDFJS.worker;
+    await this._pdfjsLoading;
     return window.pdfjsLib;
   },
 
@@ -667,8 +676,8 @@ const FileAnalyzer = {
     if (!fname) return null;
     const clean = fname.replace(/\.[^/.]+$/, '');
 
-    // 1. Order Number: US2396245, BS2310454, AU2396585, CA..., UK...
-    const orderMatch = fname.match(/(?:PR)?(US|BS|AU|CA|UK|ORD)[\-_]?\d{6,8}/i);
+    // 1. Order Number: US2396245, BS2310454, AU2396585, CA..., UK..., NZ2431659
+    const orderMatch = fname.match(/(?:PR)?(US|BS|AU|CA|UK|NZ|ORD)[\-_]?\d{6,8}/i);
     const orderNum = orderMatch ? orderMatch[0].toUpperCase() : null;
 
     // Quantity extraction: _1_50_qty_, _3_2_qty_, _1_1_qty_, 300_piece_, 1pc
@@ -705,7 +714,7 @@ const FileAnalyzer = {
     let rawW = null, rawH = null, widthIn = null, heightIn = null, rawDim = '', detectedUnit = 'in';
 
     // (FT)
-    const ftMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:_Ft)?_x_(\d+(?:\.\d+)?)\s*(?:_Ft)?_\(FT\)/i) ||
+    const ftMatch = clean.match(/(\d+(?:\.\d+)?)'?\s*(?:_Ft)?_x_(\d+(?:\.\d+)?)'?\s*(?:_Ft)?_\(FT\)/i) ||
                     clean.match(/(\d+(?:\.\d+)?)\s*(?:ft|feet)\s*(?:x|by)\s*(\d+(?:\.\d+)?)\s*(?:ft|feet)/i);
     if (ftMatch) {
       rawW = parseFloat(ftMatch[1]);
@@ -741,8 +750,19 @@ const FileAnalyzer = {
       detectedUnit = 'cm';
     }
 
+    // (MT) metres, e.g. "Personalised_Flags_8_x_2.3_(MT)" — shown in CM (the size fields have no metre unit)
+    const mtMatch = !ftMatch && !cmMatch && clean.match(/(\d+(?:\.\d+)?)\s*(?:_m|_mt)?_x_(\d+(?:\.\d+)?)\s*(?:_m|_mt)?_\(MT\)/i);
+    if (mtMatch) {
+      rawW = +(parseFloat(mtMatch[1]) * 100).toFixed(1);
+      rawH = +(parseFloat(mtMatch[2]) * 100).toFixed(1);
+      widthIn = +(rawW / 2.54).toFixed(2);
+      heightIn = +(rawH / 2.54).toFixed(2);
+      rawDim = `${mtMatch[1]}_x_${mtMatch[2]}_(MT)`;
+      detectedUnit = 'cm';
+    }
+
     // (Inch)
-    if (!ftMatch && !cmMatch && !clean.match(/\(MM\)/i)) {
+    if (!ftMatch && !cmMatch && !mtMatch && !clean.match(/\(MM\)/i)) {
       const inMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:_Inch)?_x_(\d+(?:\.\d+)?)\s*(?:_Inch)?_\(Inch\)/i) ||
                       // Loose "W_x_H" only for real production names (with an order number):
                       // a stray "3x5" in a customer's filename must never become the order size.
@@ -759,14 +779,14 @@ const FileAnalyzer = {
 
     // 3. Product Name extraction:
     let rawProdName = null;
-    const prodQtyMatch = clean.match(/_qty_(.*?)(?=_\d+(?:\.\d+)?(?:_Ft|_mm|_Inch)?_x_)/i);
+    const prodQtyMatch = clean.match(/_qty_(.*?)(?=_\d+(?:\.\d+)?(?:_Ft|_mm|_Inch|_cm)?_x_)/i);
     if (prodQtyMatch) {
       rawProdName = prodQtyMatch[1].replace(/^\d+_piece_/i, '');
     }
 
     if (!rawProdName && orderNum) {
       const orderEscaped = orderNum.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const orderPrefixMatch = clean.match(new RegExp('^' + orderEscaped + '_(.*?)(?=_[0-9]+(?:\\.[0-9]+)?(?:_Ft|_mm|_Inch)?_x_)', 'i'));
+      const orderPrefixMatch = clean.match(new RegExp('^' + orderEscaped + '_(.*?)(?=_[0-9]+(?:\\.[0-9]+)?(?:_Ft|_mm|_Inch|_cm)?_x_)', 'i'));
       if (orderPrefixMatch) {
         rawProdName = orderPrefixMatch[1].replace(/^\d+_piece_/i, '').replace(/^_qty_/i, '');
       }
@@ -791,12 +811,14 @@ const FileAnalyzer = {
 
     let humanProductName = rawProdName ? rawProdName.replace(/_/g, ' ') : null;
     let slug = rawProdName ? rawProdName.toLowerCase().replace(/_/g, '-').replace(/[^\w\-]/g, '') : null;
+    const slugAsNamed = slug;                     // tried again below when the shortened slug is not a product
     if (slug) {
       slug = slug.replace(/-(?:graphic|display-graphic)$/, '').replace(/-+$/, '');
     }
 
     // Sub-product variation & shaped product detection (Table Covers, Flags, Stands, Signs)
-    const isTableCover = /table[-_ ]?(?:cover|throw)/i.test(clean) || (rawProdName && /table/i.test(rawProdName));
+    // Pleated table covers are their own product (not a stretch / fitted cover); table-top displays are not covers
+    const isTableCover = !/pleated/i.test(clean) && (/table[-_ ]?(?:cover|throw)/i.test(clean) || (rawProdName && /table(?![-_ ]?top)/i.test(rawProdName)));
     const isStretch = /stretch/i.test(clean) || (rawProdName && /stretch/i.test(rawProdName));
     const isFitted = /fitted/i.test(clean) || (rawProdName && /fitted/i.test(rawProdName));
 
@@ -873,6 +895,8 @@ const FileAnalyzer = {
       'die-cut-yard-signs': 'die-cut-yard-signs',
       'yard-signs': 'yard-signs',
       'personalized-flags': 'personalized-flags',
+      'personalised-flags': 'personalized-flags',          // UK / AU / NZ spelling
+      'brochure-printing': 'brochures',
       'rectangle-flags': 'rectangle-flags',
       'teardrop-flags': 'teardrop-flags',
       'teardrop-flag': 'teardrop-flags',
@@ -922,6 +946,16 @@ const FileAnalyzer = {
           matchedSlug = 'custom-' + slug;
           matchedSpec = SPECS['custom-' + slug];
         }
+      }
+      // The name as written: with only "-graphic(s)" dropped ("Fabric_Pop_Up_Straight_Display_Graphic"), the gap of an
+      // "&" closed ("Step_&_Repeat…"), or one or two trailing words fewer ("…_Display_Stand_Banner")
+      if (!matchedSpec && slugAsNamed) {
+        const base = slugAsNamed.replace(/-+/g, '-').replace(/-graphics?$/, '');
+        const words = base.split('-');
+        const tries = [slugAsNamed, base];
+        for (let k = 1; k <= 2 && words.length - k >= 3; k++) tries.push(words.slice(0, -k).join('-'));
+        const hit = tries.find(k => SPECS[k]);
+        if (hit) { matchedSlug = hit; matchedSpec = SPECS[hit]; }
       }
       // Catalog products named by their size ("10x10 Canopy Tents", "6x6 Canopy"): try the size from the file name
       if (!matchedSpec && slug && rawW && rawH) {

@@ -1186,7 +1186,9 @@ const ProofStudio = {
 
     // ── Proof 03 · Print preview screenshot (only for low resolution / print-quality concern) ──
     if (plan.showPrintPreview) {
-      const why = plan.resConcern
+      const why = plan.resConcern && plan.resConcern.blur
+        ? `Your artwork was enlarged from a smaller picture: it has the pixels, but its detail is like ${plan.resConcern.ppi} PPI at the ordered size (${plan.resConcern.target} PPI recommended), so some areas may look soft or blurry when printed. The marked area is shown below at actual print size.`
+        : plan.resConcern
         ? `Your artwork is ${plan.resConcern.ppi} PPI at the ordered size (${plan.resConcern.target} PPI recommended), so some areas may look soft or pixelated when printed. The marked area is shown below at actual print size.`
         : 'This shows part of your artwork at actual print size — please check the print quality before you approve.';
       sections.push(card('03', 'Print Preview Screenshot',

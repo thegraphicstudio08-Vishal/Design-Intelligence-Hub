@@ -175,7 +175,7 @@ const PrecheckEngine = {
       : req && /^yes$/i.test(req.mockupIfInsist) ? 'Mockup only if the customer insists.' : '';
     const notes = [];
     notes.push(resConcern
-      ? `Artwork gives ${resConcern.ppi} PPI at the ordered size; SOP asks ${resConcern.target} PPI. Send the Print preview screenshot (${zoom.label}) and highlight the low-resolution area.`
+      ? `${resConcern.blur ? `Artwork has ${resConcern.filePpi} PPI by pixel count but was enlarged from a smaller picture: its real detail is about ${resConcern.ppi} PPI` : `Artwork gives ${resConcern.ppi} PPI at the ordered size`}; SOP asks ${resConcern.target} PPI. Send the Print preview screenshot (${zoom.label}) and highlight the low-resolution area.`
       : 'No resolution concern — the Print preview screenshot is not needed (send it only for low resolution or a print-quality concern; customers misread it otherwise).');
     if (customFinishing) notes.push(`Custom finishing (${SopRules.describeFinishing(fin, lay)}) — highlight it on the proof.`);
     if (mockup) notes.push(mockup);
@@ -190,6 +190,20 @@ const PrecheckEngine = {
       detail: notes.join(' '),
       action: resConcern ? 'Use the "Low Resolution File" status and attach the Print preview screenshot — sending this status (or a print-quality comment) without it is a designer error.' : ''
     };
+  },
+
+  /**
+   * Real detail of a raster artwork (DetailCheck, measured in app.js before the evaluation): 'critical' when an
+   * enlarged picture's real detail is under the SOP minimum; 'look' (confirm by eye) when it is enlarged but still
+   * over the minimum, soft and under the target, or partly enlarged; null when the picture is sharp or not measured.
+   */
+  _blur(analysis, ppi, target, min) {
+    const det = analysis && analysis.detail;
+    if (!det || det.verdict === 'unknown' || typeof DetailCheck === 'undefined' || !(ppi > 0)) return null;
+    const real = DetailCheck.truePpi(ppi, det);
+    const level = det.verdict === 'enlarged' && real < min ? 'critical'
+      : det.verdict === 'enlarged' || (det.verdict === 'soft' && real < target) || det.partly ? 'look' : null;
+    return { det, real, level };
   },
 
   evaluate(analysis, spec, userDims, overrides = {}) {
@@ -212,8 +226,14 @@ const PrecheckEngine = {
     const diffPct = analysis.aspectRatioMismatchPercent || 0;
     let resConcern = null;     // { ppi, target } when the artwork is below the SOP resolution → Proof 03 needed
     const reqTol = `${printW}" × ${printH}" (±0.5" SOP tolerance)`;
+    // A PDF design file read by PostCheck: its page size, per-picture resolution and real detail, colour mode and
+    // fonts replace the artwork size / resolution cards (it measures every picture where it is placed)
+    const design = analysis.design && analysis.design.checks ? analysis.design : null;
 
-    if (analysis.isVector && !analysis.embeddedRasterFound) {
+    if (design) {
+      design.checks.forEach(c => checks.push(c));
+      resConcern = design.resConcern;
+    } else if (analysis.isVector && !analysis.embeddedRasterFound) {
       const art = analysis.detectedInchesW ? `${analysis.detectedInchesW}" × ${analysis.detectedInchesH}" artboard` : 'Vector artwork';
       const aspectInfo = analysis.aspectRatioArtwork ? ` (Ratio: ${analysis.aspectRatioArtwork}:1)` : '';
       checks.push({
@@ -240,11 +260,19 @@ const PrecheckEngine = {
           };
       const target = sop?.resolution?.target || reqDpi;
       const minResolution = sop?.resolution?.min || minDpi;
+      // The pixel count against the detail in the pixels: a small picture enlarged to the PPI still prints soft
+      const blur = analysis.isVector ? null : this._blur(analysis, t.ppiAtOrder, target, minResolution);
+      const blurCrit = !!(blur && blur.level === 'critical');
       if (t.ppiAtOrder < target) resConcern = { ppi: t.ppiAtOrder, target };
+      else if (blurCrit) resConcern = { ppi: blur.real, target, blur: true, filePpi: t.ppiAtOrder };
 
       let st = t.ppiAtOrder >= target ? 'PASS' : t.ppiAtOrder >= minResolution ? 'WARNING' : 'FAIL';
       if (st === 'PASS' && (t.ratioDiffPct > 1.5 || diffPct > 1.5)) st = 'WARNING';
       if (diffPct > 5.0 || t.ratioDiffPct > 5.0) st = 'FAIL';
+      let manual = false;
+      if (blurCrit) st = 'FAIL';
+      else if (blur && blur.level === 'look' && st === 'PASS') { st = 'WARNING'; manual = true; }
+      const blurWord = blur && (blur.det.verdict === 'sharp' ? 'partly enlarged' : blur.det.verdict);
 
       const actualDiff = t.ratioDiffPct || diffPct;
       const isHybrid = analysis.isVector && analysis.embeddedRasterFound;
@@ -265,19 +293,22 @@ const PrecheckEngine = {
         name: 'Size Transform to Order',
         icon: '📐',
         status: st,
-        lowPpi: t.ppiAtOrder < target,
+        manual,
+        lowPpi: t.ppiAtOrder < target || blurCrit,
         // the real error in plain words (the card shows it first; the pixel maths is in "More details")
         error: st === 'PASS' ? '' : [
           t.ppiAtOrder < target ? `Low resolution: ${t.ppiAtOrder} PPI at the ordered size ${printW}" × ${printH}" — SOP needs ${target} PPI (minimum ${minResolution})` : '',
+          blurCrit ? `Enlarged / blurry picture: ${t.ppiAtOrder} PPI by pixel count, but the real detail is about ${blur.real} PPI — enlarged about ${blur.det.enlarge}× from a smaller picture${t.ppiAtOrder >= target ? ` (SOP needs ${target} PPI)` : ''}` : '',
           actualDiff > 1.5 ? `Artwork proportion differs ${actualDiff}% from the order` : ''
         ].filter(Boolean).join(' · '),
-        found: `${hybridLabel}${analysis.pixelWidth} × ${analysis.pixelHeight} px (${analysis.aspectRatioArtwork}:1) → ${printW}" × ${printH}" = ${t.ppiAtOrder} PPI${t.rotated ? ' (artwork rotated vs order)' : ''}`,
+        found: `${hybridLabel}${analysis.pixelWidth} × ${analysis.pixelHeight} px (${analysis.aspectRatioArtwork}:1) → ${printW}" × ${printH}" = ${t.ppiAtOrder} PPI${t.rotated ? ' (artwork rotated vs order)' : ''}${blur && blur.level ? ` · picture looks ${blurWord}: real detail ≈ ${blur.real} PPI` : ''}`,
         required: `${reqTol} · Target ${target} PPI (min ${minResolution}) · Canvas ${canvasTxt}`,
-        detail: `${fitTxt}${sop?.resolution?.source ? ` ${sop.resolution.source}.` : ''}`,
+        detail: `${fitTxt}${sop?.resolution?.source ? ` ${sop.resolution.source}.` : ''}${analysis.detail && typeof DetailCheck !== 'undefined' ? ` Real detail: ${DetailCheck.describe(analysis.detail, t.ppiAtOrder)}` : ''}`,
         action: st === 'PASS' ? '' : [
-          t.ppiAtOrder < target
-            ? `Use the "Low Resolution File" status and attach the Print preview screenshot proof (Proof 03) highlighting the low-resolution area — PR-DPO-03.`
+          t.ppiAtOrder < target || blurCrit
+            ? `${blurCrit ? 'Ask the customer for the original (larger) picture or a vector logo; if there is nothing better, use' : 'Use'} the "Low Resolution File" status and attach the Print preview screenshot proof (Proof 03) highlighting the low-resolution area — PR-DPO-03.`
             : '',
+          manual ? 'Look at the artwork at print size (Photoshop "Print Size"); if it looks soft, treat it as a low-resolution file (Proof 03).' : '',
           actualDiff > 1.5 ? (placementAction || 'Confirm with customer: extend background to fill the order size, or crop edge allowance.') : ''
         ].filter(Boolean).join(' ')
       });
@@ -334,7 +365,18 @@ const PrecheckEngine = {
         vAction = 'File is resolution-independent vector. Ready for high-definition production at any scale.';
       }
     } else {
-      if (analysis.isGoodForPrint) {
+      const gBlur = this._blur(analysis, analysis.effectiveDpi, reqDpi, minDpi);
+      if (gBlur && gBlur.level === 'critical') {
+        vStatus = 'FAIL';
+        vFound = `Raster (${analysis.effectiveDpi} DPI) · enlarged picture, real detail ≈ ${gBlur.real} PPI`;
+        vDetail = `NOT GOOD FOR PRINT: ${DetailCheck.describe(gBlur.det, analysis.effectiveDpi)}`;
+        vAction = `Request the original (larger) picture or vector artwork from the customer (minimum ${reqDpi} DPI of real detail at ${printW}"×${printH}").`;
+      } else if (gBlur && gBlur.level === 'look' && analysis.isGoodForPrint) {
+        vStatus = 'WARNING'; vManual = true;
+        vFound = `Raster (${analysis.effectiveDpi} DPI) · looks ${gBlur.det.verdict === 'sharp' ? 'partly enlarged' : gBlur.det.verdict}, real detail ≈ ${gBlur.real} PPI`;
+        vDetail = DetailCheck.describe(gBlur.det, analysis.effectiveDpi);
+        vAction = 'Look at the artwork at print size; if it looks soft, treat it as a low-resolution file.';
+      } else if (analysis.isGoodForPrint) {
         vStatus = 'PASS';
         vFound = `Raster (${analysis.effectiveDpi} DPI)`;
         vDetail = `GOOD FOR PRINT: ${analysis.goodForPrintReason}`;
@@ -355,7 +397,7 @@ const PrecheckEngine = {
         vAction = `Request higher resolution artwork from customer (minimum ${reqDpi} DPI at ${printW}"×${printH}") or request vector format (.AI / .EPS / .SVG / .PDF).`;
       }
     }
-    checks.push({
+    if (!design) checks.push({
       id: 'goodForPrint',
       name: 'Print Suitability ("Good for Print")',
       icon: analysis.isVector ? '⭐' : '🖨️',
