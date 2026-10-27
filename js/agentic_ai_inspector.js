@@ -567,12 +567,24 @@ const ArtworkMarkDetector = {
     });
     // A print layout's page frame: a thin line on all four sides with a plain white margin inside it (the artwork
     // starts further in) — drawn by the print layout, not a sliver left on the artwork after cropping
+    const depth = Math.max(12, Math.round(Math.min(W, H) * 0.008));
     if (out.length === 4) {
-      const depth = Math.max(12, Math.round(Math.min(W, H) * 0.008));
       out.frame = sides.every(s => [4, REF, depth].every(t => {
         const st = lineStats(s, t);
         return st && st.uniform && st.color.every(c => c >= 235);
       }));
+    } else if (out.length === 3) {
+      // Three sides, the fourth left open for the production footprint (US2392880 pop-out print file: 1 px 100 % K
+      // top, left, right): white just inside, a die-cut shape may come close to the frame in places. Counted as a
+      // frame only for a print file (the inspector checks the file name).
+      const white = (s, t) => {
+        const a = Math.round(s.len * 0.03), b = Math.round(s.len * 0.97);
+        let w = 0, n = 0;
+        for (let k = a; k < b; k++) { const i = s.at(k, t); if (!opaque[i]) continue; n++; if (lum[i] >= 235) w++; }
+        return n ? w / n : 0;
+      };
+      out.frame3 = sides.filter(s => out.some(e => e.side === s.name))
+        .every(s => white(s, 4) >= 0.9 && white(s, REF) >= 0.6 && white(s, depth) >= 0.6);
     }
     return out;
   }
@@ -873,18 +885,17 @@ const AgenticAiInspector = {
   },
 
   /**
-   * Pop-up alert for an enlarged / blurry picture: the PPI number can be fine while the picture was enlarged from a
-   * smaller one (its edges are k× wider) — the designer must see it beside the canvas, not only in the Size card.
-   * Built from the Size card (customer artwork) or the Real detail card (design PDF).
+   * Pop-up alert for the print-quality status when it is not Good to Go: Low Resolution (red) or Bit Fuzzy (amber).
+   * The PPI number can be fine while the picture was enlarged from a smaller one — the designer sees the status
+   * beside the canvas, not only in the report (report.printQuality, PrintQuality).
    */
   _renderDetailAlert() {
     const report = (typeof appState !== 'undefined') ? appState.report : null;
-    const check = report && Array.isArray(report.checks)
-      ? report.checks.find(c => (c.id === 'sizeTransform' || c.id === 'pc-detail') && c.blur && !c.isOverridden) : null;
+    const q = report && report.printQuality;
     let box = document.getElementById('detail-alert');
-    if (!check) { if (box) box.remove(); return; }
-    const b = check.blur, crit = b.level === 'critical';
-    const key = `${(report.analysis && report.analysis.previewDataUrl || '').length}|${check.id}|${b.level}|${b.pics.length}`;
+    if (!q || q.status === 'good') { if (box) box.remove(); return; }
+    const low = q.status === 'low';
+    const key = `${(report.analysis && report.analysis.previewDataUrl || '').length}|${q.status}|${q.real}|${q.ppi}`;
     if (this._detailAlertClosedKey === key) { if (box) box.remove(); return; }
     this._detailAlertKey = key;
     if (!box) {
@@ -894,19 +905,24 @@ const AgenticAiInspector = {
       const stack = this._alertStack();
       stack.insertBefore(box, stack.firstChild);
     }
-    box.className = `spell-alert${crit ? '' : ' is-warn'}`;
-    const worst = b.pics.slice().sort((x, y) => x.real - y.real)[0];
-    const what = p => p.n ? `Picture ${p.n}` : 'Artwork';
+    box.className = `spell-alert${low ? '' : ' is-warn'}`;
+    const looks = q.real < q.ppi;
     box.innerHTML = `
-      <div class="spell-alert-head">⚠️ <span>${crit ? 'Blurry / enlarged picture — real detail ≈ ' + worst.real + ' PPI' : 'Picture may print soft — check by eye'}</span>
+      <div class="spell-alert-head">⚠️ <span>Print quality: ${q.label}${looks ? ` — looks like ≈ ${q.real} PPI zoomed in` : ` — ${q.ppi} PPI`}</span>
         <button class="spell-alert-close" title="Close" onclick="AgenticAiInspector.closeDetailAlert()">×</button></div>
-      <div class="spell-alert-note">The PPI number is not the whole story: ${crit ? 'this picture was enlarged from a smaller one, so it prints fuzzy even though the file says' : 'the edges look wider than a picture made at its size, although the file says'} ${worst.filePpi} PPI. SOP needs ${b.target} PPI of real detail (minimum ${b.min}).</div>
-      ${b.pics.slice(0, 4).map(p => `
-        <div class="spell-alert-row">
-          <div class="spell-alert-words"><span class="spell-alert-kind">${what(p)}</span>
-            <span class="sz-dist">${p.filePpi} PPI in the file · ${p.verdict} ×${p.enlarge} → real detail ≈ ${p.real} PPI</span></div>
-          <button class="spell-alert-show" onclick="focusCheck('${check.id}')">Show</button>
-        </div>`).join('')}`;
+      <div class="spell-alert-note">${looks ? `The file has ${q.ppi} PPI, but ${q.kPart && q.k === 1 ? 'part of the artwork was' : 'the picture was'} enlarged from a smaller one, so at print size it ${low ? 'prints blurry' : 'looks a bit soft'}.` : `At print size the artwork ${low ? 'prints pixelated / blurry' : 'looks a bit soft up close'}.`} SOP: ${q.target} PPI (minimum ${q.min}). Use the "${q.label}" status with the Print preview screenshot (Proof 03).</div>
+      <div class="spell-alert-row">
+        <div class="spell-alert-words"><span class="spell-alert-kind">${q.pic ? 'Picture ' + q.pic : 'Artwork'}</span>
+          <span class="sz-dist">${q.ppi} PPI in the file${looks ? ` · enlarged ×${q.kPart && q.k === 1 ? q.kPart : q.k} → looks like ≈ ${q.real} PPI` : ''}</span></div>
+        <button class="spell-alert-show" onclick="AgenticAiInspector.showPrintQuality()">Show</button>
+      </div>`;
+  },
+
+  /** Show button of the print-quality alert: the status strip with the zoomed print preview */
+  showPrintQuality() {
+    const el = document.getElementById('pq-strip');
+    if (typeof switchTab === 'function') switchTab('checks');
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); }
   },
 
   closeDetailAlert() {
@@ -1357,7 +1373,8 @@ const AgenticAiInspector = {
     if (res.edgeLines.length) {
       const sides = res.edgeLines.map(e => e.side);
       const thick = Math.max(...res.edgeLines.map(e => e.thicknessPx));
-      const frame = !!res.edgeLines.frame;
+      const fname = (typeof appState !== 'undefined' && ((appState.parsedFilename && appState.parsedFilename.fname) || (appState.file && appState.file.name))) || '';
+      const frame = !!res.edgeLines.frame || (!!res.edgeLines.frame3 && /print[_\s-]?file/i.test(fname));
       this.defects.push({
         id: 'edge_1',
         type: 'edge_line',
@@ -1369,7 +1386,7 @@ const AgenticAiInspector = {
         confidence: null,
         details: {
           description: frame
-            ? `A ${thick} px frame runs round the whole page with a plain white margin inside it — the page frame of a print layout, not part of the printed artwork.`
+            ? `A ${thick} px frame runs along the ${sides.length === 4 ? 'whole page' : sides.join(', ') + ' edges'} with a plain white margin inside it — the page frame of a print layout, not part of the printed artwork.`
             : `A ${thick} px line runs along the ${sides.join(', ')} edge${sides.length > 1 ? 's' : ''} and differs from the artwork next to it. If it is not a planned border (e.g. a white or grey sliver left after cropping), remove it or extend the background — after trimming it can show unevenly.`
         },
         finishing: frame,

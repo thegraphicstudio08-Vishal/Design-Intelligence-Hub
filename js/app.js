@@ -901,6 +901,42 @@ function designAnalysisFor(file, step) {
   return cache.get(file);
 }
 
+/**
+ * Two faces of the order in one file? The artwork's proportion is two order faces stacked (W × 2H) or side by side
+ * (2W × H), within 5 % (the gap between them), and either its two halves look alike (the same design front and back)
+ * or the file name says it is a print file / double sided. Returns { w, h, layout, faceW, faceH } in inches, else null.
+ * A single artwork of another proportion stays a size mismatch.
+ */
+async function twoFaceSheet(src, pw, ph, dims, fname) {
+  const W = dims.widthIn, H = dims.heightIn, r = pw / ph;
+  if (Math.abs(r - W / H) / (W / H) <= 0.03) return null;               // one face, as ordered
+  const near = R => Math.abs(r - R) / R <= 0.05;
+  const layout = near(W / (2 * H)) ? 'stacked' : near((2 * W) / H) ? 'side' : null;
+  if (!layout) return null;
+  const named = /print[_\s-]?file|double[_\s-]?sided|front[_\s-]?(and|&)[_\s-]?back|\(ds\)|2[_\s-]?sided/i.test(fname || '');
+  let alike = false;
+  try {
+    const img = new Image();
+    img.src = src;
+    await img.decode();
+    const k = 160 / Math.max(pw, ph), w = Math.max(8, Math.round(pw * k)), h = Math.max(8, Math.round(ph * k));
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(img, 0, 0, w, h);
+    const d = g.getImageData(0, 0, w, h).data;
+    const lum = (x, y) => { const o = (y * w + x) * 4; return 0.3 * d[o] + 0.59 * d[o + 1] + 0.11 * d[o + 2]; };
+    // the two halves compared pixel by pixel (mean difference in grey levels)
+    let sum = 0, n = 0;
+    if (layout === 'stacked') { const hh = h >> 1; for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) { sum += Math.abs(lum(x, y) - lum(x, y + h - hh)); n++; } }
+    else { const hw = w >> 1; for (let y = 0; y < h; y++) for (let x = 0; x < hw; x++) { sum += Math.abs(lum(x, y) - lum(x + w - hw, y)); n++; } }
+    alike = n > 0 && sum / n < 12;
+  } catch (e) { alike = false; }
+  if (!alike && !named) return null;
+  const sheetW = layout === 'stacked' ? W : H * r, sheetH = layout === 'stacked' ? W / r : H;
+  return { w: +sheetW.toFixed(2), h: +sheetH.toFixed(2), layout, faceW: W, faceH: H, alike };
+}
+
 async function runPreCheck() {
   if (!appState.file || !appState.product) return;
   clearTimeout(scheduleRecheckAfterSizeChange._timer);   // this run already uses the latest size
@@ -1006,6 +1042,18 @@ async function runPreCheck() {
       }
     }
 
+    // A print file with the front and back faces in one image (a pop-out banner's two faces stacked, or side by side):
+    // size, resolution and orientation are measured on the two-face sheet, not on one face
+    if (analysis && analysis.pixelWidth && !analysis.templatePanel && checkDims && checkDims.widthIn > 0 && checkDims.heightIn > 0) {
+      const fname = (appState.parsedFilename && appState.parsedFilename.fname) || (appState.file && appState.file.name) || '';
+      const sheet = await twoFaceSheet(artSrc, analysis.pixelWidth, analysis.pixelHeight, checkDims, fname);
+      if (sheet) {
+        checkDims = Object.assign({}, checkDims, { widthIn: sheet.w, heightIn: sheet.h });
+        FileAnalyzer._evaluateMeasurementsAndOrientation(analysis, sheet.w, sheet.h);
+        analysis.twoFaces = sheet;
+      }
+    }
+
     // 1.9 Real detail of a raster artwork (a small picture enlarged to a high PPI still prints soft) — measured once
     // per file on its own pixels; the size / resolution check reads it
     if (analysis && !analysis.isVector && typeof DetailCheck !== 'undefined' && artSrc && !String(artSrc).includes('PDF VECTOR')) {
@@ -1031,11 +1079,11 @@ async function runPreCheck() {
     // 4. Render Pre-Check Results
     renderResults(report, previousOrders);
 
-    // 5. Render Interactive Canvas with Product Die-Line Template
+    // 5. Render Interactive Canvas with Product Die-Line Template (a two-face print file on its whole sheet)
     CanvasInspector.renderArtwork(
       artSrc,
       appState.product,
-      appState.userDims
+      analysis && analysis.twoFaces ? checkDims : appState.userDims
     );
 
     // 6. Mount Agentic AI blinking overlay on active canvas
@@ -1186,8 +1234,10 @@ function renderSummaryCard(report) {
   const { overall, score, checks, analysis, spec, dimensions } = report;
   const counts = report.counts || { passes: 0, fails: 0, manual: 0 };
   updateFailBadges(counts.fails);
-  // enlarged / blurry picture: pop-up alert beside the canvas, like spelling and the safe zone
+  // print quality Low Resolution / Bit Fuzzy: pop-up alert beside the canvas, like spelling and the safe zone
   if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderDetailAlert) AgenticAiInspector._renderDetailAlert();
+  // the status to set (Good to Go / Bit Fuzzy / Low Resolution) with the PPI and the zoomed print preview
+  const qualityHtml = typeof PrintQuality !== 'undefined' ? PrintQuality.html(report.printQuality, dimensions) : '';
 
   // VECTOR "GOOD FOR PRINT" HERO BANNER — a PDF design file shows what its page is made of instead
   let vectorBannerHtml = '';
@@ -1275,6 +1325,7 @@ function renderSummaryCard(report) {
       </div>
       <div class="summary-verdict ${overall === 'PASS' ? 'verd-pass' : 'verd-fail'}">${overall}</div>
     </div>
+    ${qualityHtml}
     ${issuesHtml}
     <div class="summary-meta">
       <span>Order <strong>#${appState.orderNum || 'US-DRAFT'}</strong> · Customer: <strong>${appState.customerName || 'Customer'}</strong> · Product: <strong>${spec.name}</strong> · Size: <strong>${dimensions.widthIn}" × ${dimensions.heightIn}"</strong> · Checked: <strong>${new Date().toLocaleTimeString()}</strong></span>

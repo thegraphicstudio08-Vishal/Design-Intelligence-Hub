@@ -759,6 +759,40 @@ body {
   font-weight: 700;
 }
 
+/* Print quality status (Good to Go / Bit Fuzzy / Low Resolution) with the zoomed print preview */
+.pq-strip {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  border: 1px solid var(--pass-border);
+  border-left: 5px solid var(--pass);
+  background: var(--pass-bg);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.pq-strip.pq-fuzzy { border-color: var(--warn-border); border-left-color: var(--warn); background: var(--warn-bg); }
+.pq-strip.pq-low { border-color: var(--fail-border); border-left-color: var(--fail); background: var(--fail-bg); }
+.pq-strip.flash { animation: checkFlash 1.6s ease; }
+.pq-main { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.pq-label { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.pq-status { display: flex; align-items: center; gap: 8px; font-size: 22px; font-weight: 800; color: var(--pass-dark); }
+.pq-fuzzy .pq-status { color: #b35c00; }
+.pq-low .pq-status { color: var(--fail); }
+.pq-dot { width: 12px; height: 12px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.pq-why { font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; }
+.pq-facts { display: flex; flex-wrap: wrap; gap: 6px; }
+.pq-facts span { background: #fff; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 999px; padding: 3px 10px; font-size: 11.5px; color: var(--text-secondary); }
+.pq-facts strong { color: var(--text-primary); }
+.pq-note { font-size: 11px; color: var(--text-muted); }
+.pq-view { flex: 0 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.pq-view-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.pq-zoom { display: inline-flex; gap: 4px; }
+.pq-zoom button { font: inherit; font-size: 10.5px; letter-spacing: 0; text-transform: none; font-weight: 700; padding: 2px 8px; border: 1px solid #cbd5e1; border-radius: 999px; background: #fff; color: #475569; cursor: pointer; }
+.pq-zoom button.on { background: #1e293b; border-color: #1e293b; color: #fff; }
+.pq-view-box { height: 220px; overflow: auto; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; }
+.pq-view-box img { display: block; max-width: none; image-rendering: auto; }
+.pq-view-note { font-size: 11px; color: var(--text-muted); }
+
 /* ── TABS BAR ── */
 .tabs-bar {
   display: flex;

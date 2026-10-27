@@ -897,6 +897,10 @@ const FileAnalyzer = {
       'personalized-flags': 'personalized-flags',
       'personalised-flags': 'personalized-flags',          // UK / AU / NZ spelling
       'brochure-printing': 'brochures',
+      // order files say "Horizontal_Pop_Out_Banners"; the catalogue (BannerBuzz site) calls it Horizontal Pop Up Banners
+      'horizontal-pop-out-banners': 'horizontal-pop-up-banners',
+      'horizontal-pop-out-banner': 'horizontal-pop-up-banners',
+      'horizontal-popout-banners': 'horizontal-pop-up-banners',
       'rectangle-flags': 'rectangle-flags',
       'teardrop-flags': 'teardrop-flags',
       'teardrop-flag': 'teardrop-flags',

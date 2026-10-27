@@ -69,7 +69,26 @@ const DetailCheck = {
     // sharp text over an enlarged photo: the photo areas still read as enlarged
     const blurTiles = tiles.filter(t => t.state === 'enlarged').length;
     const partly = verdict === 'sharp' && tiles.length >= 6 && blurTiles / tiles.length >= 0.3;
-    return { verdict, partly, edges: all.length, p25: +p25.toFixed(2), p50: +p50.toFixed(2), enlarge, w: W, h: H, tiles };
+    // the zoomed print preview (PrintQuality) shows the least sharp measured area, at the picture's own pixels
+    const focus = tiles.length ? tiles.reduce((a, t) => (t.p25 > a.p25 ? t : a)) : null;
+    const sample = focus ? this._sample(source, W, H, focus.x + focus.w / 2, focus.y + focus.h / 2) : null;
+    return { verdict, partly, edges: all.length, p25: +p25.toFixed(2), p50: +p50.toFixed(2), enlarge, w: W, h: H, tiles, sample };
+  },
+
+  /** Up to 900 × 600 native pixels around (cx, cy) as a JPEG: { url, w, h, fx, fy } (fx, fy = the centre in the crop) */
+  _sample(source, W, H, cx, cy) {
+    try {
+      const w = Math.min(W, 900), h = Math.min(H, 600);
+      const x = Math.max(0, Math.min(W - w, Math.round(cx - w / 2))), y = Math.max(0, Math.min(H - h, Math.round(cy - h / 2)));
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const g = c.getContext('2d');
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
+      g.drawImage(source, x, y, w, h, 0, 0, w, h);
+      return { url: c.toDataURL('image/jpeg', 0.9), w, h, fx: Math.round(cx - x), fy: Math.round(cy - y) };
+    } catch (e) {
+      return null;
+    }
   },
 
   /** Real detail in PPI: the file's PPI divided by how much the picture was enlarged */

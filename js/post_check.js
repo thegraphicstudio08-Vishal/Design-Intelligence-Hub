@@ -334,36 +334,34 @@ const PostCheck = {
         items: low.map(q => `${picName(q)}: <strong>${q.at} PPI</strong> ${show(q)}`),
         required: `${res.target} PPI at the placed size (minimum ${res.min}) · ${res.source}`,
         detail: `PPI = picture pixels ÷ placed inches, for each picture where it sits on the page${scale > 1 ? `, at the full order size (the page is drawn at 1:${scale}, so the page PPI ÷ ${scale})` : ''}${r.userUnit !== 1 ? ` (page scale /UserUnit ${r.userUnit} applied)` : ''}. ${pics.map(q => `${picName(q)} → ${q.at} PPI`).join('; ')}.`,
-        action: low.length ? `Replace the picture with a larger original, or rebuild it as vector. If the customer has nothing better, send the "Low Resolution File" proof with the Print preview screenshot (Proof 03) — PR-DPO-03.` : '' });
+        action: low.length ? `Replace the picture with a larger original, or rebuild it as vector. If the customer has nothing better, use the "${worst.at < res.min ? 'Low Resolution' : 'Bit Fuzzy'}" status with the Print preview screenshot (Proof 03) — PR-DPO-03.` : '' });
     }
 
     // 5. Real detail: enlarged / blurry pictures
     const measured = pics.filter(q => q.detail && q.detail.verdict !== 'unknown');
     if (pics.length) {
+      // same rule as the print-quality status: edges up to 2 px count as made at size
       const judge = q => {
-        const d = q.detail, real = DetailCheck.truePpi(q.at, d);
-        if (!d || d.verdict === 'unknown') return 'none';
-        if (d.verdict === 'enlarged' && real < res.min) return 'fail';
-        if (d.verdict === 'enlarged' || d.verdict === 'soft' || d.partly) return real < res.target || d.partly || d.verdict === 'enlarged' ? 'look' : 'ok';
-        return 'ok';
+        const e = typeof PrintQuality !== 'undefined' ? PrintQuality.enlargement(q.detail) : null;
+        if (!e) return 'none';
+        const real = Math.round(q.at / e.all), realPart = e.part ? Math.round(q.at / e.part) : null;
+        if (e.all > 1 && real < res.min) return 'fail';
+        return (e.all > 1 && real < res.target) || (realPart && realPart < res.target) ? 'look' : 'ok';
       };
       const bad = pics.filter(q => judge(q) === 'fail'), look = pics.filter(q => judge(q) === 'look');
       const line = q => `${picName(q)}: ${DetailCheck.describe(q.detail, q.at)} ${show(q)}`;
+      const qa = q => PrintQuality.assess({ ppi: q.at, det: q.detail, target: res.target, min: res.min });
       checks.push({ id: 'pc-detail', name: 'Real detail (enlarged / blurry pictures)', icon: '🔬',
         status: bad.length ? 'FAIL' : look.length || !measured.length ? 'INFO' : 'PASS',
         found: measured.length
-          ? measured.map(q => `Picture ${q.n}: ${q.detail.verdict === 'sharp' && !q.detail.partly ? 'sharp' : q.detail.verdict === 'sharp' ? 'partly enlarged' : q.detail.verdict} (edges ${q.detail.p25} px${q.detail.verdict !== 'sharp' ? `, real detail ≈ ${DetailCheck.truePpi(q.at, q.detail)} PPI` : ''})`).join(' · ')
+          ? measured.map(q => { const a = qa(q); return `Picture ${q.n}: ${a ? a.label : q.detail.verdict} (edges ${q.detail.p25} px${a && a.real < q.at ? `, looks like ≈ ${a.real} PPI zoomed in` : ''})`; }).join(' · ')
           : 'Not enough clear edges to judge (flat colours)',
-        error: bad.length ? `${bad.length === 1 ? 'Picture ' + bad[0].n + ' was' : bad.length + ' pictures were'} enlarged from a smaller picture: ${bad.map(q => `${q.at} PPI in the file, real detail ≈ ${DetailCheck.truePpi(q.at, q.detail)} PPI`).join('; ')} — SOP needs ${res.target} PPI` : '',
+        error: bad.length ? `${bad.length === 1 ? 'Picture ' + bad[0].n + ' was' : bad.length + ' pictures were'} enlarged from a smaller picture: ${bad.map(q => `${q.at} PPI in the file, looks like ≈ ${qa(q).real} PPI zoomed in`).join('; ')} — SOP needs ${res.target} PPI` : '',
         items: [...bad, ...look].map(line),
-        // read by the picture-quality pop-up alert
-        blur: bad.length || look.length ? { level: bad.length ? 'critical' : 'look', target: res.target, min: res.min,
-          pics: [...bad, ...look].map(q => ({ n: q.n, filePpi: q.at, real: DetailCheck.truePpi(q.at, q.detail), enlarge: q.detail.enlarge,
-            verdict: q.detail.verdict === 'sharp' ? 'partly enlarged' : q.detail.verdict, crit: bad.includes(q) })) } : null,
         required: `Real detail at least ${res.min} PPI (target ${res.target}) — a picture made at its size has edges 1–1.6 px wide`,
         detail: `Measured on each picture's own pixels: how wide its sharpest edges are. A picture enlarged k× from a smaller one has edges about k× wider, whatever the PPI number says — its real detail is the PPI ÷ k. ${pics.map(q => `${picName(q)}: ${DetailCheck.describe(q.detail, q.at)}`).join(' ')}`,
-        action: bad.length ? 'Ask the customer for the original (larger) picture or a vector logo, or rebuild the artwork. If there is nothing better, send the "Low Resolution File" proof with the Print preview screenshot (Proof 03) showing the soft area.'
-          : look.length ? 'Look at the marked areas at print size (Photoshop "Print Size", 100% for 72 PPI files). If they look soft, treat it as a low-resolution file (Proof 03).'
+        action: bad.length ? 'Ask the customer for the original (larger) picture or a vector logo, or rebuild the artwork. If there is nothing better, use the "Low Resolution" status with the Print preview screenshot (Proof 03) showing the soft area.'
+          : look.length ? 'Look at the marked areas at print size (Photoshop "Print Size", 100% for 72 PPI files). If they look soft, use the "Bit Fuzzy" status with the Print preview screenshot (Proof 03).'
           : !measured.length ? 'The pictures have too few clear edges for the tool to judge (flat colours, soft gradients) — look at them at print size.' : '' });
     }
 
@@ -410,14 +408,24 @@ const PostCheck = {
         action: 'Flatten the artwork (or delete the hidden layers) and save the PDF again.' });
     }
 
-    // Proof 03 (print preview screenshot) when a picture is under the SOP resolution or enlarged
-    let resConcern = null;
-    const lowPic = pics.filter(q => q.at < res.target).sort((x, y) => x.at - y.at)[0];
-    const blurPic = pics.filter(q => q.detail && q.detail.verdict === 'enlarged' && DetailCheck.truePpi(q.at, q.detail) < res.min)[0];
-    if (lowPic) resConcern = { ppi: lowPic.at, target: res.target };
-    else if (blurPic) resConcern = { ppi: DetailCheck.truePpi(blurPic.at, blurPic.detail), target: res.target, blur: true, filePpi: blurPic.at };
+    // The status to set (Good to Go / Bit Fuzzy / Low Resolution): the worst picture as it looks at print size;
+    // vector only → Good to Go. Proof 03 (print preview screenshot) unless Good to Go.
+    let resConcern = null, quality = null;
+    if (typeof PrintQuality !== 'undefined') {
+      quality = pics.length ? PrintQuality.worst(pics.map(q => {
+        const a = PrintQuality.assess({ ppi: q.at, det: q.detail, target: res.target, min: res.min });
+        if (a) { a.pic = q.n; a.sample = q.detail && q.detail.sample ? Object.assign({ pic: q.n }, q.detail.sample) : null; }
+        q.quality = a;                       // the pictures table shows each picture's status
+        return a;
+      })) : PrintQuality.vector();
+      if (quality && quality.pic && pics.length > 1) quality.why = `Picture ${quality.pic}: ${quality.why}`;
+      if (quality && quality.status !== 'good') resConcern = { ppi: quality.real, target: res.target, status: quality.status, blur: quality.real < quality.ppi, filePpi: quality.ppi };
+    } else {
+      const lowPic = pics.filter(q => q.at < res.target).sort((x, y) => x.at - y.at)[0];
+      if (lowPic) resConcern = { ppi: lowPic.at, target: res.target };
+    }
     this._picStates(r, checks);
-    return { r, checks, resConcern, scale };
+    return { r, checks, resConcern, scale, quality };
   },
 
   /** 1:N when the page has the order's proportion (±1.5 %) at a fraction of its size (N ≥ 1.5), else 1 */
@@ -521,9 +529,10 @@ const PostCheck = {
       return `<div class="pc-blur" style="left:${x0 / r.vpW * 100}%; top:${y0 / r.vpH * 100}%; width:${(x1 - x0) / r.vpW * 100}%; height:${(y1 - y0) / r.vpH * 100}%" title="Enlarged area (edges ${t.p25} px)"></div>`;
     }).join('')).join('');
     const rows = r.pics.filter(q => q.kind !== 'mask').map(q => {
-      const dt = q.detail, real = dt && dt.verdict !== 'unknown' ? DetailCheck.truePpi(q.at, dt) : null;
+      const dt = q.detail, a = q.quality;
       const dTxt = !dt ? (q.areaIn < 1 ? 'small — not measured' : 'not measured') : dt.verdict === 'unknown' ? 'too few edges'
-        : dt.verdict === 'sharp' ? (dt.partly ? `partly enlarged (${dt.p25} px)` : `sharp (${dt.p25} px)`) : `${dt.verdict} ×${dt.enlarge} → ≈ ${real} PPI`;
+        : a ? `${a.label}${a.real < q.at ? ` · looks like ≈ ${a.real} PPI` : ''} (${dt.p25} px)`
+        : dt.verdict === 'sharp' ? (dt.partly ? `partly enlarged (${dt.p25} px)` : `sharp (${dt.p25} px)`) : `${dt.verdict} (${dt.p25} px)`;
       const st = q.state || 'pass';
       return `<tr><td><button type="button" class="pc-num" onclick="PostCheck.showPic(${q.n})">${q.n}</button></td><td>${q.w.toLocaleString()} × ${q.h.toLocaleString()}</td><td>${(+q.inW).toFixed(1)}" × ${(+q.inH).toFixed(1)}"</td><td><strong>${q.at}</strong>${d.scale > 1 ? ` <span class="pc-sub">(${q.ppi} on the 1:${d.scale} page)</span>` : ''}</td><td>${dTxt}</td><td>${this._esc(q.cs)}</td><td>${q.coverPct}%${q.copies > 1 ? ` · ${q.copies}×` : ''}</td><td><span class="pc-res ${st}">${{ pass: 'OK', info: 'Confirm', fail: 'Critical' }[st]}</span></td></tr>`;
     }).join('');
