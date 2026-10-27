@@ -1186,6 +1186,8 @@ function renderSummaryCard(report) {
   const { overall, score, checks, analysis, spec, dimensions } = report;
   const counts = report.counts || { passes: 0, fails: 0, manual: 0 };
   updateFailBadges(counts.fails);
+  // enlarged / blurry picture: pop-up alert beside the canvas, like spelling and the safe zone
+  if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderDetailAlert) AgenticAiInspector._renderDetailAlert();
 
   // VECTOR "GOOD FOR PRINT" HERO BANNER — a PDF design file shows what its page is made of instead
   let vectorBannerHtml = '';

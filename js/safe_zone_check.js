@@ -82,20 +82,26 @@ const SafeZoneCheck = {
   /**
    * QNAP template: sample a box (fractions of the upright artwork) on the template's area mask. Any point outside
    * the safe area flags it; points in the bleed mean it will be cut off. side = where the outside part lies.
+   * ink: points where the shape really has ink (fractions of the upright artwork) — sampled instead of the whole box,
+   * so a round logo under a curved template edge is not flagged by the empty corners of its box.
    */
-  _measureQnap(b, g, place) {
+  _measureQnap(b, g, place, ink) {
     const r = this._rotBox(b, g.rot);
     const t = g.qnap.t, c = g.qnap.c, FW = t.fullIn[0], FH = t.fullIn[1];
     const x0 = place.x + r.x * place.w, y0 = place.y + r.y * place.h, bw = r.w * place.w, bh = r.h * place.h;
-    let out = 0, bleed = 0, n = 0, sx = 0, sy = 0;
-    for (let i = 0; i < 9; i++) {
-      for (let j = 0; j < 9; j++) {
-        const fx = (x0 + bw * (0.04 + 0.92 * i / 8)) / FW, fy = (y0 + bh * (0.04 + 0.92 * j / 8)) / FH;
-        const v = ProductTemplates.maskAt(c, fx, fy);
-        n++;
-        if (v < 255) { out++; sx += fx; sy += fy; if (v < 128) bleed++; }   // 64 = bleed bars, 0 = outside / bleed
-      }
+    const at = [];
+    if (ink && ink.length) {
+      ink.forEach(p => { const q = this._rotBox({ x: p.x, y: p.y, w: 0, h: 0 }, g.rot); at.push([place.x + q.x * place.w, place.y + q.y * place.h]); });
+    } else {
+      for (let i = 0; i < 9; i++) for (let j = 0; j < 9; j++) at.push([x0 + bw * (0.04 + 0.92 * i / 8), y0 + bh * (0.04 + 0.92 * j / 8)]);
     }
+    let out = 0, bleed = 0, n = 0, sx = 0, sy = 0;
+    at.forEach(([X, Y]) => {
+      const fx = X / FW, fy = Y / FH;
+      const v = ProductTemplates.maskAt(c, fx, fy);
+      n++;
+      if (v < 255) { out++; sx += fx; sy += fy; if (v < 128) bleed++; }   // 64 = bleed bars, 0 = outside / bleed
+    });
     // side: the template edge nearest to the part that lies outside the safe area
     let side = '';
     if (out) {
@@ -153,8 +159,17 @@ const SafeZoneCheck = {
         const lh = l.h0, ov = Math.min(l.y1, w.y1) - Math.max(l.y0, w.y0);
         return Math.max(lh, h) / Math.min(lh, h) <= 1.6 && ov >= 0.5 * Math.min(lh, h) && w.x0 - l.x1 <= 1.4 * Math.max(lh, h) && w.x0 >= l.x0 - 0.5 * h;
       });
-      if (ln) { ln.words.push(w.text); ln.x1 = Math.max(ln.x1, w.x1); ln.y0 = Math.min(ln.y0, w.y0); ln.y1 = Math.max(ln.y1, w.y1); }
-      else lines.push({ words: [w.text], x0: w.x0, y0: w.y0, x1: w.x1, y1: w.y1, h0: h });
+      if (ln) { ln.words.push(w.text); ln.ws.push(w); ln.x1 = Math.max(ln.x1, w.x1); ln.y0 = Math.min(ln.y0, w.y0); ln.y1 = Math.max(ln.y1, w.y1); }
+      else lines.push({ words: [w.text], ws: [w], x0: w.x0, y0: w.y0, x1: w.x1, y1: w.y1, h0: h });
+    });
+    // a word box that reaches far above / below all the others of its line took in an ornament next to it (the reader
+    // boxed "CRISTIANA" together with a frame diamond 1.4" above the letters): that side is cut back to the line
+    lines.forEach(l => {
+      if (l.ws.length < 3) return;
+      const hs = l.ws.map(w => w.y1 - w.y0).sort((a, b) => a - b), mh = hs[hs.length >> 1];
+      const tops = l.ws.map(w => w.y0).sort((a, b) => a - b), bots = l.ws.map(w => w.y1).sort((a, b) => b - a);
+      if (tops[1] - tops[0] > 0.5 * mh) l.y0 = tops[1];
+      if (bots[0] - bots[1] > 0.5 * mh) l.y1 = bots[1];
     });
     return lines.map(l => ({ text: l.words.join(' '), box: turnBack({ x: l.x0, y: l.y0, w: l.x1 - l.x0, h: l.y1 - l.y0 }) }));
   },
@@ -294,7 +309,24 @@ const SafeZoneCheck = {
       rgb[id * 3] += px[o]; rgb[id * 3 + 1] += px[o + 1]; rgb[id * 3 + 2] += px[o + 2];
       if (pureInk(o)) pureN[id]++;
     }
+    // how sharply each shape stands off its surroundings: the colour step from its border pixels to the background
+    // beside them — printed ink jumps, a patch of background shading (a gradient a shade off the edge colours) fades
+    const step = new Float64Array(comps.length + 1), stepN = new Int32Array(comps.length + 1);
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const p = y * w + x, id = lab[p];
+        if (!id) continue;
+        for (const q of [p - 1, p + 1, p - w, p + w]) {
+          if (fg[q]) continue;
+          const o = p * 4, r = q * 4;
+          step[id] += Math.abs(px[o] - px[r]) + Math.abs(px[o + 1] - px[r + 1]) + Math.abs(px[o + 2] - px[r + 2]);
+          stepN[id]++;
+        }
+      }
+    }
     comps.forEach((c, i) => {
+      c.id = i + 1;
+      c.step = stepN[i + 1] ? step[i + 1] / stepN[i + 1] : null;
       const m = lum[i + 1] / c.n;
       c.texture = Math.sqrt(Math.max(0, lum2[i + 1] / c.n - m * m)); c.pure = pureN[i + 1] / c.n;
       c.rgb = [rgb[(i + 1) * 3] / c.n, rgb[(i + 1) * 3 + 1] / c.n, rgb[(i + 1) * 3 + 2] / c.n];
@@ -314,14 +346,35 @@ const SafeZoneCheck = {
       }
       return tot ? bgN / tot : 1;
     };
-    let keep = comps.filter(c => {
+    // share of a shape's own side that lies on the artwork edge: a background band or a photo running off sits on the
+    // edge along its whole side, a figure the trim cuts (hair, a foot, a barbell) only at a point
+    const onEdge = (c, id) => {
+      const cw = c.x1 - c.x0 + 1, chh = c.y1 - c.y0 + 1;
+      const rows = (xa, xb) => { let k = 0; for (let y = c.y0; y <= c.y1; y++) for (let x = xa; x <= xb; x++) if (lab[y * w + x] === id) { k++; break; } return k / chh; };
+      const cols = (ya, yb) => { let k = 0; for (let x = c.x0; x <= c.x1; x++) for (let y = ya; y <= yb; y++) if (lab[y * w + x] === id) { k++; break; } return k / cw; };
+      let f = 0;
+      if (c.x0 <= edgeTol) f = Math.max(f, rows(0, edgeTol));
+      if (c.x1 >= w - 1 - edgeTol) f = Math.max(f, rows(w - 1 - edgeTol, w - 1));
+      if (c.y0 <= edgeTol) f = Math.max(f, cols(0, edgeTol));
+      if (c.y1 >= h - 1 - edgeTol) f = Math.max(f, cols(h - 1 - edgeTol, h - 1));
+      c.onEdge = f;
+      return f;
+    };
+    let keep = comps.filter((c, i) => {
       if (c.n < minN) return false;                                       // specks: the Lines & Dots check
       const cw = c.x1 - c.x0 + 1, chh = c.y1 - c.y0 + 1;
       if (isBig(c)) return false;                                         // big shapes / frames / panels / the photo
+      // a soft border (colour step under 20 to the background beside it): background shading, not printed ink
+      // (letters / logos step 45–290; a patch of a pale gradient ≈ 8)
+      if (c.step !== null && c.step < 20) return false;
       // touching the artwork edge: a background / bleed shape or a photo running off — unless it is a compact shape
-      // of flat ink (a logo or graphic the trim cuts through)
+      // of flat ink (a logo or graphic the trim cuts through) or a large solid figure that only grazes the edge (a
+      // runner's hair: fills 55 % of its box, 4 % of its side on the edge — a curved background swoosh fills about 20 %;
+      // small photo slivers and frame corners stay out)
       c.edge = touches(c);
-      if (c.edge && (cw > w * 0.25 || chh > h * 0.25 || c.n < 0.2 * cw * chh || !inkLike(c))) return false;
+      if (c.edge && (cw > w * 0.25 || chh > h * 0.25 || c.n < 0.2 * cw * chh || !inkLike(c))
+        && !((cw > w * 0.25 || chh > h * 0.25) && cw <= w * 0.5 && chh <= h * 0.5 && c.n >= 0.35 * cw * chh
+          && onEdge(c, i + 1) <= 0.25)) return false;
       // thin lines (frame / border rules, curves) are decoration
       if (Math.max(cw, chh) >= 8 * Math.min(cw, chh) && Math.min(cw, chh) <= Math.max(3, Math.max(w, h) * 0.012)) return false;
       return true;
@@ -444,6 +497,24 @@ const SafeZoneCheck = {
         return !(r.ps.length >= 6 && spread(ws) < 0.12 && spread(hs) < 0.12 && spread(ns) < 0.12);
       });
     };
+    // where a shape really has ink: the centre of its pixels in each cell of a 9 × 9 grid over its box (shapes found
+    // on a photo by their colours have no label here → their box is measured)
+    const inkPoints = (parts, x0, y0, x1, y1) => {
+      if (parts.some(p => !p.id)) return null;
+      const ids = new Set(parts.map(p => p.id)), bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+      const sx = new Float64Array(81), sy = new Float64Array(81), cnt = new Int32Array(81);
+      for (let y = y0; y <= y1; y++) {
+        const j = Math.min(8, ((y - y0) * 9 / bh) | 0);
+        for (let x = x0; x <= x1; x++) {
+          if (!ids.has(lab[y * w + x])) continue;
+          const k = Math.min(8, ((x - x0) * 9 / bw) | 0) * 9 + j;
+          sx[k] += x; sy[k] += y; cnt[k]++;
+        }
+      }
+      const pts = [];
+      for (let k = 0; k < 81; k++) if (cnt[k]) pts.push({ x: (sx[k] / cnt[k] + 0.5) / w, y: (sy[k] / cnt[k] + 0.5) / h });
+      return pts;
+    };
     // a shape standing on the plain background (a logo on a photo was found by its colours)
     const items = [...groups.values()].filter(t => t.patternN < 0.6 * t.parts.length && (t.onPicture || bgAround(t) >= 0.55))
       .sort((a, b) => b.n - a.n).slice(0, 80);
@@ -451,7 +522,11 @@ const SafeZoneCheck = {
       ok: true, plain: true, size: { w: W0, h: H0 },
       items: items.map(t => ({ box: { x: t.x0 / w, y: t.y0 / h, w: (t.x1 - t.x0 + 1) / w, h: (t.y1 - t.y0 + 1) / h },
         parts: t.parts.length, lettering: lettering(t), edge: t.edge, onPicture: t.onPicture,
-        _parts: this._debug ? t.parts.map(p => [p.x0, p.y0, p.x1, p.y1, p.n, Math.round(p.texture || 0), p.pattern ? 'P' : '', p.edge ? 'E' : '']) : undefined })),
+        ink: inkPoints(t.parts, t.x0, t.y0, t.x1, t.y1),
+        // the shapes of a group one by one: a graphic joined with the lettering beside it is still measured itself
+        pieces: t.parts.length > 1 ? t.parts.map(p => ({ x: p.x0 / w, y: p.y0 / h, w: (p.x1 - p.x0 + 1) / w, h: (p.y1 - p.y0 + 1) / h, edge: !!p.edge,
+          ink: inkPoints([p], p.x0, p.y0, p.x1, p.y1) })) : null,
+        _parts: this._debug ? t.parts.map(p => [p.x0, p.y0, p.x1, p.y1, p.n, Math.round(p.texture || 0), p.pattern ? 'P' : '', p.edge ? 'E' : '', Math.round(p.step || 0), p.onEdge === undefined ? '' : +p.onEdge.toFixed(2)]) : undefined })),
       // the background pattern's shapes: the text reader sometimes "reads" a word in a pattern (bricks → "Jd")
       pattern: keep.filter(c => c.pattern).slice(0, 600).map(c => ({ x: c.x0 / w, y: c.y0 / h, w: (c.x1 - c.x0 + 1) / w, h: (c.y1 - c.y0 + 1) / h }))
     };
@@ -485,7 +560,7 @@ const SafeZoneCheck = {
       ? ProductTemplates.placement(g.qnap.t, turned ? (size.h || 1) : (size.w || 1), turned ? (size.w || 1) : (size.h || 1), g.rot)
       : this._placement(g, size.w || 1, size.h || 1);
     const tol = g.qnap ? 0 : this._tolerance(g);
-    const measure = b => g.qnap ? this._measureQnap(b, g, place) : this._measure(b, g, place);
+    const measure = (b, ink) => g.qnap ? this._measureQnap(b, g, place, ink) : this._measure(b, g, place);
     const outside = m => g.qnap ? m.out > 0 : m.dist < g.safeIn - tol;
     // near = on the safe line, within the measuring tolerance: listed in the details, not counted
     const items = [], near = [];
@@ -512,11 +587,37 @@ const SafeZoneCheck = {
       const iy = Math.min(b.y + b.h, l.box.y + l.box.h) - Math.max(b.y, l.box.y);
       return ix > 0 && iy > 0 && ix * iy >= 0.3 * Math.min(b.w * b.h, l.box.w * l.box.h);
     });
+    // a shape the read text covers (a letter of a read word, padded a little for the reader's tight boxes)
+    const inText = b => lines.some(l => {
+      const py = 0.15 * l.box.h, pxl = py * (size.h || 1) / (size.w || 1);
+      const ix = Math.min(b.x + b.w, l.box.x + l.box.w + pxl) - Math.max(b.x, l.box.x - pxl);
+      const iy = Math.min(b.y + b.h, l.box.y + l.box.h + py) - Math.max(b.y, l.box.y - py);
+      return ix > 0 && iy > 0 && ix * iy >= 0.5 * b.w * b.h;
+    });
     if (obj.ok && obj.items) {
       obj.items.forEach(o => {
-        if (overlapsText(o.box)) return;
+        if (overlapsText(o.box)) {
+          // a group joined with read text (bolts beside a word, a mascot next to a name): the text is measured as text
+          // above — its other shapes are measured one by one, one mark per side they cross
+          const bySide = {};
+          (o.pieces || []).forEach(p => {
+            if (inText(p)) return;
+            const m = measure(p, p.ink);
+            if (!outside(m)) return;
+            const s = bySide[m.side] || (bySide[m.side] = { x0: 1, y0: 1, x1: 0, y1: 0, edge: false, m });
+            s.x0 = Math.min(s.x0, p.x); s.y0 = Math.min(s.y0, p.y); s.x1 = Math.max(s.x1, p.x + p.w); s.y1 = Math.max(s.y1, p.y + p.h);
+            s.edge = s.edge || p.edge;
+            if (m.dist < s.m.dist) s.m = m;
+          });
+          // on a template the shapes' own ink was measured — the box around them would add empty corners
+          Object.values(bySide).forEach(s => {
+            const box = { x: s.x0, y: s.y0, w: s.x1 - s.x0, h: s.y1 - s.y0 }, m = g.qnap ? s.m : measure(box);
+            if (outside(m)) items.push(Object.assign({ kind: 'object', text: '', box, edge: s.edge }, m));
+          });
+          return;
+        }
         // lettering = a word read from its shapes (the text reader missed it or did not run): counted like text
-        const m = measure(o.box), it = Object.assign({ kind: o.lettering ? 'lettering' : 'object', text: '', box: o.box, edge: !!o.edge }, m);
+        const m = measure(o.box, o.ink), it = Object.assign({ kind: o.lettering ? 'lettering' : 'object', text: '', box: o.box, edge: !!o.edge }, m);
         if (outside(m)) items.push(it);
         else if (o.lettering && !g.qnap && m.dist < g.safeIn) near.push(it);
       });

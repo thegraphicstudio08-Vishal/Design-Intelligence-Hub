@@ -295,6 +295,9 @@ const PrecheckEngine = {
         status: st,
         manual,
         lowPpi: t.ppiAtOrder < target || blurCrit,
+        // read by the picture-quality pop-up alert
+        blur: blur && blur.level ? { level: blur.level, target, min: minResolution,
+          pics: [{ n: 0, filePpi: t.ppiAtOrder, real: blur.real, enlarge: blur.det.enlarge, verdict: blurWord, crit: blurCrit }] } : null,
         // the real error in plain words (the card shows it first; the pixel maths is in "More details")
         error: st === 'PASS' ? '' : [
           t.ppiAtOrder < target ? `Low resolution: ${t.ppiAtOrder} PPI at the ordered size ${printW}" × ${printH}" — SOP needs ${target} PPI (minimum ${minResolution})` : '',

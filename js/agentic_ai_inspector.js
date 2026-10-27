@@ -872,6 +872,49 @@ const AgenticAiInspector = {
     if (box) box.remove();
   },
 
+  /**
+   * Pop-up alert for an enlarged / blurry picture: the PPI number can be fine while the picture was enlarged from a
+   * smaller one (its edges are k× wider) — the designer must see it beside the canvas, not only in the Size card.
+   * Built from the Size card (customer artwork) or the Real detail card (design PDF).
+   */
+  _renderDetailAlert() {
+    const report = (typeof appState !== 'undefined') ? appState.report : null;
+    const check = report && Array.isArray(report.checks)
+      ? report.checks.find(c => (c.id === 'sizeTransform' || c.id === 'pc-detail') && c.blur && !c.isOverridden) : null;
+    let box = document.getElementById('detail-alert');
+    if (!check) { if (box) box.remove(); return; }
+    const b = check.blur, crit = b.level === 'critical';
+    const key = `${(report.analysis && report.analysis.previewDataUrl || '').length}|${check.id}|${b.level}|${b.pics.length}`;
+    if (this._detailAlertClosedKey === key) { if (box) box.remove(); return; }
+    this._detailAlertKey = key;
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'detail-alert';
+      box.setAttribute('role', 'alert');
+      const stack = this._alertStack();
+      stack.insertBefore(box, stack.firstChild);
+    }
+    box.className = `spell-alert${crit ? '' : ' is-warn'}`;
+    const worst = b.pics.slice().sort((x, y) => x.real - y.real)[0];
+    const what = p => p.n ? `Picture ${p.n}` : 'Artwork';
+    box.innerHTML = `
+      <div class="spell-alert-head">⚠️ <span>${crit ? 'Blurry / enlarged picture — real detail ≈ ' + worst.real + ' PPI' : 'Picture may print soft — check by eye'}</span>
+        <button class="spell-alert-close" title="Close" onclick="AgenticAiInspector.closeDetailAlert()">×</button></div>
+      <div class="spell-alert-note">The PPI number is not the whole story: ${crit ? 'this picture was enlarged from a smaller one, so it prints fuzzy even though the file says' : 'the edges look wider than a picture made at its size, although the file says'} ${worst.filePpi} PPI. SOP needs ${b.target} PPI of real detail (minimum ${b.min}).</div>
+      ${b.pics.slice(0, 4).map(p => `
+        <div class="spell-alert-row">
+          <div class="spell-alert-words"><span class="spell-alert-kind">${what(p)}</span>
+            <span class="sz-dist">${p.filePpi} PPI in the file · ${p.verdict} ×${p.enlarge} → real detail ≈ ${p.real} PPI</span></div>
+          <button class="spell-alert-show" onclick="focusCheck('${check.id}')">Show</button>
+        </div>`).join('')}`;
+  },
+
+  closeDetailAlert() {
+    this._detailAlertClosedKey = this._detailAlertKey;
+    const box = document.getElementById('detail-alert');
+    if (box) box.remove();
+  },
+
   /** Buttons of the orientation alert: preview on the canvas only — the order size is never changed here */
   previewOrientation(what, value) {
     const ci = (typeof CanvasInspector !== 'undefined') ? CanvasInspector : null;

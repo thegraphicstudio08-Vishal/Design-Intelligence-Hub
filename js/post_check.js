@@ -356,6 +356,10 @@ const PostCheck = {
           : 'Not enough clear edges to judge (flat colours)',
         error: bad.length ? `${bad.length === 1 ? 'Picture ' + bad[0].n + ' was' : bad.length + ' pictures were'} enlarged from a smaller picture: ${bad.map(q => `${q.at} PPI in the file, real detail ≈ ${DetailCheck.truePpi(q.at, q.detail)} PPI`).join('; ')} — SOP needs ${res.target} PPI` : '',
         items: [...bad, ...look].map(line),
+        // read by the picture-quality pop-up alert
+        blur: bad.length || look.length ? { level: bad.length ? 'critical' : 'look', target: res.target, min: res.min,
+          pics: [...bad, ...look].map(q => ({ n: q.n, filePpi: q.at, real: DetailCheck.truePpi(q.at, q.detail), enlarge: q.detail.enlarge,
+            verdict: q.detail.verdict === 'sharp' ? 'partly enlarged' : q.detail.verdict, crit: bad.includes(q) })) } : null,
         required: `Real detail at least ${res.min} PPI (target ${res.target}) — a picture made at its size has edges 1–1.6 px wide`,
         detail: `Measured on each picture's own pixels: how wide its sharpest edges are. A picture enlarged k× from a smaller one has edges about k× wider, whatever the PPI number says — its real detail is the PPI ÷ k. ${pics.map(q => `${picName(q)}: ${DetailCheck.describe(q.detail, q.at)}`).join(' ')}`,
         action: bad.length ? 'Ask the customer for the original (larger) picture or a vector logo, or rebuild the artwork. If there is nothing better, send the "Low Resolution File" proof with the Print preview screenshot (Proof 03) showing the soft area.'
