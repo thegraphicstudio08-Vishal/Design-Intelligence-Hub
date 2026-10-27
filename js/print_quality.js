@@ -42,13 +42,15 @@ const PrintQuality = {
     const k = e ? e.all : 1, kPart = e ? e.part : null;
     const real = Math.round(ppi / k), realPart = kPart ? Math.round(ppi / kPart) : null;
     const worst = Math.min(real, realPart || real);
-    const status = worst < min ? 'low' : worst < target ? 'fuzzy' : 'good';
+    // soft areas on an otherwise sharp artwork can be soft by nature (a gradient, a blurred photo background): they
+    // make it Bit Fuzzy at most — the designer confirms them in the zoomed preview
+    const status = real < min ? 'low' : real < target || (realPart && realPart < target) ? 'fuzzy' : 'good';
     const p25 = o.det && o.det.p25;
     let why;
     if (k > 1) {
       why = `The picture was enlarged about ${k}× from a smaller one: at print size it shows the detail of about ${real} PPI, although the file has ${ppi} PPI`;
     } else if (kPart) {
-      why = `Sharp overall, but part of the artwork (an enlarged photo or logo) shows only about ${realPart} PPI of detail at print size (file: ${ppi} PPI)`;
+      why = `Sharp overall, but part of the artwork (an enlarged photo or logo, or an area soft by design such as a gradient — confirm it in the zoomed preview) shows only about ${realPart} PPI of detail at print size (file: ${ppi} PPI)`;
     } else {
       why = e ? `Sharp edges (${p25} px): the artwork has the ${ppi} PPI of detail its pixels promise at print size` : `${ppi} PPI at print size`;
     }

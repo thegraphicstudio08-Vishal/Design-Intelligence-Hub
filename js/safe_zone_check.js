@@ -577,8 +577,30 @@ const SafeZoneCheck = {
     const readAt = ai && ai.textResult && ai.textResult.orientation ? ai.textResult.orientation.angle : 0;
     const lines = (textWords ? this._textLines(textWords, size, readAt) : [])
       .filter(l => !(pat.length && (l.text.match(/[A-Za-z0-9]/g) || []).length <= 4 && onPattern(l.box)));
+    // The reader's word boxes can take in an ornament or a frame line next to the text (US2428792: "027" boxed down to
+    // the gold frame line, 0.29" from the bottom, the digits 2.7" up): a line found outside is measured again on its
+    // letters — the shapes inside its box at the letters' height (the ornament sits above / below them)
+    const pieces = obj.ok && obj.items ? obj.items.flatMap(o => o.pieces || [o.box]) : [];
+    const letters = b => {
+      const ps = pieces.filter(p => {
+        const ix = Math.min(b.x + b.w, p.x + p.w) - Math.max(b.x, p.x), iy = Math.min(b.y + b.h, p.y + p.h) - Math.max(b.y, p.y);
+        return ix > 0 && iy > 0 && ix * iy >= 0.6 * p.w * p.h;
+      });
+      if (ps.length < 2) return null;
+      const mid = a => a.slice().sort((x, y) => x - y)[a.length >> 1];
+      const cy = mid(ps.map(p => p.y + p.h / 2)), ph = mid(ps.map(p => p.h));
+      const ls = ps.filter(p => Math.abs(p.y + p.h / 2 - cy) <= 0.6 * ph);
+      if (ls.length < 2) return null;
+      const x0 = Math.min(...ls.map(p => p.x)), y0 = Math.min(...ls.map(p => p.y));
+      return { x: x0, y: y0, w: Math.max(...ls.map(p => p.x + p.w)) - x0, h: Math.max(...ls.map(p => p.y + p.h)) - y0 };
+    };
     lines.forEach(l => {
-      const m = measure(l.box), it = Object.assign({ kind: 'text', text: l.text, box: l.box }, m);
+      let m = measure(l.box);
+      if (outside(m) && !g.qnap) {
+        const lb = letters(l.box);
+        if (lb) { l.box = lb; m = measure(lb); }
+      }
+      const it = Object.assign({ kind: 'text', text: l.text, box: l.box }, m);
       if (outside(m)) items.push(it);
       else if (!g.qnap && m.dist < g.safeIn) near.push(it);
     });
