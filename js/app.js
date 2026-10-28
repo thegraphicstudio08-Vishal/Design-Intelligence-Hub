@@ -472,8 +472,10 @@ function handleFile(file) {
 
     const spec = parsed.spec || (parsed.productSlug && SPECS[parsed.productSlug]);
     if (banner && spec) {
-      // the order read from the production file name: product first, then the facts as labelled chips
+      // the order read from the production file name: product and the key facts first; line / qty, material,
+      // finishing and the SOP line open with "More information" (and fold again with "Hide information")
       const chip = (label, value, wide) => `<span class="fnb-chip${wide ? ' wide' : ''}"><small>${label}</small>${value}</span>`;
+      banner.classList.toggle('open', !!appState.orderInfoOpen);
       banner.innerHTML = `
         <div class="fnb-head"><span class="fnb-ok">${rIco('check')}</span>Order read from the file name</div>
         <div class="fnb-product">${parsed.productName}</div>
@@ -481,11 +483,17 @@ function handleFile(file) {
           ${chip('Order', parsed.orderNum || '—')}
           ${chip('Size', parsed.hasSize ? `${parsed.widthIn}" × ${parsed.heightIn}"` : 'Not in the name')}
           ${chip('Sides', parsed.side)}
-          ${chip('Line / qty', `${parsed.lineItem || '—'} / ${parsed.qty}${parsed.designerCode ? ' · ' + parsed.designerCode : ''}`)}
-          ${chip('Material', `${parsed.material || '—'}${parsed.location ? ' · ' + parsed.location : ''}`, true)}
-          ${chip('Finishing', parsed.finishing, true)}
         </div>
-        <div class="fnb-sop">${sopSummaryText(spec, parsed)}</div>
+        <div class="fnb-more">
+          <div class="fnb-chips">
+            ${chip('Line / qty', `${parsed.lineItem || '—'} / ${parsed.qty}${parsed.designerCode ? ' · ' + parsed.designerCode : ''}`)}
+            ${chip('Material', `${parsed.material || '—'}${parsed.location ? ' · ' + parsed.location : ''}`, true)}
+            ${chip('Finishing', parsed.finishing, true)}
+          </div>
+          <div class="fnb-sop">${sopSummaryText(spec, parsed)}</div>
+        </div>
+        <button type="button" class="fnb-toggle" onclick="appState.orderInfoOpen = this.closest('.fn-banner').classList.toggle('open')">
+          <span class="fnb-t-open">More information ▾</span><span class="fnb-t-close">Hide information ▴</span></button>
       `;
       banner.classList.add('show');
     }
@@ -941,6 +949,28 @@ async function twoFaceSheet(src, pw, ph, dims, fname) {
 }
 
 /**
+ * A tab in the background gets no screen redraws, and pdf.js draws a PDF page piece by piece on them: a check
+ * started and left for another tab (e-mail, Photoshop) stood still at "Reading the file" until the designer came
+ * back. While the tab is hidden, "next frame" runs at once through a message channel (not slowed down in the
+ * background, unlike timers); a visible tab draws as before.
+ */
+(() => {
+  if (typeof window === 'undefined' || !window.requestAnimationFrame || typeof MessageChannel === 'undefined') return;
+  const raf = window.requestAnimationFrame.bind(window), caf = window.cancelAnimationFrame.bind(window);
+  const ch = new MessageChannel(), waiting = new Map();
+  let next = 1;
+  ch.port1.onmessage = e => { const cb = waiting.get(e.data); if (cb) { waiting.delete(e.data); cb(performance.now()); } };
+  window.requestAnimationFrame = cb => {
+    if (!document.hidden) return raf(cb);
+    const id = -(next++);
+    waiting.set(id, cb);
+    ch.port2.postMessage(id);
+    return id;
+  };
+  window.cancelAnimationFrame = id => (id < 0 ? waiting.delete(id) : caf(id));
+})();
+
+/**
  * While a check runs, the results area shows what it is doing: the artwork with a scan running over it, the steps
  * (done ✓, now ●, still to come), a progress bar, the current task and the time. Started and moved on by
  * runPreCheck; hidden when the result is drawn (or the check fails).
@@ -990,8 +1020,14 @@ const Checking = {
     }
     const now = document.getElementById('ck-now');
     if (now) now.textContent = note || this.STEPS[Math.max(0, this._cur)] + '…';
-    // let the browser draw the change before the next piece of work
-    return new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+    // let the browser draw the change before the next piece of work — but never wait for a redraw alone: a tab in
+    // the background gets none, and the check stood still until the designer came back to it
+    return new Promise(r => {
+      let gone = false;
+      const go = () => { if (!gone) { gone = true; setTimeout(r, 0); } };
+      requestAnimationFrame(go);
+      setTimeout(go, 100);
+    });
   },
 
   done() {
@@ -1197,6 +1233,8 @@ function renderResults(report, previousOrders) {
   appState._quiet = null;
   if (quiet) requestAnimationFrame(() => rGlide(quiet));    // after this redraw: the marked card glides into place
   else {
+    // the result is in: the left panel folds to its rail — more room for the result (once per file; › opens it again)
+    if (appState._foldedFor !== appState.file) { appState._foldedFor = appState.file; toggleLeftPanel(true); }
     content.classList.add('r-enter');
     clearTimeout(renderResults._enter);
     renderResults._enter = setTimeout(() => content.classList.remove('r-enter'), 2200);
@@ -1633,6 +1671,23 @@ function toggleCheckMore(id) {
   if (card.classList.contains('more')) cardOpening(card);
   const b = card.querySelector('.cc-more');
   if (b) b.setAttribute('aria-expanded', card.classList.contains('more') ? 'true' : 'false');
+}
+
+/**
+ * The left panel folds to a slim rail when the result comes in (more room for the result) — also with "‹ Hide
+ * panel" — and opens again with ›; the rail keeps the file's thumbnail, the order number, upload and run again
+ */
+function toggleLeftPanel(fold) {
+  const body = document.querySelector('.app-body');
+  if (!body) return;
+  const on = fold == null ? !body.classList.contains('lp-folded') : !!fold;
+  body.classList.toggle('lp-folded', on);
+  const th = document.getElementById('lp-rail-thumb'), src = document.getElementById('preview-img');
+  if (th) { th.src = src && src.src ? src.src : ''; th.style.display = src && src.src && src.style.visibility !== 'hidden' ? '' : 'none'; }
+  const ord = document.getElementById('lp-rail-order');
+  if (ord) ord.textContent = appState.orderNum || (appState.parsedFilename && appState.parsedFilename.orderNum) || '';
+  // the canvas and the overlays measure their width again
+  window.dispatchEvent(new Event('resize'));
 }
 
 /** Windows "reduce motion": no movement, the end state at once */

@@ -224,7 +224,8 @@ const PrecheckEngine = {
     const gap = lr ? t.gapIn.w : t.gapIn.h;
     return { pct: t.blankPct, coverPct: +(100 - t.blankPct).toFixed(1), artIn: t.fitSizeIn, orderIn: { w: W, h: H },
       gapIn: gap, eachIn: +(gap / 2).toFixed(2), sides: lr ? 'left and right' : 'above and below', axis: lr ? 'w' : 'h',
-      stretch: t.stretch, noStretch: t.blankPct >= this.BLANK_NO_STRETCH, ppiWhole: t.ppiIfFitted, ppiStretched: t.ppiAtOrder };
+      stretch: t.stretch, noStretch: t.blankPct >= this.BLANK_NO_STRETCH, ppiWhole: t.ppiIfFitted, ppiStretched: t.ppiAtOrder,
+      cropPct: t.cropPctIfFilled };
   },
 
   evaluate(analysis, spec, userDims, overrides = {}) {

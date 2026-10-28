@@ -810,8 +810,41 @@ const AgenticAiInspector = {
       const view = document.getElementById('view-precheck');
       if (view && !view.classList.contains('active')) stack.style.display = 'none';   // shown again on the pre-check page
       document.body.appendChild(stack);
+      this._alertBar(stack);
     }
     return stack;
+  },
+
+  /**
+   * The bar on top of the alert column: how many alerts there are, and "Collapse" — only when the designer clicks
+   * it does the column fold into a small pill ("⚠ 3 alerts · Open"). The alerts always open in full; each one is
+   * closed by the designer (×). Follows the alerts as they come and go.
+   */
+  _alertBar(stack) {
+    let bar = document.getElementById('alerts-bar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'alerts-bar';
+      bar.className = 'alerts-bar';
+      bar.innerHTML = `<button type="button" class="ab-fold" onclick="AgenticAiInspector.foldAlerts(true)">Alerts <b class="ab-n"></b><span>Collapse ›</span></button>
+        <button type="button" class="ab-open" onclick="AgenticAiInspector.foldAlerts(false)">⚠️ <b class="ab-n"></b> <span class="ab-word"></span><span class="ab-go">‹ Open</span></button>`;
+      document.body.appendChild(bar);
+    }
+    const sync = () => {
+      const n = stack.children.length;
+      bar.hidden = !n || stack.style.display === 'none';
+      bar.querySelectorAll('.ab-n').forEach(el => { el.textContent = n; });
+      const w = bar.querySelector('.ab-word');
+      if (w) w.textContent = n === 1 ? 'alert' : 'alerts';
+      bar.classList.toggle('folded', stack.classList.contains('folded'));
+    };
+    new MutationObserver(sync).observe(stack, { childList: true, attributes: true, attributeFilter: ['style', 'class'] });
+    sync();
+  },
+
+  foldAlerts(fold) {
+    const stack = document.getElementById('precheck-alerts');
+    if (stack) stack.classList.toggle('folded', !!fold);
   },
 
   /**
@@ -887,6 +920,7 @@ const AgenticAiInspector = {
       ${preview ? `<div class="orient-alert-preview">${preview}</div>` : ''}
       <div class="orient-alert-actions">${buttons.join('')}</div>
       ${hint ? `<div class="orient-alert-hint">${hint}</div>` : ''}`;
+    this._compact(box);
   },
 
   closeOrientationAlert() {
@@ -926,6 +960,7 @@ const AgenticAiInspector = {
           <span class="sz-dist">${q.ppi} PPI in the file${looks ? ` · enlarged ×${q.kPart && q.k === 1 ? q.kPart : q.k} → looks like ≈ ${q.real} PPI` : ''}</span></div>
         <button class="spell-alert-show" onclick="AgenticAiInspector.showPrintQuality()">Show</button>
       </div>`;
+    this._compact(box);
   },
 
   /**
@@ -949,17 +984,56 @@ const AgenticAiInspector = {
       stack.insertBefore(box, stack.firstChild);
     }
     box.className = `spell-alert${b.noStretch ? '' : ' is-warn'}`;
+    // short first; "Review more" opens the blank space in numbers, a small drawing of the order and what to do
+    const lr = b.axis === 'w', side = (lr ? b.artIn.w / b.orderIn.w : b.artIn.h / b.orderIn.h) * 100;
     box.innerHTML = `
       <div class="spell-alert-head">⚠️ <span>Blank space: ${b.pct}% of the ${b.orderIn.w}" × ${b.orderIn.h}" order would print empty</span>
         <button class="spell-alert-close" title="Close" onclick="AgenticAiInspector.closeBlankAlert()">×</button></div>
-      <div class="spell-alert-note">The artwork's proportion is not the order's: placed whole it covers ${b.artIn.w}" × ${b.artIn.h}", leaving ${b.gapIn}" empty ${b.sides} (${b.eachIn}" each side). ${b.noStretch
-        ? `Do not stretch it — it would be distorted ×${b.stretch}. Extend the background or rearrange the design to fill the size, or ask the customer for artwork made at ${b.orderIn.w}" × ${b.orderIn.h}"; customer approval (Design Review).`
-        : `Extend the background to fill the size (stretching would distort it ×${b.stretch}); customer approval (Design Review).`}</div>
+      <div class="spell-alert-note">The artwork covers only ${b.coverPct}% of the order: ${b.gapIn}" would print empty ${b.sides}.${b.noStretch ? ' Do not stretch it.' : ''}</div>
+      <div class="alert-more">
+        <div class="am-diagram${lr ? '' : ' am-v'}" title="The order (${b.orderIn.w}" × ${b.orderIn.h}") with the artwork placed whole">
+          <i style="flex-basis:${((100 - side) / 2).toFixed(1)}%"></i><b style="flex-basis:${side.toFixed(1)}%">Artwork</b><i style="flex-basis:${((100 - side) / 2).toFixed(1)}%"></i>
+        </div>
+        <dl class="am-facts">
+          <dt>Order size</dt><dd>${b.orderIn.w}" × ${b.orderIn.h}"</dd>
+          <dt>Artwork placed whole</dt><dd>${b.artIn.w}" × ${b.artIn.h}" · ${b.coverPct}% of the size · ${b.ppiWhole} PPI</dd>
+          <dt>Empty</dt><dd><strong>${b.gapIn}" (${b.pct}%)</strong> — ${b.eachIn}" ${lr ? 'left · ' + b.eachIn + '" right' : 'above · ' + b.eachIn + '" below'}</dd>
+          <dt>Stretched to fill</dt><dd>distorted ×${b.stretch} · ${b.ppiStretched} PPI${b.noStretch ? ' — not acceptable' : ''}</dd>
+          <dt>Filled, not distorted</dt><dd>${b.cropPct}% of the artwork cut off</dd>
+        </dl>
+        <div class="am-todo"><strong>What to do:</strong> ${b.noStretch
+          ? `extend the background or rearrange the design to fill ${b.orderIn.w}" × ${b.orderIn.h}", or ask the customer for artwork made at that size.`
+          : `extend the background to fill the size (stretching distorts it ×${b.stretch}).`} Customer approval — Design Review (PR-DPO-03 artwork placement).</div>
+      </div>
       <div class="spell-alert-row">
         <div class="spell-alert-words"><span class="spell-alert-kind">Artwork placed whole</span>
           <span class="sz-dist">${b.coverPct}% of the size · ${b.ppiWhole} PPI</span></div>
         <button class="spell-alert-show" onclick="AgenticAiInspector.showBlankSpace()">Show</button>
       </div>`;
+    this._compact(box);
+  },
+
+  /**
+   * Alerts open short: the title and the rows with their Show buttons stay; the explanation (and the details)
+   * fold behind "More details" and open on a click — and stay open when the alert is redrawn. Used by every pop-up
+   * alert after it draws its content. A short note with no details stays as it is.
+   */
+  _compact(box) {
+    if (!box) return;
+    const open = this._openAlerts || (this._openAlerts = new Set());
+    const note = box.querySelector('.spell-alert-note');
+    const more = box.querySelector('.alert-more');
+    if (!note || (!more && note.textContent.length < 110)) return;
+    note.classList.add('am-body');
+    box.classList.add('is-compact');
+    box.classList.toggle('is-open', open.has(box.id));
+    if (box.querySelector('.alert-more-btn')) return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'alert-more-btn';
+    b.innerHTML = '<span class="am-o">More details ▾</span><span class="am-c">Hide details ▴</span>';
+    b.onclick = () => { if (box.classList.toggle('is-open')) open.add(box.id); else open.delete(box.id); };
+    (more || note).after(b);
   },
 
   /** Show button of the blank-space alert: the canvas, its empty areas swept in again */

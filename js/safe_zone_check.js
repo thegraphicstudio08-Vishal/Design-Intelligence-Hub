@@ -836,6 +836,7 @@ const SafeZoneCheck = {
             <span class="sz-dist">${dist(it)}</span></div>
           <button class="spell-alert-show" onclick="SafeZoneCheck.show(${i})">Show</button>
         </div>`).join('')}${r.items.length + (r.more || 0) > 6 ? `<div class="spell-alert-note">+ ${r.items.length + (r.more || 0) - 6} more marked on the canvas</div>` : ''}`;
+    if (AgenticAiInspector._compact) AgenticAiInspector._compact(box);    // opens short, "Review more" for the rest
   },
 
   closeAlert() {

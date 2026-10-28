@@ -189,13 +189,15 @@ const PostCheck = {
   },
 
   /**
-   * A copy of a whole picture for the zoomed print preview: a JPEG blob URL, at most 6000 px on the long side (bigger
-   * pictures are scaled down; the preview still sizes it by the picture's own pixels). { url, w, h } = native size.
+   * A copy of a whole picture for the zoomed print preview: a JPEG blob URL at the picture's own pixels, so 100 % /
+   * Print size show the real pixels (a 6000 px copy stretched back up made the US2421709 banner — 13824 px — look
+   * soft). Only beyond what the preview can show (16000 px, about 120 MP) is it scaled down; the preview still sizes
+   * it by the picture's own pixels. { url, w, h } = native size.
    */
   async _fullCopy(src) {
     try {
       const W = src.naturalWidth || src.width, H = src.naturalHeight || src.height;
-      const k = Math.min(1, 6000 / Math.max(W, H));
+      const k = Math.min(1, 16000 / Math.max(W, H), Math.sqrt(120e6 / (W * H)));
       const c = document.createElement('canvas');
       c.width = Math.max(1, Math.round(W * k)); c.height = Math.max(1, Math.round(H * k));
       const g = c.getContext('2d');
