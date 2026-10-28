@@ -1376,6 +1376,8 @@ const CanvasInspector = {
       this.artRect = { x: tx + r.x, y: ty + r.y, w: r.w, h: r.h };
     }
     ctx.restore();
+    this.trimRect = { x: tx, y: ty, w: tw, h: th };
+    this.safeInset = b.safeIn * s;
 
     // 4. Artboard edge, trim (finished size / fold line), safe area
     ctx.save();
@@ -1567,12 +1569,15 @@ const CanvasInspector = {
   redraw() {
     this.artRect = null;
     this.artRot = 0;
+    this.trimRect = null;          // the ordered (finished) size on the canvas, px — set by the layouts that know it
+    this.safeInset = 0;            // the safe area inside it, px (banner templates)
     this._loupeCanvasUrl = null;   // the zoom loupe's picture of the canvas is out of date
     this.legend = null;            // set again by the print sheet / banner layout when it draws
     this._redrawCanvas();
     this._drawRotationNote();
     this._renderLegend();
     if (typeof SafeZoneCheck !== 'undefined') SafeZoneCheck.placeOverlay();   // safe-zone marks follow the artwork
+    if (typeof CanvasFx !== 'undefined') CanvasFx.place();                    // blank space / safe line animations
     // Stray line & dot scan + markers: always on the real artwork image, whichever layout drew it
     if (typeof AgenticAiInspector !== 'undefined' && this.canvas && this.currentImg) {
       AgenticAiInspector.onCanvasRedraw(this.canvas, this.currentImg, this.currentSpec, this.currentDims);
@@ -1732,6 +1737,7 @@ const CanvasInspector = {
       this.artRect = { x: ox + r.x, y: oy + r.y, w: r.w, h: r.h };   // where the artwork sits on the canvas (px)
     }
     ctx.restore();
+    this.trimRect = { x: ox, y: oy, w, h };
 
     // 2.4 Official QNAP Template Overlay when enabled via toolbar toggle or in template mode
     if (this.guides.officialOverlay && this.officialTemplateImg && this.officialTemplateImg.complete && this.officialTemplateImg.naturalWidth > 0) {

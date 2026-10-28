@@ -1014,7 +1014,7 @@ async function runPreCheck() {
   btnText.textContent = 'Inspecting SOP…';
 
   onDimensionInput();
-  Checking.start();
+  if (!appState._quiet) Checking.start();   // a card the designer marked: the results stay on the page
 
   try {
     // 0. SOP requirements for this exact order (size + finishing + product)
@@ -1176,6 +1176,7 @@ async function runPreCheck() {
     alert('An error occurred during pre-check analysis: ' + err.message);
   } finally {
     Checking.done();
+    appState._quiet = null;                    // a quiet re-check that failed must not hide the next panel
     btn.disabled = false;
     btnIcon.textContent = '⚡';
     btnText.textContent = 'Run OPS-Intel Check';
@@ -1191,10 +1192,15 @@ function renderResults(report, previousOrders) {
   const content = document.getElementById('results-content');
   content.style.display = 'flex';
   // the entrance animations (cards rising in one after another, the score counting up) play for a new result only —
-  // not every time a background check (spelling, colour) redraws a card
-  content.classList.add('r-enter');
-  clearTimeout(renderResults._enter);
-  renderResults._enter = setTimeout(() => content.classList.remove('r-enter'), 2200);
+  // not every time a background check (spelling, colour) redraws a card, nor after a card the designer marked
+  const quiet = appState._quiet;
+  appState._quiet = null;
+  if (quiet) requestAnimationFrame(() => rGlide(quiet));    // after this redraw: the marked card glides into place
+  else {
+    content.classList.add('r-enter');
+    clearTimeout(renderResults._enter);
+    renderResults._enter = setTimeout(() => content.classList.remove('r-enter'), 2200);
+  }
 
   const { spec, dimensions } = report;
   appState.previousOrders = previousOrders;
@@ -1320,6 +1326,8 @@ function renderSummaryCard(report) {
   if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderDetailAlert) AgenticAiInspector._renderDetailAlert();
   // blank space: the artwork placed whole leaves part of the ordered size empty
   if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderBlankAlert) AgenticAiInspector._renderBlankAlert();
+  // the canvas was drawn before this result: its blank-space layer is placed now (plays when the canvas is in view)
+  if (typeof CanvasFx !== 'undefined') CanvasFx.place();
   // the status to set (Good to Go / Bit Fuzzy / Low Resolution) with the PPI and the zoomed print preview
   const qualityHtml = typeof PrintQuality !== 'undefined' ? PrintQuality.html(report.printQuality, dimensions) : '';
 
@@ -1627,15 +1635,81 @@ function toggleCheckMore(id) {
   if (b) b.setAttribute('aria-expanded', card.classList.contains('more') ? 'true' : 'false');
 }
 
+/** Windows "reduce motion": no movement, the end state at once */
+function rStill() {
+  return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+/**
+ * The designer marked a card (corrected / checked by eye / override): the check runs again quietly — the results
+ * stay on the page, no checking panel — the card shows ✓, and after the redraw it glides into its new group (or,
+ * when that group is folded, its count pops)
+ */
+function quietRecheck(id) {
+  const card = document.getElementById(`cc-${id}`);
+  appState._quiet = { id, from: card ? card.getBoundingClientRect() : null };
+  if (card && !rStill()) {
+    card.classList.add('r-marked');
+    setTimeout(runPreCheck, 320);            // the ✓ shows before the redraw
+  } else runPreCheck();
+}
+
+/** After a quiet re-check: the marked card glides from where it was to where it is now (transform only) */
+function rGlide(q) {
+  const card = document.getElementById(`cc-${q.id}`);
+  if (!card || !q.from || rStill()) return;
+  const group = card.closest('details.checks-group');
+  if (group && !group.open) {
+    const n = group.querySelector('.cg-count');
+    if (n && n.animate) n.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.45)' }, { transform: 'scale(1)' }], { duration: 520, easing: 'ease-out' });
+    return;
+  }
+  const to = card.getBoundingClientRect();
+  if (card.animate) card.animate([{ transform: `translate(${q.from.left - to.left}px, ${q.from.top - to.top}px)`, opacity: 0.6 }, { transform: 'none', opacity: 1 }],
+    { duration: 480, easing: 'cubic-bezier(.2,.8,.2,1)' });
+}
+
+/** A pop-up alert leaves: it slides out to the right, the alerts under it glide up into its place */
+function rDismiss(box) {
+  if (!box) return;
+  const stack = box.parentElement;
+  if (!stack || rStill() || !box.animate) { box.remove(); return; }
+  box.removeAttribute('id');                  // a new alert of the same kind can open meanwhile
+  const sibs = [...stack.children].filter(el => el !== box);
+  const before = sibs.map(el => el.getBoundingClientRect().top);
+  box.style.pointerEvents = 'none';
+  box.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(48px)' }], { duration: 220, easing: 'ease-in', fill: 'forwards' })
+    .onfinish = () => {
+      box.remove();
+      sibs.forEach((el, i) => {
+        const dy = before[i] - el.getBoundingClientRect().top;
+        if (dy && el.animate) el.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 280, easing: 'cubic-bezier(.2,.8,.2,1)' });
+      });
+    };
+}
+
+/** "Show" in an alert: bring the target into view and ring it twice (a pulse drawn by the graphics card) */
+function rHighlight(el) {
+  if (!el) return;
+  el.scrollIntoView({ behavior: rStill() ? 'auto' : 'smooth', block: 'center' });
+  if (rStill()) return;
+  if (getComputedStyle(el).position === 'static') { el.style.position = 'relative'; el._ringPos = true; }
+  el.classList.remove('r-ring');
+  void el.offsetWidth;
+  el.classList.add('r-ring');
+  clearTimeout(el._ring);
+  el._ring = setTimeout(() => { el.classList.remove('r-ring'); if (el._ringPos) { el.style.position = ''; el._ringPos = false; } }, 2700);
+}
+
 function markCheckFixed(id) {
   appState.overrides[id] = 'Designer confirmed file was corrected and validated.';
-  runPreCheck();
+  quietRecheck(id);
 }
 
 /** A "Confirm by eye" item the designer has looked at: counted as passed, with the reason logged */
 function confirmCheck(id) {
   appState.overrides[id] = 'Designer checked this by eye and confirmed it.';
-  runPreCheck();
+  quietRecheck(id);
 }
 
 /**
@@ -1667,9 +1741,10 @@ function submitOverride() {
   }
 
   if (pendingOverrideId) {
-    appState.overrides[pendingOverrideId] = reason;
+    const id = pendingOverrideId;
+    appState.overrides[id] = reason;
     closeOverrideModal();
-    runPreCheck();
+    quietRecheck(id);
   }
 }
 
@@ -1681,7 +1756,12 @@ function switchTab(tabId) {
     const tabEl = document.getElementById(`tab-${t}`);
     const resEl = document.getElementById(`rt-${t}`);
     if (tabEl) tabEl.classList.toggle('active', t === tabId);
-    if (resEl) resEl.classList.toggle('active', t === tabId);
+    if (resEl) {
+      const was = resEl.classList.contains('active');
+      resEl.classList.toggle('active', t === tabId);
+      // the tab's content fades in when the designer switches to it
+      if (t === tabId && !was && !rStill() && resEl.animate) resEl.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'ease-out' });
+    }
   });
 }
 

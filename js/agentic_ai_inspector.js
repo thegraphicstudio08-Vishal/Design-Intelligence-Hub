@@ -785,8 +785,19 @@ const AgenticAiInspector = {
   },
 
   closeSpellingAlert() {
-    const box = document.getElementById('spell-alert');
-    if (box) box.remove();
+    this._dismiss(document.getElementById('spell-alert'));
+  },
+
+  /** A closed alert slides out (app.js rDismiss); straight away where that is not loaded */
+  _dismiss(box) {
+    if (!box) return;
+    if (typeof rDismiss === 'function') rDismiss(box); else box.remove();
+  },
+
+  /** A "Show" target is brought into view and ringed (app.js rHighlight) */
+  _highlight(el) {
+    if (!el) return;
+    if (typeof rHighlight === 'function') rHighlight(el); else el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   },
 
   /** Fixed top-right stack holding the pre-check pop-up alerts (orientation, spelling) */
@@ -880,8 +891,7 @@ const AgenticAiInspector = {
 
   closeOrientationAlert() {
     this._orientAlertClosedKey = this._orientAlertKey;
-    const box = document.getElementById('orient-alert');
-    if (box) box.remove();
+    this._dismiss(document.getElementById('orient-alert'));
   },
 
   /**
@@ -952,30 +962,27 @@ const AgenticAiInspector = {
       </div>`;
   },
 
-  /** Show button of the blank-space alert: the canvas with the artwork on the ordered size */
+  /** Show button of the blank-space alert: the canvas, its empty areas swept in again */
   showBlankSpace() {
     if (typeof switchTab === 'function') switchTab('checks');
-    const el = document.querySelector('.visual-inspector-card') || document.getElementById('artwork-canvas');
-    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); }
+    this._highlight(document.querySelector('.canvas-viewport-wrap') || document.getElementById('artwork-canvas'));
+    if (typeof CanvasFx !== 'undefined') setTimeout(() => CanvasFx.play(), 350);
   },
 
   closeBlankAlert() {
     this._blankAlertClosedKey = this._blankAlertKey;
-    const box = document.getElementById('blank-alert');
-    if (box) box.remove();
+    this._dismiss(document.getElementById('blank-alert'));
   },
 
   /** Show button of the print-quality alert: the status strip with the zoomed print preview */
   showPrintQuality() {
-    const el = document.getElementById('pq-strip');
     if (typeof switchTab === 'function') switchTab('checks');
-    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); }
+    this._highlight(document.getElementById('pq-strip'));
   },
 
   closeDetailAlert() {
     this._detailAlertClosedKey = this._detailAlertKey;
-    const box = document.getElementById('detail-alert');
-    if (box) box.remove();
+    this._dismiss(document.getElementById('detail-alert'));
   },
 
   /** Buttons of the orientation alert: preview on the canvas only — the order size is never changed here */
@@ -985,16 +992,18 @@ const AgenticAiInspector = {
     if (what === 'turn') ci.setRotation(value);                  // artwork on the board as it is
     else if (what === 'order') ci.setOrderTurned(!!value);       // the template board (artboard)
     else if (what === 'reset') ci.resetOrientation();
-    const wrap = document.querySelector('.canvas-viewport-wrap');
-    if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    this._highlight(document.querySelector('.canvas-viewport-wrap'));
   },
 
-  /** Bring the artwork into view with this word's marker highlighted */
+  /** Bring the artwork into view with this word's marker highlighted (the canvas ringed when the marker is not) */
   showSpellingMistake(defectId) {
     this.locateDefect(defectId);
     const marker = document.getElementById(`marker-${defectId}`);
-    const target = marker || document.querySelector('.canvas-viewport-wrap');
-    if (target) setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+    const wrap = document.querySelector('.canvas-viewport-wrap');
+    setTimeout(() => {
+      if (marker) marker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      else this._highlight(wrap);
+    }, 50);
   },
 
   /** Spelling card of the pre-check report: what was read, what looks wrong, what a person must still check */

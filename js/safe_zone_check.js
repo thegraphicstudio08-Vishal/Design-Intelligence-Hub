@@ -791,7 +791,9 @@ const SafeZoneCheck = {
   show(i) {
     const m = document.getElementById('sz-mark-' + i);
     const canvas = document.getElementById('artwork-canvas');
-    (canvas || m || document.body).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const wrap = document.querySelector('.canvas-viewport-wrap') || canvas;
+    if (wrap && typeof rHighlight === 'function') rHighlight(wrap);
+    else (canvas || m || document.body).scrollIntoView({ behavior: 'smooth', block: 'center' });
     if (m) { m.classList.remove('flash'); void m.offsetWidth; m.classList.add('flash'); }
   },
 
@@ -839,7 +841,7 @@ const SafeZoneCheck = {
   closeAlert() {
     if (this._last) this._alertClosedKey = this._last.key;
     const box = document.getElementById('safe-zone-alert');
-    if (box) box.remove();
+    if (box && typeof rDismiss === 'function') rDismiss(box); else if (box) box.remove();   // slides out
   }
 };
 

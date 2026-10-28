@@ -14,6 +14,7 @@
  */
 const PrintQuality = {
   SHARP_UPTO: 2.0,
+  PART_MARGIN: 0.85,    // an enlarged part makes it Low Resolution only when clearly (15 %) under the SOP minimum
   PRINT_SIZE_PX_PER_IN: 96 * 1.144,      // Photoshop "Print Size" on the 143 PPI screen (Proof Studio, SOP slide 8)
   LABEL: { good: 'Good to Go', fuzzy: 'Bit Fuzzy', low: 'Low Resolution' },
   RANK: { good: 0, fuzzy: 1, low: 2 },
@@ -44,8 +45,10 @@ const PrintQuality = {
     const worst = Math.min(real, realPart || real);
     // the status follows the least sharp part: an enlarged photo or logo beside sharp text prints as soft as it looks
     // in the zoomed preview (team, Oct 2026: "if the print preview looks fuzzy and blurry, fail it, even when the
-    // PPI meets the SOP — the goal is the real quality of the artwork")
-    const status = worst < min ? 'low' : worst < target ? 'fuzzy' : 'good';
+    // PPI meets the SOP — the goal is the real quality of the artwork"). A part is measured on fewer tiles, so it
+    // makes it Low Resolution when clearly under the minimum (US2429834 truck ≈ 9 PPI); just under (PRUS2432258
+    // tickets, 618 PPI, parts ≈ 281 vs minimum 300) it is Bit Fuzzy
+    const status = real < min || this.partLow(realPart, min) ? 'low' : worst < target ? 'fuzzy' : 'good';
     const p25 = o.det && o.det.p25;
     let why;
     if (k > 1) {
@@ -60,6 +63,11 @@ const PrintQuality = {
       : ` — meets the SOP ${target} PPI.`;
     if (!e) why += ' Judged on the PPI: the artwork has too few clear edges (flat colours) to measure its sharpness.';
     return { status, label: this.LABEL[status], ppi, real: worst, k, kPart, target, min, basis: e ? 'visual' : 'ppi', why, p25 };
+  },
+
+  /** An enlarged part clearly under the SOP minimum (the same rule for the status and the cards) */
+  partLow(realPart, min) {
+    return !!(realPart && min > 0 && realPart < min * this.PART_MARGIN);
   },
 
   /** Vector artwork: sharp at any size */
@@ -134,6 +142,13 @@ const PrintQuality = {
     img.style.height = Math.round(box.dataset.h * sc) + 'px';
     btn.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === btn));
     this.center(box, cx, cy);
+    // a smooth zoom: the picture starts at its old size round the view centre and grows / shrinks to the new one
+    // (transform only). Not for very large views, where the graphics card would have to draw too much at once.
+    const big = Math.max(box.dataset.w, box.dataset.h) * Math.max(sc, old) > 9000;
+    if (!this._still() && !big && img.animate && Math.abs(sc - old) > 1e-3) {
+      img.animate([{ transform: `scale(${old / sc})`, transformOrigin: `${cx * sc}px ${cy * sc}px` },
+        { transform: 'none', transformOrigin: `${cx * sc}px ${cy * sc}px` }], { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    }
   },
 
   /** Scroll the preview so (x, y) — by default the measured area — sits in the middle */

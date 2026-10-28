@@ -206,7 +206,7 @@ const PrecheckEngine = {
     if (!e) return null;
     const real = Math.round(ppi / e.all), realPart = e.part ? Math.round(ppi / e.part) : null;
     // the least sharp part decides, like the print-quality status (an enlarged logo beside sharp text fails too)
-    const level = (e.all > 1 && real < min) || (realPart && realPart < min) ? 'critical'
+    const level = (e.all > 1 && real < min) || PrintQuality.partLow(realPart, min) ? 'critical'
       : (e.all > 1 && real < target) || (realPart && realPart < target) ? 'look' : null;
     return { det, real: realPart && e.all === 1 ? realPart : real, enlarge: e.part && e.all === 1 ? e.part : e.all, level };
   },
