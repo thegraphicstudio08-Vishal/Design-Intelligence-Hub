@@ -505,9 +505,9 @@ function handleFile(file) {
     if (previewSize) previewSize.textContent = `${sizeKB} KB · ${file.type || ext}`;
 
     if (file.type.startsWith('image/') || ext === 'SVG') {
-      const r = new FileReader();
-      r.onload = (e) => {
-        if (previewImg) previewImg.src = e.target.result;
+      if (previewImg) previewImg.style.visibility = 'hidden';   // no broken-picture icon while the file is read
+      const loaded = (e) => {
+        if (previewImg) { previewImg.src = e.target.result; previewImg.style.visibility = ''; }
         appState.previewDataUrl = e.target.result;
         if (!ProofStudio.slots.overall || !ProofStudio.slots.overall.isCustom) {
           ProofStudio.setSlot('overall', e.target.result, file.name);
@@ -545,7 +545,12 @@ function handleFile(file) {
         };
         img.src = e.target.result;
       };
-      r.readAsDataURL(file);
+      // a CMYK JPEG print file is first made into an RGB copy (raster_source.js) — a few seconds in the background
+      // instead of minutes of a frozen page; the checking panel says so meanwhile
+      RasterSource.isCmykJpeg(file).then(cmyk => {
+        if (cmyk && appState.product) { appState.previewDataUrl = null; Checking.start(); Checking.step(0, 'Preparing the CMYK print file for the checks…'); }
+      }).catch(() => {});
+      RasterSource.dataUrl(file).then(result => loaded({ target: { result } }), err => { Checking.done(); alert(`"${file.name}" could not be read: ${err}`); });
     } else {
       // Vector or PDF file preview SVG using parsed dimensions
       const previewSvg = FileAnalyzer._generateVectorPreviewSvg(
@@ -554,7 +559,7 @@ function handleFile(file) {
         appState.userDims?.widthIn || 36,
         appState.userDims?.heightIn || 24
       );
-      if (previewImg) previewImg.src = previewSvg;
+      if (previewImg) { previewImg.src = previewSvg; previewImg.style.visibility = ''; }
       appState.previewDataUrl = previewSvg;
       if (!ProofStudio.slots.overall || !ProofStudio.slots.overall.isCustom) {
         ProofStudio.setSlot('overall', previewSvg, file.name);
@@ -957,7 +962,7 @@ const Checking = {
     this.thumb(appState.file && /^image\//.test(appState.file.type || '') ? appState.previewDataUrl : null);
     document.getElementById('ck-steps').innerHTML = this.STEPS.map((s, i) => `<li id="ck-s${i}"><span class="ck-dot"></span>${s}</li>`).join('');
     this._cur = -1;
-    this._t0 = Date.now();
+    if (p.hidden) this._t0 = Date.now();   // already open (a CMYK print file being prepared): the time runs on
     clearInterval(this._timer);
     this._timer = setInterval(() => { const el = document.getElementById('ck-time'); if (el) el.textContent = Math.round((Date.now() - this._t0) / 1000) + ' s'; }, 500);
     p.hidden = false;

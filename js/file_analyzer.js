@@ -412,8 +412,8 @@ const FileAnalyzer = {
    */
   async _analyzeRaster(file, res, targetW, targetH) {
     return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
+      // the picture the checks read: a CMYK JPEG as its RGB copy (raster_source.js), read once per file
+      const loaded = (e) => {
         res.previewDataUrl = e.target.result;
         const img = new Image();
         img.onload = () => {
@@ -453,7 +453,10 @@ const FileAnalyzer = {
         };
         img.src = res.previewDataUrl;
       };
-      reader.readAsDataURL(file);
+      RasterSource.dataUrl(file).then(result => loaded({ target: { result } }), () => {
+        res.goodForPrintReason = 'Could not read the file.';
+        resolve(res);
+      });
     });
   },
 
