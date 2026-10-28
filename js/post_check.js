@@ -542,15 +542,24 @@ const PostCheck = {
       mixed: ['Partly raster', `Vector${r.texts ? ' + text' : ''} + ${nPics} picture${nPics === 1 ? '' : 's'}`, `Vector parts print sharp; the pictures cover ${r.cover}% of the page and are checked one by one.`],
       empty: ['Empty', 'Nothing is drawn on page 1', 'The page has no shapes, text or pictures.']
     }[r.kind];
+    // a picture placed larger than the page (its edges cut off by the page) is outlined where it shows on the page —
+    // its whole box ran off the drawing, over the panel and the cards below
+    const onPage = b => {
+      const x0 = Math.max(0, b[0]), y0 = Math.max(0, b[1]), x1 = Math.min(r.vpW, b[2]), y1 = Math.min(r.vpH, b[3]);
+      return x1 - x0 > 0.5 && y1 - y0 > 0.5 ? [x0, y0, x1, y1] : null;
+    };
     const boxes = r.pics.filter(q => q.kind !== 'mask').map(q => {
-      const b = q.box, st = q.state || 'pass';
+      const b = onPage(q.box), st = q.state || 'pass';
+      if (!b) return '';
       const L = b[0] / r.vpW * 100, T = b[1] / r.vpH * 100, W = (b[2] - b[0]) / r.vpW * 100, H = (b[3] - b[1]) / r.vpH * 100;
       const dv = q.detail && q.detail.verdict !== 'unknown' ? ` · ${q.detail.verdict === 'sharp' ? (q.detail.partly ? 'partly enlarged' : 'sharp') : q.detail.verdict}` : '';
       return `<div class="pc-box ${st}${T < 8 ? ' tag-in' : ''}" id="pc-box-${q.n}" style="left:${L}%; top:${T}%; width:${W}%; height:${H}%"><span class="pc-box-tag">${q.n} · ${q.at} PPI${dv}</span></div>`;
     }).join('');
     // enlarged areas are marked only when part of a picture is enlarged (a wholly enlarged picture is outlined in red)
     const blur = r.pics.filter(q => q.detail && q.detail.partly && q.state && q.state !== 'pass').map(q => (q.detail.tiles || []).filter(t => t.state === 'enlarged' && t.vbox).map(t => {
-      const [x0, y0, x1, y1] = t.vbox;
+      const v = onPage(t.vbox);
+      if (!v) return '';
+      const [x0, y0, x1, y1] = v;
       return `<div class="pc-blur" style="left:${x0 / r.vpW * 100}%; top:${y0 / r.vpH * 100}%; width:${(x1 - x0) / r.vpW * 100}%; height:${(y1 - y0) / r.vpH * 100}%" title="Enlarged area (edges ${t.p25} px)"></div>`;
     }).join('')).join('');
     const rows = r.pics.filter(q => q.kind !== 'mask').map(q => {
