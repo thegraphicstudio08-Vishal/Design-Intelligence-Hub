@@ -529,6 +529,19 @@ details.checks-group[open] > summary { margin-bottom: 2px; }
 .check-card.r-marked .cta-fixed { animation: r-pop .25s var(--r-ease); background: var(--r-ok, #16a34a); border-color: var(--r-ok, #16a34a); color: #fff; }
 @keyframes r-marked { to { opacity: .35; transform: translateX(14px) scale(.985); } }
 
+/* Drop to check: a file dragged anywhere on the OPS-Intel page (app.js) — exactly as in prototype v3 */
+.drop-anywhere { position: fixed; inset: 0; z-index: 9500; display: none; align-items: center; justify-content: center; background: rgba(14, 19, 34, .72); }
+.drop-anywhere.on { display: flex; animation: da-fade .2s ease; }
+.drop-anywhere * { pointer-events: none; }
+.da-box { width: min(720px, 80vw); height: 340px; border: 3px dashed #fff; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #fff; animation: da-pop .35s var(--r-ease); }
+.da-icon { width: 84px; height: 84px; border-radius: 24px; background: var(--r-accent); display: grid; place-items: center; animation: da-bob 1.6s ease-in-out infinite; }
+.da-icon .r-ico { width: 40px; height: 40px; color: #fff; }
+.da-title { font-size: 28px; font-weight: 700; line-height: 1.2; }
+.da-sub { font-size: 14px; opacity: .85; }
+@keyframes da-fade { from { opacity: 0; } }
+@keyframes da-pop { from { opacity: 0; transform: scale(.92); } }
+@keyframes da-bob { 50% { transform: translateY(-6px); } }
+
 /* buttons answer the press */
 #view-precheck button:active, .left-panel button:active { transform: scale(.97); }
 
@@ -544,7 +557,7 @@ details.checks-group[open] > summary { margin-bottom: 2px; }
 /* Motion turned off in the system settings: everything still works, without the movement */
 @media (prefers-reduced-motion: reduce) {
   #view-precheck *, .left-panel *, .bb-header *, .bb-subnav *, .left-panel .lp-section,
-  .precheck-alerts > *, .precheck-alerts *, .r-ring::after { animation: none !important; transition: none !important; }
+  .precheck-alerts > *, .precheck-alerts *, .r-ring::after, .drop-anywhere, .drop-anywhere * { animation: none !important; transition: none !important; }
   .canvas-fx .fx-blank { opacity: 1 !important; }
   .canvas-fx .fx-safe { display: none; }
   #view-precheck .ck-steps li.now .ck-dot { animation: ck-spin 2s linear infinite !important; }

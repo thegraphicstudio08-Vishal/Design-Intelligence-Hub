@@ -71,6 +71,29 @@ function onFileInputChange(e) {
 }
 window.onFileInputChange = onFileInputChange;
 
+/**
+ * Drop to check: a file dragged anywhere on the OPS-Intel page shows a full-page drop area; dropping it checks it
+ * like the upload box (customer artwork JPG / PNG / PDF, or the design file). The upload box keeps its own drop
+ * (it stops the event, so a file is never checked twice); Proof Studio keeps its own drop boxes.
+ */
+(() => {
+  const isFile = e => !!(e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files'));
+  const onCheckPage = () => { const v = document.getElementById('view-precheck'); return !v || v.classList.contains('active'); };
+  const area = () => document.getElementById('drop-anywhere');
+  const show = on => { const a = area(); if (a) a.classList.toggle('on', on); };
+  window.addEventListener('dragenter', e => { if (isFile(e) && onCheckPage()) { e.preventDefault(); show(true); } });
+  window.addEventListener('dragover', e => { if (isFile(e) && onCheckPage()) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
+  // the drop area covers the page, so leaving it means leaving the window
+  window.addEventListener('dragleave', e => { if (e.target === area()) show(false); });
+  window.addEventListener('drop', e => {
+    show(false);
+    if (!isFile(e) || !onCheckPage()) return;
+    e.preventDefault();
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+})();
+
 // ── Application Initialization (Runs immediately if DOM is ready, or on DOMContentLoaded) ──
 function initApp() {
   initCategories();
