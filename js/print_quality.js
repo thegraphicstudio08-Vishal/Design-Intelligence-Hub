@@ -87,18 +87,29 @@ const PrintQuality = {
       q.basis === 'visual' ? `<span>Looks like: <strong>≈ ${q.real} PPI</strong> zoomed in${q.k > 1 ? ` (enlarged ×${q.k})` : q.kPart ? ` in part (×${q.kPart})` : ''}</span>` : '<span>Sharpness: not measurable (flat colours)</span>',
       `<span>SOP: <strong>${q.target} PPI</strong> (minimum ${q.min})</span>`
     ].join('');
-    const s = q.sample;
+    // The zoomed print preview: the whole artwork (or the whole picture of a design PDF) at print size, moved around by
+    // hand; it opens on the least sharp area the check measured. Without the whole artwork, that area alone.
+    const s = q.sample, f = q.full && q.full.url && q.full.w > 0 ? q.full : null;
+    const src = f ? { url: f.url, w: f.w, h: f.h, fx: s && s.cx != null ? s.cx : f.w / 2, fy: s && s.cy != null ? s.cy : f.h / 2 }
+      : s && s.url ? { url: s.url, w: s.w, h: s.h, fx: s.fx, fy: s.fy } : null;
     let view = '';
-    if (s && s.url && q.ppi) {
+    if (src && q.ppi) {
       const z = this.zoomFor(q, dims);
+      const MAX = 16000;                                    // the browser draws an image up to about this many pixels
+      const fits = sc => Math.max(src.w, src.h) * sc <= MAX;
+      const btn = (sc, label, on) => fits(sc) ? `<button type="button"${on ? ' class="on"' : ''} data-scale="${sc}" onclick="PrintQuality.zoom(this)">${label}</button>` : '';
+      const start = fits(z.scale) ? z.scale : MAX / Math.max(src.w, src.h);
       view = `
         <div class="pq-view">
           <div class="pq-view-head"><span>Zoomed print preview</span>
-            <span class="pq-zoom"><button type="button" class="on" data-scale="${z.scale}" onclick="PrintQuality.zoom(this)">${z.scale === 1 ? '100%' : 'Print size'}</button>${z.scale === 1 ? '' : '<button type="button" data-scale="1" onclick="PrintQuality.zoom(this)">100%</button>'}<button type="button" data-scale="${2 * z.scale}" onclick="PrintQuality.zoom(this)">${z.scale === 1 ? '200%' : '2× print size'}</button></span></div>
-          <div class="pq-view-box" data-w="${s.w}" data-h="${s.h}" data-fx="${s.fx}" data-fy="${s.fy}">
-            <img src="${s.url}" alt="Artwork area at print size" style="width:${Math.round(s.w * z.scale)}px; height:${Math.round(s.h * z.scale)}px;" onload="PrintQuality.center(this.parentElement)">
+            <span class="pq-zoom">${btn(start, z.scale === 1 ? '100%' : 'Print size', true)}${z.scale === 1 ? '' : btn(1, '100%')}${btn(2 * z.scale, z.scale === 1 ? '200%' : '2× print size')}</span></div>
+          <div class="pq-view-frame">
+            <div class="pq-view-box" data-w="${src.w}" data-h="${src.h}" data-fx="${src.fx}" data-fy="${src.fy}" onpointerdown="PrintQuality.drag(event, this)" title="Drag to move around the artwork">
+              <img src="${src.url}" alt="Artwork at print size" draggable="false" style="width:${Math.round(src.w * start)}px; height:${Math.round(src.h * start)}px;" onload="PrintQuality.ready(this)">
+            </div>
+            <span class="pq-hand"><span class="pq-hand-ico"><svg class="r-ico"><use href="#ri-hand"/></svg></span>Drag to move</span>
           </div>
-          <div class="pq-view-note">${esc(z.label)} — the least sharp area the check measured${s.pic ? ` (picture ${s.pic})` : ''}</div>
+          <div class="pq-view-note">${esc(z.label)} — ${f ? `the whole ${s && s.pic ? `picture ${s.pic}` : 'artwork'}, opened on the least sharp area the check measured` : 'the least sharp area the check measured'}</div>
         </div>`;
     }
     return `
@@ -113,23 +124,92 @@ const PrintQuality = {
       </div>`;
   },
 
-  /** Zoom buttons of the print preview */
+  /** Zoom buttons of the print preview: the point in the middle of the view stays in the middle */
   zoom(btn) {
     const box = btn.closest('.pq-view').querySelector('.pq-view-box'), img = box.querySelector('img');
-    const sc = parseFloat(btn.dataset.scale);
+    const old = img.clientWidth / Math.max(1, box.dataset.w), sc = parseFloat(btn.dataset.scale);
+    const cx = (box.scrollLeft + box.clientWidth / 2) / old, cy = (box.scrollTop + box.clientHeight / 2) / old;
     img.style.width = Math.round(box.dataset.w * sc) + 'px';
     img.style.height = Math.round(box.dataset.h * sc) + 'px';
     btn.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === btn));
-    this.center(box);
+    this.center(box, cx, cy);
   },
 
-  /** Scroll the preview so the measured area sits in the middle */
-  center(box) {
+  /** Scroll the preview so (x, y) — by default the measured area — sits in the middle */
+  center(box, x, y) {
     const img = box.querySelector('img');
     if (!img) return;
     const sc = img.clientWidth / Math.max(1, box.dataset.w);
-    box.scrollLeft = Math.max(0, box.dataset.fx * sc - box.clientWidth / 2);
-    box.scrollTop = Math.max(0, box.dataset.fy * sc - box.clientHeight / 2);
+    box.scrollLeft = Math.max(0, (x != null ? x : +box.dataset.fx) * sc - box.clientWidth / 2);
+    box.scrollTop = Math.max(0, (y != null ? y : +box.dataset.fy) * sc - box.clientHeight / 2);
+  },
+
+  _still() {
+    return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  },
+
+  /**
+   * The preview's picture is in: centre it on the measured area, then — once per artwork — a short "peek" pan shows
+   * that it can be moved. The animated hand hint stays until the first drag.
+   */
+  ready(img) {
+    const box = img.parentElement, frame = box.parentElement;
+    this.center(box);
+    if (this._used) frame.classList.add('used');
+    if (this._peeked === img.src || this._still()) return;
+    // the peek plays when the preview is on screen (a design file's preview sits further down the page)
+    const peek = () => {
+      if (this._peeked === img.src || !box.isConnected) return;
+      this._peeked = img.src;
+      const room = box.scrollWidth - box.clientWidth;
+      if (room < 20) return;
+      const l0 = box.scrollLeft, A = (room - l0 >= 70 ? 1 : -1) * Math.min(70, Math.max(room - l0, l0)), t0 = performance.now(), D = 1300;
+      const step = now => {
+        const k = Math.min(1, (now - t0) / D);
+        box.scrollLeft = l0 + A * Math.sin(Math.PI * k);         // out and back
+        if (k < 1 && !box.classList.contains('grabbing')) requestAnimationFrame(step);
+      };
+      setTimeout(() => requestAnimationFrame(step), 400);
+    };
+    if (typeof IntersectionObserver === 'undefined') { peek(); return; }
+    const io = new IntersectionObserver(entries => {
+      if (entries.some(en => en.isIntersecting)) { io.disconnect(); peek(); }
+    }, { threshold: .6 });
+    io.observe(box);
+  },
+
+  /** Hand tool: drag the artwork around inside the preview; let go and it glides on and slows down */
+  drag(e, box) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    cancelAnimationFrame(this._glide);
+    box.parentElement.classList.add('used');
+    this._used = true;
+    let lx = e.clientX, ly = e.clientY, lt = performance.now(), vx = 0, vy = 0;
+    box.classList.add('grabbing');
+    const move = ev => {
+      const now = performance.now(), dt = Math.max(1, now - lt), dx = ev.clientX - lx, dy = ev.clientY - ly;
+      box.scrollLeft -= dx;
+      box.scrollTop -= dy;
+      vx = .8 * (dx / dt) + .2 * vx;                               // px per ms, smoothed
+      vy = .8 * (dy / dt) + .2 * vy;
+      lx = ev.clientX; ly = ev.clientY; lt = now;
+    };
+    const up = () => {
+      box.classList.remove('grabbing');
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      if (performance.now() - lt > 80 || this._still()) return;   // held still before letting go: no glide
+      let px = vx * 16, py = vy * 16;                              // px per frame
+      const glide = () => {
+        px *= .92; py *= .92;
+        box.scrollLeft -= px; box.scrollTop -= py;
+        if (Math.abs(px) + Math.abs(py) > .4) this._glide = requestAnimationFrame(glide);
+      };
+      this._glide = requestAnimationFrame(glide);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
   }
 };
 

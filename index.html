@@ -9,8 +9,39 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=20261027b">
+  <link rel="stylesheet" href="css/redesign.css?v=20261028d">
 </head>
 <body>
+
+  <!-- Icons of the OPS-Intel screens (css/redesign.css · app.js rIco) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="ri-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></symbol>
+    <symbol id="ri-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></symbol>
+    <symbol id="ri-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 9"/></symbol>
+    <symbol id="ri-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5Z"/><path d="M4 19a2 2 0 0 1 2-2h13M9 7h6"/></symbol>
+    <symbol id="ri-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+    <symbol id="ri-upload" viewBox="0 0 24 24"><path d="M12 15V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
+    <symbol id="ri-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></symbol>
+    <symbol id="ri-ruler" viewBox="0 0 24 24"><path d="m3 17 14-14 4 4L7 21l-4-4Z"/><path d="m7 13 2 2M10 10l2 2M13 7l2 2"/></symbol>
+    <symbol id="ri-printer" viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7" rx="1"/></symbol>
+    <symbol id="ri-rotate" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></symbol>
+    <symbol id="ri-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M4 20 20 4" opacity=".45"/></symbol>
+    <symbol id="ri-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="ri-crop" viewBox="0 0 24 24"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></symbol>
+    <symbol id="ri-ring" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></symbol>
+    <symbol id="ri-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.9 1.2-1.9-.5-1.1.3-2.1 1.4-2.1H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10Z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15.5" cy="7.5" r="1.2"/></symbol>
+    <symbol id="ri-type" viewBox="0 0 24 24"><path d="M5 7V5h14v2M12 5v14M9 19h6"/></symbol>
+    <symbol id="ri-spell" viewBox="0 0 24 24"><path d="M4 16 8 5l4 11M5.5 12h5"/><path d="m13 16 3 3 5-6"/></symbol>
+    <symbol id="ri-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/></symbol>
+    <symbol id="ri-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="ri-layers" viewBox="0 0 24 24"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></symbol>
+    <symbol id="ri-alert" viewBox="0 0 24 24"><path d="M12 9v4m0 3.5v.01"/><path d="M10.3 4.2 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/></symbol>
+    <symbol id="ri-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
+    <symbol id="ri-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="ri-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="ri-hand" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v1M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/></symbol>
+    <symbol id="ri-loader" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/></symbol>
+  </svg>
 
   <!-- ── DPO HEADER ── -->
   <header class="bb-header">
@@ -32,11 +63,11 @@
       <span class="bb-tool-tag">OPS-Intel</span>
     </div>
     <div class="bb-header-right">
-      <span class="header-link" onclick="setSubnav(null, 'dashboard')">📊 Metrics</span>
-      <span class="header-link" onclick="setSubnav(null, 'rules')">📐 SOP Specs</span>
+      <span class="header-link" onclick="setSubnav(null, 'dashboard')"><svg class="r-ico"><use href="#ri-chart"/></svg>Metrics</span>
+      <span class="header-link" onclick="setSubnav(null, 'rules')"><svg class="r-ico"><use href="#ri-book"/></svg>SOP Specs</span>
       <div class="header-user">
-        <div class="user-avatar">DT</div>
-        <span class="user-name">Design Team</span>
+        <div class="user-avatar">DQ</div>
+        <span class="user-name">Design Quality<small>QPEx</small></span>
       </div>
     </div>
   </header>
@@ -44,20 +75,20 @@
   <!-- ── SUB NAVIGATION ── -->
   <nav class="bb-subnav">
     <div class="subnav-item active" data-view="precheck" onclick="setSubnav(this, 'precheck')">
-      ⚡ OPS-Intel
+      <svg class="r-ico"><use href="#ri-bolt"/></svg>OPS-Intel
       <span class="subnav-badge fail" id="fail-badge" style="display:none">0</span>
     </div>
     <div class="subnav-item" data-view="previous" onclick="setSubnav(this, 'precheck'); setTimeout(() => switchTab('previous'), 50);">
-      🔍 Previous Orders
+      <svg class="r-ico"><use href="#ri-history"/></svg>Previous Orders
     </div>
     <div class="subnav-item" data-view="proof" onclick="setSubnav(this, 'proof')">
-      📋 Proof Studio
+      <svg class="r-ico"><use href="#ri-image"/></svg>Proof Studio
     </div>
     <div class="subnav-item" data-view="rules" style="margin-left:auto" onclick="setSubnav(this, 'rules')">
-      📐 Product Rules (SOPs)
+      <svg class="r-ico"><use href="#ri-book"/></svg>Product Rules (SOPs)
     </div>
     <div class="subnav-item" data-view="dashboard" onclick="setSubnav(this, 'dashboard')">
-      📊 Operations Dashboard
+      <svg class="r-ico"><use href="#ri-chart"/></svg>Operations Dashboard
     </div>
   </nav>
 
@@ -75,7 +106,7 @@
 
           <div class="lp-title"><span class="lp-step-num">1</span>Upload Artwork or Design File</div>
           <div class="upload-zone" id="upload-zone" onclick="triggerArtworkUpload()" ondragover="handleDragOver(event)" ondragenter="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" role="button" tabindex="0" title="Click or drag the customer artwork (JPG / PNG / PDF) or the design file (PDF)" style="cursor: pointer;">
-            <span class="upload-icon">📁</span>
+            <span class="upload-icon"><svg class="r-ico"><use href="#ri-upload"/></svg></span>
             <div class="upload-text-main">Click or drag the file here</div>
             <div class="upload-text-sub">Customer artwork: JPG · PNG · PDF &nbsp;·&nbsp; Design file: PDF</div>
           </div>
@@ -433,11 +464,40 @@
 
           <!-- Initial Empty State -->
           <div class="empty-state" id="empty-state">
-            <div class="empty-illo">🎯</div>
-            <div class="empty-h">OPS-Intel Ready</div>
+            <div class="es-art"><svg class="r-ico"><use href="#ri-target"/></svg><i></i><i></i><i></i><i></i></div>
+            <div class="empty-h">Check the artwork <span>before the proof</span></div>
             <div class="empty-p">
-              Upload the customer artwork (JPG, PNG or PDF) or the designer's PDF design file. OPS-Intel checks it against the product SOP: size and resolution, real detail (enlarged or blurry pictures), orientation, safe area, lines &amp; dots, spelling and colour — and for a PDF also what the page is made of (vector, raster or partly raster), every picture's resolution where it is placed, colour mode and fonts.
+              Upload the customer artwork (JPG, PNG or PDF) or the designer's PDF on the left. OPS-Intel reads the order from the file name and checks the file against the product SOP.
             </div>
+            <div class="es-steps">
+              <div class="es-step"><b>1</b><div><strong>Upload the file</strong><span>The order, product, size and finishing are read from the file name.</span></div></div>
+              <div class="es-step"><b>2</b><div><strong>See what to fix</strong><span>Each issue in plain words, with how to fix it and its place on the artwork.</span></div></div>
+              <div class="es-step"><b>3</b><div><strong>Create the proof</strong><span>Proof 01, 02 or 03 — exactly as the SOP asks for this order.</span></div></div>
+            </div>
+            <div class="es-checks">
+              <span><svg class="r-ico"><use href="#ri-eye"/></svg>Sharpness &amp; resolution</span>
+              <span><svg class="r-ico"><use href="#ri-shield"/></svg>Safe area</span>
+              <span><svg class="r-ico"><use href="#ri-spell"/></svg>Spelling</span>
+              <span><svg class="r-ico"><use href="#ri-dot"/></svg>Stray lines &amp; dots</span>
+              <span><svg class="r-ico"><use href="#ri-palette"/></svg>Colour (CMYK)</span>
+              <span><svg class="r-ico"><use href="#ri-ring"/></svg>Finishing</span>
+              <span><svg class="r-ico"><use href="#ri-file"/></svg>Design PDF: pictures, fonts, colour mode</span>
+            </div>
+          </div>
+
+          <!-- While a check runs: the artwork being scanned, the steps and the time (app.js Checking) -->
+          <div class="checking-panel" id="checking-panel" hidden>
+            <div class="ck-art" id="ck-art">
+              <img id="ck-thumb" alt="">
+              <svg class="r-ico ck-file"><use href="#ri-file"/></svg>
+              <div class="ck-grid"></div>
+              <div class="ck-beam"></div>
+            </div>
+            <div class="ck-title">Checking <span id="ck-order">the artwork</span></div>
+            <div class="ck-sub" id="ck-sub"></div>
+            <div class="ck-bar"><i id="ck-bar"></i></div>
+            <ol class="ck-steps" id="ck-steps"></ol>
+            <div class="ck-foot"><span id="ck-now">Starting…</span><span id="ck-time">0 s</span></div>
           </div>
 
           <!-- Results Content -->
@@ -617,15 +677,15 @@
   <script src="js/agentic_ai_inspector.js?v=20261027b"></script>
   <script src="js/color_check.js?v=20261023a"></script>
   <script src="js/safe_zone_check.js?v=20261027c"></script>
-  <script src="js/precheck_engine.js?v=20261027b"></script>
+  <script src="js/precheck_engine.js?v=20261028a"></script>
   <script src="js/previous_orders.js"></script>
   <script src="js/qnap_templates.js?v=20261017d"></script>
   <script src="js/product_templates.js?v=20261017c"></script>
   <script src="js/canvas_inspector.js?v=20261022b"></script>
   <script src="js/proof_studio.js?v=20261026a"></script>
-  <script src="js/detail_check.js?v=20261027b"></script>
-  <script src="js/print_quality.js?v=20261027c"></script>
-  <script src="js/post_check.js?v=20261027b"></script>
-  <script src="js/app.js?v=20261027b"></script>
+  <script src="js/detail_check.js?v=20261028a"></script>
+  <script src="js/print_quality.js?v=20261028b"></script>
+  <script src="js/post_check.js?v=20261028a"></script>
+  <script src="js/app.js?v=20261028f"></script>
 </body>
 </html>

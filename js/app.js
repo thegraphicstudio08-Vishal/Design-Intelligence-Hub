@@ -472,22 +472,20 @@ function handleFile(file) {
 
     const spec = parsed.spec || (parsed.productSlug && SPECS[parsed.productSlug]);
     if (banner && spec) {
+      // the order read from the production file name: product first, then the facts as labelled chips
+      const chip = (label, value, wide) => `<span class="fnb-chip${wide ? ' wide' : ''}"><small>${label}</small>${value}</span>`;
       banner.innerHTML = `
-        <div style="font-weight:800; font-size:12px; margin-bottom:6px; color:#c2410c; display:flex; align-items:center; gap:6px;">
-          <span>⚡</span> <span>BannerBuzz Production Filename Auto-Identified</span>
+        <div class="fnb-head"><span class="fnb-ok">${rIco('check')}</span>Order read from the file name</div>
+        <div class="fnb-product">${parsed.productName}</div>
+        <div class="fnb-chips">
+          ${chip('Order', parsed.orderNum || '—')}
+          ${chip('Size', parsed.hasSize ? `${parsed.widthIn}" × ${parsed.heightIn}"` : 'Not in the name')}
+          ${chip('Sides', parsed.side)}
+          ${chip('Line / qty', `${parsed.lineItem || '—'} / ${parsed.qty}${parsed.designerCode ? ' · ' + parsed.designerCode : ''}`)}
+          ${chip('Material', `${parsed.material || '—'}${parsed.location ? ' · ' + parsed.location : ''}`, true)}
+          ${chip('Finishing', parsed.finishing, true)}
         </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px 10px; font-size:11.5px; background:#fff; padding:10px; border-radius:6px; border:1px solid #fed7aa;">
-          <div><span style="color:#64748b;">Product Name:</span> <strong style="color:#111c38;">${parsed.productName}</strong></div>
-          <div><span style="color:#64748b;">Order No:</span> <strong style="color:#111c38;">${parsed.orderNum || 'N/A'}</strong></div>
-          <div><span style="color:#64748b;">Parsed Size:</span> <strong style="color:#111c38;">${parsed.hasSize ? `${parsed.rawDim} (${parsed.widthIn}" × ${parsed.heightIn}")` : 'Not in filename — using entered size'}</strong></div>
-          <div><span style="color:#64748b;">Side:</span> <strong style="color:#111c38;">${parsed.side}</strong></div>
-          <div><span style="color:#64748b;">Material:</span> <strong style="color:#111c38;">${parsed.material || '—'}${parsed.location ? ' · ' + parsed.location : ''}</strong></div>
-          <div><span style="color:#64748b;">Line / Qty:</span> <strong style="color:#111c38;">${parsed.lineItem || '—'} / ${parsed.qty}${parsed.designerCode ? ' · (' + parsed.designerCode + ')' : ''}</strong></div>
-          <div style="grid-column:span 2;"><span style="color:#64748b;">Finishing Details:</span> <strong style="color:#111c38;">${parsed.finishing}</strong></div>
-          <div style="grid-column:span 2; color:#1d4ed8; font-weight:700; background:#eff6ff; padding:4px 8px; border-radius:4px; margin-top:2px;">
-            ${sopSummaryText(spec, parsed)}
-          </div>
-        </div>
+        <div class="fnb-sop">${sopSummaryText(spec, parsed)}</div>
       `;
       banner.classList.add('show');
     }
@@ -937,6 +935,67 @@ async function twoFaceSheet(src, pw, ph, dims, fname) {
   return { w: +sheetW.toFixed(2), h: +sheetH.toFixed(2), layout, faceW: W, faceH: H, alike };
 }
 
+/**
+ * While a check runs, the results area shows what it is doing: the artwork with a scan running over it, the steps
+ * (done ✓, now ●, still to come), a progress bar, the current task and the time. Started and moved on by
+ * runPreCheck; hidden when the result is drawn (or the check fails).
+ */
+const Checking = {
+  STEPS: ['Reading the file', 'Measuring size & resolution', 'Reading the text and looking for stray marks',
+    'Matching the product, safe area & finishing', 'Measuring sharpness at print size', 'Building the result'],
+  _t0: 0, _timer: null, _cur: -1,
+
+  start() {
+    const p = document.getElementById('checking-panel');
+    if (!p) return;
+    const pf = appState.parsedFilename || {}, d = appState.userDims || {};
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('results-content').style.display = 'none';
+    document.getElementById('ck-order').textContent = appState.orderNum ? `order ${appState.orderNum}` : 'the artwork';
+    document.getElementById('ck-sub').textContent = [appState.product && appState.product.name, d.widthIn && d.heightIn ? `${d.widthIn}" × ${d.heightIn}"` : '', pf.finishing].filter(Boolean).join(' · ');
+    // an image file shows at once; a PDF shows a file icon until its real page is drawn (not the stand-in picture)
+    this.thumb(appState.file && /^image\//.test(appState.file.type || '') ? appState.previewDataUrl : null);
+    document.getElementById('ck-steps').innerHTML = this.STEPS.map((s, i) => `<li id="ck-s${i}"><span class="ck-dot"></span>${s}</li>`).join('');
+    this._cur = -1;
+    this._t0 = Date.now();
+    clearInterval(this._timer);
+    this._timer = setInterval(() => { const el = document.getElementById('ck-time'); if (el) el.textContent = Math.round((Date.now() - this._t0) / 1000) + ' s'; }, 500);
+    p.hidden = false;
+    this.step(0);
+  },
+
+  /** The artwork picture under the scan (an image file at once; a PDF once its page is drawn) */
+  thumb(src) {
+    const img = document.getElementById('ck-thumb'), art = document.getElementById('ck-art');
+    const ok = !!src && !String(src).includes('PDF VECTOR') && /^(data:image|blob:)/.test(String(src));
+    if (img) { if (ok) img.src = src; img.style.display = ok ? '' : 'none'; }
+    if (art) art.classList.toggle('no-thumb', !ok);
+  },
+
+  /** Move on to step i; note = what exactly it is doing now (e.g. "Measuring the detail of picture 2 of 5…") */
+  step(i, note) {
+    if (i > this._cur) {
+      for (let k = 0; k < this.STEPS.length; k++) {
+        const li = document.getElementById('ck-s' + k);
+        if (li) { li.classList.toggle('done', k < i); li.classList.toggle('now', k === i); }
+      }
+      this._cur = i;
+      const bar = document.getElementById('ck-bar');
+      if (bar) bar.style.width = Math.round((i + .5) / this.STEPS.length * 100) + '%';
+    }
+    const now = document.getElementById('ck-now');
+    if (now) now.textContent = note || this.STEPS[Math.max(0, this._cur)] + '…';
+    // let the browser draw the change before the next piece of work
+    return new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+  },
+
+  done() {
+    clearInterval(this._timer);
+    const p = document.getElementById('checking-panel');
+    if (p) p.hidden = true;
+  }
+};
+
 async function runPreCheck() {
   if (!appState.file || !appState.product) return;
   clearTimeout(scheduleRecheckAfterSizeChange._timer);   // this run already uses the latest size
@@ -950,6 +1009,7 @@ async function runPreCheck() {
   btnText.textContent = 'Inspecting SOP…';
 
   onDimensionInput();
+  Checking.start();
 
   try {
     // 0. SOP requirements for this exact order (size + finishing + product)
@@ -971,7 +1031,9 @@ async function runPreCheck() {
     // 1. Analyze File
     // A PDF design file is read once (PostCheck): what the page is made of, every picture's placed PPI and real
     // detail, colour mode, fonts — and the page drawn in that pass is the artwork every other check works on
-    const design = await designAnalysisFor(appState.file, t => { btnText.textContent = t; });
+    const design = await designAnalysisFor(appState.file, t => { btnText.textContent = t; Checking.step(0, t); });
+    if (design && design.preview) Checking.thumb(design.preview);
+    await Checking.step(1);
     let analysis = await FileAnalyzer.analyze(appState.file, effectiveSpec, appState.userDims, design);
     if (analysis && analysis.pixelWidth && analysis.pixelHeight) {
       const swapped = checkAndApplyAutoOrientation(analysis.pixelWidth, analysis.pixelHeight);
@@ -1012,6 +1074,8 @@ async function runPreCheck() {
 
     if (analysis) analysis.previewDataUrl = artSrc;
 
+    Checking.thumb(artSrc);
+    await Checking.step(2);
     if (typeof AgenticAiInspector !== 'undefined') {
       const dummyCanvas = document.createElement('canvas');
       dummyCanvas.width = analysis?.pixelWidth || 800;
@@ -1023,6 +1087,7 @@ async function runPreCheck() {
     // QNAP product template whose panel is not the ordered product size (a canopy wall 117" × 42" on a 10 × 10 ft
     // tent): size, resolution and orientation are measured on the template panel the artwork is made for
     // A shaped artwork (table cover cross, flag outline…) is matched to its template by its outline first
+    await Checking.step(3);
     let checkDims = appState.userDims;
     if (typeof ProductTemplates !== 'undefined' && analysis && analysis.pixelWidth && appState.userDims) {
       const pf = appState.parsedFilename;
@@ -1056,6 +1121,7 @@ async function runPreCheck() {
 
     // 1.9 Real detail of a raster artwork (a small picture enlarged to a high PPI still prints soft) — measured once
     // per file on its own pixels; the size / resolution check reads it
+    await Checking.step(4);
     if (analysis && !analysis.isVector && typeof DetailCheck !== 'undefined' && artSrc && !String(artSrc).includes('PDF VECTOR')) {
       const cache = appState.detailCache || (appState.detailCache = new WeakMap());
       if (!cache.has(appState.file)) cache.set(appState.file, measureArtworkDetail(artSrc));
@@ -1064,6 +1130,7 @@ async function runPreCheck() {
 
     // 1.95 Design file (PDF): page size, picture resolution and real detail, colour mode, fonts — these cards replace
     // the artwork size / resolution cards in the report
+    await Checking.step(5);
     if (design && analysis && typeof PostCheck !== 'undefined') {
       analysis.design = PostCheck.checksFor(design, { spec: effectiveSpec, dims: checkDims, parsed: appState.parsedFilename, req: sopReq });
     }
@@ -1098,8 +1165,12 @@ async function runPreCheck() {
     if (typeof ColorCheck !== 'undefined') ColorCheck.run(analysis && analysis.previewDataUrl);
   } catch (err) {
     console.error('Pre-check error:', err);
+    // back to what was on the page before this check (the last result, or the start screen)
+    Checking.done();
+    document.getElementById(appState.report ? 'results-content' : 'empty-state').style.display = appState.report ? 'flex' : '';
     alert('An error occurred during pre-check analysis: ' + err.message);
   } finally {
+    Checking.done();
     btn.disabled = false;
     btnIcon.textContent = '⚡';
     btnText.textContent = 'Run OPS-Intel Check';
@@ -1110,9 +1181,15 @@ async function runPreCheck() {
  * Render the Pre-Check UI Report
  */
 function renderResults(report, previousOrders) {
+  if (typeof Checking !== 'undefined') Checking.done();
   document.getElementById('empty-state').style.display = 'none';
   const content = document.getElementById('results-content');
   content.style.display = 'flex';
+  // the entrance animations (cards rising in one after another, the score counting up) play for a new result only —
+  // not every time a background check (spelling, colour) redraws a card
+  content.classList.add('r-enter');
+  clearTimeout(renderResults._enter);
+  renderResults._enter = setTimeout(() => content.classList.remove('r-enter'), 2200);
 
   const { spec, dimensions } = report;
   appState.previousOrders = previousOrders;
@@ -1275,66 +1352,83 @@ function renderSummaryCard(report) {
     `;
   }
 
-  // PREVIOUS ORDERS ALERT BANNER
+  // Previous order for this customer: a slim line under the result, not a banner above it
   const previousOrders = appState.previousOrders;
   let prevAlertHtml = '';
   if (previousOrders && previousOrders.length > 0) {
     const po = previousOrders[0];
     prevAlertHtml = `
-      <div class="prev-alert-banner">
-        <div class="prev-alert-left">
-          <div class="prev-alert-icon">🔍</div>
-          <div>
-            <div class="prev-alert-title">Previous Relevant Order Found (${po.orderNum})</div>
-            <div class="prev-alert-desc">${po.approvalType} · Approved ${po.customerApprovedDate || po.date} · Match: ${po.artworkSimilarity}% Artwork, ${po.productSimilarity}% Product</div>
-          </div>
-        </div>
-        <button class="btn btn-sm btn-orange" onclick="switchTab('previous')">Review Previous Order →</button>
+      <div class="rs-prev">
+        <span class="rs-prev-ico">${rIco('search')}</span>
+        <span><b>Previous order found · ${po.orderNum}</b> — ${po.approvalType} · approved ${po.customerApprovedDate || po.date} · match ${po.artworkSimilarity}% artwork, ${po.productSimilarity}% product</span>
+        <button type="button" onclick="switchTab('previous')">Review it ›</button>
       </div>
     `;
   }
 
-  // The critical issues, each jumping to its card
+  // The critical issues, numbered, each jumping to its card
   const plain = html => String(html || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
   const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const short = t => (t.length > 120 ? t.slice(0, 117) + '…' : t);
+  const short = t => (t.length > 150 ? t.slice(0, 147) + '…' : t);
   const crit = checks.filter(c => c.status === 'FAIL' && !c.isOverridden && !c.duplicateOf);
-  const issuesHtml = crit.length ? `
-    <div class="summary-issues">
-      <div class="si-head">Fix before proofing</div>
-      ${crit.map(c => `
-        <button type="button" class="si-item" onclick="focusCheck('${c.id}')">
-          <span class="si-icon">${c.icon}</span>
-          <span class="si-text"><strong>${c.name}</strong><span>${esc(short(plain(c.error || c.found)))}</span></span>
-          <span class="si-go">View ›</span>
-        </button>`).join('')}
-    </div>` : `
-    <div class="summary-ready">✓ No critical issues — the artwork is ready for the customer proof.</div>`;
+  const fixHtml = `
+    <div class="rs-box rs-fix">
+      <div class="rs-box-head">${rIco('alert')}Fix before proofing ${crit.length ? `<span class="rs-count">${crit.length}</span>` : ''}</div>
+      ${crit.length ? `<div class="rs-fix-list">${crit.map((c, i) => `
+        <button type="button" class="rs-fix-item" style="--i:${i}" onclick="focusCheck('${c.id}')">
+          <span class="rs-n">${i + 1}</span>
+          <span class="rs-fix-text"><b>${cardText(c).title}</b><span>${esc(short(plain(c.error || c.found)))}</span></span>
+          <span class="rs-go">View ›</span>
+        </button>`).join('')}</div>`
+        : `<div class="rs-clear">${rIco('check')}Nothing to fix — the artwork meets the SOP.</div>`}
+    </div>`;
 
+  // SOP score: the number out of 100 and a bar, coloured by the score (green ≥ 85 · amber ≥ 60 · red) — never
+  // green while something is still Critical
+  const sc = Math.max(0, Math.min(100, score));
+  const scoreBand = sc >= 85 && !crit.length ? 'good' : sc >= 60 ? 'mid' : 'low';
+  const verdictTitle = crit.length ? `${crit.length} thing${crit.length > 1 ? 's' : ''} to fix before the proof` : 'Ready for the customer proof';
   card.innerHTML = `
+    <div class="rs-hero ${crit.length ? 'has-issues' : 'is-clear'}">
+      <div class="rs-score ${scoreBand}">
+        <span class="rs-score-label">SOP score</span>
+        <span class="rs-score-num"><b>${sc}</b><small>/100</small></span>
+        <span class="rs-score-bar"><i style="width:${sc}%"></i></span>
+      </div>
+      <div class="rs-main">
+        <div class="rs-kicker">OPS-Intel result · Order #${appState.orderNum || 'US-DRAFT'}</div>
+        <h2 class="rs-title">${verdictTitle}</h2>
+        <div class="rs-meta">${spec.name} · ${dimensions.widthIn}" × ${dimensions.heightIn}" · checked ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+        <div class="rs-chips">
+          <span class="rs-chip fail"><i></i>${counts.fails} Critical</span>
+          ${counts.manual ? `<button type="button" class="rs-chip info" onclick="focusCheck('manual-group')"><i></i>${counts.manual} to check by eye</button>` : ''}
+          <span class="rs-chip pass"><i></i>${counts.passes} Passed</span>
+        </div>
+      </div>
+      <div class="rs-actions">
+        <button type="button" class="rs-btn" onclick="setSubnav(document.querySelector('.subnav-item[data-view=proof]'), 'proof')">Create proof ${rIco('arrow')}</button>
+        <span class="rs-verdict ${overall === 'PASS' ? 'pass' : 'fail'}">${overall === 'PASS' ? 'SOP passed' : 'SOP not met yet'}</span>
+      </div>
+    </div>
     ${vectorBannerHtml}
+    <div class="rs-grid${qualityHtml ? '' : ' one'}">
+      ${fixHtml}
+      ${qualityHtml}
+    </div>
     ${prevAlertHtml}
-    <div class="summary-top">
-      <div class="summary-score-block">
-        <div class="score-num ${overall.toLowerCase()}">${score}</div>
-        <div class="score-label">SOP Quality Score</div>
-      </div>
-      <div class="summary-chips">
-        <div class="chip chip-pass"><span class="chip-dot"></span>${counts.passes} Passed</div>
-        <div class="chip chip-fail"><span class="chip-dot"></span>${counts.fails} Critical</div>
-      </div>
-      <div class="summary-verdict ${overall === 'PASS' ? 'verd-pass' : 'verd-fail'}">${overall}</div>
-    </div>
-    ${qualityHtml}
-    ${issuesHtml}
-    <div class="summary-meta">
-      <span>Order <strong>#${appState.orderNum || 'US-DRAFT'}</strong> · Customer: <strong>${appState.customerName || 'Customer'}</strong> · Product: <strong>${spec.name}</strong> · Size: <strong>${dimensions.widthIn}" × ${dimensions.heightIn}"</strong> · Checked: <strong>${new Date().toLocaleTimeString()}</strong></span>
-      <span class="summary-actions">
-        ${counts.manual ? `<button type="button" class="summary-link" onclick="focusCheck('manual-group')">${counts.manual} to confirm by eye ›</button>` : ''}
-        <button type="button" class="btn btn-orange btn-sm" onclick="setSubnav(document.querySelector('.subnav-item[data-view=proof]'), 'proof')">Create proof ›</button>
-      </span>
-    </div>
   `;
+  // a new result: the score counts up (not when a background check redraws the card)
+  const num = card.querySelector('.rs-score-num b'), content = document.getElementById('results-content');
+  if (num && content && content.classList.contains('r-enter') && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+    const t0 = performance.now();
+    const tick = now => {
+      const k = Math.min(1, (now - t0) / 900);
+      num.textContent = Math.round(sc * (1 - Math.pow(1 - k, 3)));
+      if (k < 1) requestAnimationFrame(tick);
+    };
+    num.textContent = '0';
+    requestAnimationFrame(tick);
+  }
 }
 
 /**
@@ -1346,7 +1440,7 @@ function checksListHtml(report) {
   const crit = checks.filter(c => c.status === 'FAIL' && !c.isOverridden);
   const passed = checks.filter(c => c.status === 'PASS' || c.isOverridden);
   const manual = checks.filter(c => c.status === 'INFO' && !c.isOverridden);
-  const card = c => renderCheckCard(c, report);
+  const card = (c, i) => renderCheckCard(c, report, i);
   const fold = (id, cls, title, list, note, key) => list.length ? `
     <details class="checks-group ${cls}" id="cg-${id}"${appState[key] ? ' open' : ''} ontoggle="appState.${key} = this.open">
       <summary class="checks-group-head"><span class="cg-dot"></span>${title}<span class="cg-count">${list.length}</span><span class="cg-note">${note}</span></summary>
@@ -1359,7 +1453,7 @@ function checksListHtml(report) {
     </div>` : `
     <div class="checks-allclear">✓ No critical issues — nothing to fix before the proof.</div>`;
   return critical
-    + fold('manual-group', 'manual', 'Confirm by eye', manual, 'not scored — the tool cannot decide these alone', 'manualGroupOpen')
+    + fold('manual-group', 'manual', 'Check by eye', manual, 'not scored — the tool cannot decide these alone', 'manualGroupOpen')
     + fold('passed-group', 'passed', 'Passed', passed, 'no action needed', 'passedGroupOpen');
 }
 
@@ -1390,15 +1484,50 @@ function focusCheck(id) {
   setTimeout(() => card.classList.remove('flash'), 1600);
 }
 
+/** An icon from the page's icon set (index.html, ids "ri-…") */
+function rIco(name) {
+  return `<svg class="r-ico"><use href="#ri-${name}"/></svg>`;
+}
+
+/**
+ * What each check card is called on screen and what it checks, in plain words, with its icon. The engines keep
+ * their own names (c.name) for the proof, the override log and the metrics.
+ */
+const CARD_TEXT = {
+  sizeTransform: ['Size & resolution', 'Fits the order and has enough pixels at print size', 'ruler'],
+  goodForPrint: ['Print suitability', 'Vector or raster — good enough to print', 'printer'],
+  orientation: ['Orientation', 'Landscape or portrait, as ordered', 'rotate'],
+  linesAndDots: ['Stray lines & dots', 'Marks left behind on clean areas', 'dot'],
+  safeArea: ['Safe area', 'Text and logos away from the cut edge', 'shield'],
+  bleed: ['Bleed', 'Background runs past the trim', 'crop'],
+  finishing: ['Finishing', 'Grommets, hems and pole pockets as ordered', 'ring'],
+  proofPlan: ['Proof to send', 'The proofs the SOP asks for on this order', 'image'],
+  colorMode: ['Colour (CMYK)', 'How the colours will print', 'palette'],
+  fontSizes: ['Text size', 'Small text still readable at print size', 'type'],
+  spelling: ['Spelling', 'Every word read on the artwork', 'spell'],
+  'pc-pages': ['Pages', 'Pages in the design file', 'file'],
+  'pc-size': ['Page size', 'The design page against the order', 'ruler'],
+  'pc-ppi': ['Picture resolution', 'Each picture where it is placed', 'image'],
+  'pc-detail': ['Picture sharpness', 'Enlarged or blurry pictures', 'eye'],
+  'pc-colour': ['Colour mode', 'CMYK pictures and colours', 'palette'],
+  'pc-fonts': ['Fonts', 'Fonts embedded in the PDF', 'type'],
+  'pc-stack': ['Hidden copies', 'Pictures stacked on top of each other', 'layers']
+};
+function cardText(c) {
+  const t = CARD_TEXT[c.id];
+  return t ? { title: t[0], sub: t[1], icon: t[2] } : { title: c.name, sub: '', icon: 'shield' };
+}
+
 /**
  * One check, in three steps so nothing confuses:
  *  1. closed: the check name and its result (CRITICAL / CONFIRM / PASSED)
  *  2. opened: only the real error — what is wrong (the items, for the safe zone), how to fix it, the buttons
  *  3. "More details" inside it: the SOP target, the analysis and the pictures
  */
-function renderCheckCard(c, report) {
+function renderCheckCard(c, report, i = 0) {
   const st = c.isOverridden ? 'overridden' : ({ PASS: 'pass', FAIL: 'fail', INFO: 'info' }[c.status] || 'info');
-  const pillLabel = c.isOverridden ? 'OVERRIDDEN' : ({ PASS: 'PASSED', FAIL: 'CRITICAL', INFO: 'CONFIRM' }[c.status] || c.status);
+  const pillLabel = c.isOverridden ? 'Overridden' : ({ PASS: 'Passed', FAIL: 'Critical', INFO: 'Check by eye' }[c.status] || c.status);
+  const ct = cardText(c);
   const issue = c.status === 'FAIL' && !c.isOverridden;
   const manual = c.status === 'INFO' && !c.isOverridden;
   const same = ((report && report.checks) || []).filter(d => d.duplicateOf === c.id);
@@ -1407,6 +1536,8 @@ function renderCheckCard(c, report) {
   const headline = (issue && c.error) || c.found;
   const detected = issue && c.error ? c.found : '';
   const hasMore = !!(detected || c.required || c.detail || c.visual || c.isOverridden || (!issue && !manual && c.action));
+  // second line of the closed card: its result in plain words — or what it checks, when there is no result yet
+  const subLine = String(headline || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() || ct.sub;
 
   // the safe-zone items, one line each, with a jump to the mark on the canvas
   const sz = c.id === 'safeArea' && c.safeZone && c.safeZone.items && c.safeZone.items.length && typeof SafeZoneCheck !== 'undefined' ? c.safeZone : null;
@@ -1422,11 +1553,14 @@ function renderCheckCard(c, report) {
         <ul class="cc-items">${c.items.map(t => `<li class="cc-item"><span class="cc-item-text">${t}</span></li>`).join('')}</ul>` : '';
 
   return `
-    <div class="check-card ${st}" id="cc-${c.id}">
+    <div class="check-card ${st}" id="cc-${c.id}" style="--i:${i}">
       <div class="check-header" onclick="toggleCheckCard('${c.id}')" role="button" tabindex="0" aria-expanded="false"
            onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleCheckCard('${c.id}'); }">
-        <span class="check-icon">${c.icon}</span>
-        <span class="check-name">${c.name}${c.isOverridden ? '<span class="override-tag">OVERRIDDEN</span>' : ''}</span>
+        <span class="check-icon">${rIco(ct.icon)}</span>
+        <span class="check-title">
+          <span class="check-name">${ct.title}</span>
+          <span class="check-sub">${esc(subLine)}</span>
+        </span>
         <span class="check-pill pill-${st}">${pillLabel}</span>
         <span class="check-chevron" id="chev-${c.id}">▾</span>
       </div>
@@ -1460,10 +1594,18 @@ function renderCheckCard(c, report) {
   `;
 }
 
+/** A card the designer just opened slides its content in (not when the list is redrawn with it already open) */
+function cardOpening(card) {
+  card.classList.add('opening');
+  clearTimeout(card._opening);
+  card._opening = setTimeout(() => card.classList.remove('opening'), 400);
+}
+
 function toggleCheckCard(id) {
   const card = document.getElementById(`cc-${id}`);
   if (!card) return;
   card.classList.toggle('open');
+  if (card.classList.contains('open')) cardOpening(card);
   const head = card.querySelector('.check-header');
   if (head) head.setAttribute('aria-expanded', card.classList.contains('open') ? 'true' : 'false');
 }
@@ -1473,6 +1615,7 @@ function toggleCheckMore(id) {
   const card = document.getElementById(`cc-${id}`);
   if (!card) return;
   card.classList.toggle('more');
+  if (card.classList.contains('more')) cardOpening(card);
   const b = card.querySelector('.cc-more');
   if (b) b.setAttribute('aria-expanded', card.classList.contains('more') ? 'true' : 'false');
 }

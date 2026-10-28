@@ -274,6 +274,10 @@ const PrecheckEngine = {
       if (!analysis.isVector && typeof PrintQuality !== 'undefined') {
         printQuality = PrintQuality.assess({ ppi: t.ppiAtOrder, det: analysis.detail, target, min: minResolution });
         if (printQuality) printQuality.sample = analysis.detail && analysis.detail.sample;
+        // the whole artwork for the zoomed print preview (moved around by hand): the uploaded picture itself
+        if (printQuality && !analysis.renderedFromPdf && analysis.previewDataUrl && !String(analysis.previewDataUrl).includes('PDF VECTOR')) {
+          printQuality.full = { url: analysis.previewDataUrl, w: analysis.pixelWidth, h: analysis.pixelHeight };
+        }
       }
       if (printQuality && printQuality.status !== 'good') {
         resConcern = { ppi: printQuality.real, target, status: printQuality.status, blur: printQuality.real < t.ppiAtOrder, filePpi: t.ppiAtOrder };

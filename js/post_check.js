@@ -86,6 +86,8 @@ const PostCheck = {
         const src = data && (data.bitmap || this._canvasFrom(data));
         p.detail = src ? await DetailCheck.measure(src) : { verdict: 'unknown', reason: 'The picture could not be read for the detail check.', tiles: [], edges: 0 };
         p.detail.tiles = (p.detail.tiles || []).filter(t => t.state !== 'sharp').map(t => Object.assign(t, { vbox: this._tileBox(p, t, vp) }));
+        // the whole picture for the zoomed print preview (moved around by hand)
+        if (src) p.full = await this._fullCopy(src);
       }
 
       step('Checking the fonts…');
@@ -184,6 +186,26 @@ const PostCheck = {
       new Promise(res => { try { store.get(id, res); } catch (e) { res(null); } }),
       new Promise(res => setTimeout(() => res(null), 20000))
     ]);
+  },
+
+  /**
+   * A copy of a whole picture for the zoomed print preview: a JPEG blob URL, at most 6000 px on the long side (bigger
+   * pictures are scaled down; the preview still sizes it by the picture's own pixels). { url, w, h } = native size.
+   */
+  async _fullCopy(src) {
+    try {
+      const W = src.naturalWidth || src.width, H = src.naturalHeight || src.height;
+      const k = Math.min(1, 6000 / Math.max(W, H));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(W * k)); c.height = Math.max(1, Math.round(H * k));
+      const g = c.getContext('2d');
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(src, 0, 0, c.width, c.height);
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9));
+      return blob ? { url: URL.createObjectURL(blob), w: W, h: H } : null;
+    } catch (e) {
+      return null;
+    }
   },
 
   /** pdf.js picture data without a bitmap (RGB / RGBA bytes) as a canvas; 1-bit pictures are not measured */
@@ -414,7 +436,7 @@ const PostCheck = {
     if (typeof PrintQuality !== 'undefined') {
       quality = pics.length ? PrintQuality.worst(pics.map(q => {
         const a = PrintQuality.assess({ ppi: q.at, det: q.detail, target: res.target, min: res.min });
-        if (a) { a.pic = q.n; a.sample = q.detail && q.detail.sample ? Object.assign({ pic: q.n }, q.detail.sample) : null; }
+        if (a) { a.pic = q.n; a.sample = q.detail && q.detail.sample ? Object.assign({ pic: q.n }, q.detail.sample) : null; a.full = q.full || null; }
         q.quality = a;                       // the pictures table shows each picture's status
         return a;
       })) : PrintQuality.vector();

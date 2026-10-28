@@ -75,7 +75,8 @@ const DetailCheck = {
     return { verdict, partly, edges: all.length, p25: +p25.toFixed(2), p50: +p50.toFixed(2), enlarge, w: W, h: H, tiles, sample };
   },
 
-  /** Up to 900 × 600 native pixels around (cx, cy) as a JPEG: { url, w, h, fx, fy } (fx, fy = the centre in the crop) */
+  /** Up to 900 × 600 native pixels around (cx, cy) as a JPEG: { url, w, h, fx, fy, cx, cy } (fx, fy = the centre in the
+   *  crop; cx, cy = the same point in the whole picture) */
   _sample(source, W, H, cx, cy) {
     try {
       const w = Math.min(W, 900), h = Math.min(H, 600);
@@ -85,7 +86,7 @@ const DetailCheck = {
       const g = c.getContext('2d');
       g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
       g.drawImage(source, x, y, w, h, 0, 0, w, h);
-      return { url: c.toDataURL('image/jpeg', 0.9), w, h, fx: Math.round(cx - x), fy: Math.round(cy - y) };
+      return { url: c.toDataURL('image/jpeg', 0.9), w, h, fx: Math.round(cx - x), fy: Math.round(cy - y), cx: Math.round(cx), cy: Math.round(cy) };
     } catch (e) {
       return null;
     }
