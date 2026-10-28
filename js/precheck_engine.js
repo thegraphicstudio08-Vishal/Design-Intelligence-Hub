@@ -205,9 +205,26 @@ const PrecheckEngine = {
     const e = PrintQuality.enlargement(det);
     if (!e) return null;
     const real = Math.round(ppi / e.all), realPart = e.part ? Math.round(ppi / e.part) : null;
-    const level = e.all > 1 && real < min ? 'critical'
+    // the least sharp part decides, like the print-quality status (an enlarged logo beside sharp text fails too)
+    const level = (e.all > 1 && real < min) || (realPart && realPart < min) ? 'critical'
       : (e.all > 1 && real < target) || (realPart && realPart < target) ? 'look' : null;
     return { det, real: realPart && e.all === 1 ? realPart : real, enlarge: e.part && e.all === 1 ? e.part : e.all, level };
+  },
+
+  BLANK_MIN: 10,          // % of the ordered size left empty from which the blank space is an error (alert)
+  BLANK_NO_STRETCH: 25,   // % empty from which stretching would distort the artwork too much (more than ×1.33)
+
+  /**
+   * Blank space when the artwork is placed whole (not distorted) on the ordered size — SopRules.transform's
+   * letterbox. Null below BLANK_MIN, or when the artwork is the ordered size turned (the orientation alert).
+   */
+  _blankSpace(t, W, H) {
+    if (!t || !(t.blankPct >= this.BLANK_MIN) || t.rotated) return null;
+    const lr = t.gapIn.w >= t.gapIn.h;
+    const gap = lr ? t.gapIn.w : t.gapIn.h;
+    return { pct: t.blankPct, coverPct: +(100 - t.blankPct).toFixed(1), artIn: t.fitSizeIn, orderIn: { w: W, h: H },
+      gapIn: gap, eachIn: +(gap / 2).toFixed(2), sides: lr ? 'left and right' : 'above and below', axis: lr ? 'w' : 'h',
+      stretch: t.stretch, noStretch: t.blankPct >= this.BLANK_NO_STRETCH, ppiWhole: t.ppiIfFitted, ppiStretched: t.ppiAtOrder };
   },
 
   evaluate(analysis, spec, userDims, overrides = {}) {
@@ -230,6 +247,7 @@ const PrecheckEngine = {
     const diffPct = analysis.aspectRatioMismatchPercent || 0;
     let resConcern = null;     // { ppi, target } when the artwork is below the SOP resolution → Proof 03 needed
     let printQuality = null;   // PrintQuality status: Good to Go / Bit Fuzzy / Low Resolution
+    let blankSpace = null;     // the artwork placed whole leaves part of the ordered size empty (_blankSpace)
     const reqTol = `${printW}" × ${printH}" (±0.5" SOP tolerance)`;
     // A PDF design file read by PostCheck: its page size, per-picture resolution and real detail, colour mode and
     // fonts replace the artwork size / resolution cards (it measures every picture where it is placed)
@@ -267,12 +285,17 @@ const PrecheckEngine = {
           };
       const target = sop?.resolution?.target || reqDpi;
       const minResolution = sop?.resolution?.min || minDpi;
+      // Blank space: placed whole (not distorted) the artwork leaves part of the ordered size empty. A small
+      // difference is stretched to the size (SOP placement 12 / 14) — its PPI is the stretched one; a large one
+      // cannot be stretched, so the resolution is the artwork's placed whole and the blank space is the error
+      const blank = this._blankSpace(t, printW, printH);
+      const ppiAt = blank && blank.noStretch ? t.ppiIfFitted : t.ppiAtOrder;
       // The pixel count against the detail in the pixels: a small picture enlarged to the PPI still prints soft
-      const blur = analysis.isVector ? null : this._blur(analysis, t.ppiAtOrder, target, minResolution);
+      const blur = analysis.isVector ? null : this._blur(analysis, ppiAt, target, minResolution);
       const blurCrit = !!(blur && blur.level === 'critical');
       // the status to set (Good to Go / Bit Fuzzy / Low Resolution): what the artwork looks like at print size
       if (!analysis.isVector && typeof PrintQuality !== 'undefined') {
-        printQuality = PrintQuality.assess({ ppi: t.ppiAtOrder, det: analysis.detail, target, min: minResolution });
+        printQuality = PrintQuality.assess({ ppi: ppiAt, det: analysis.detail, target, min: minResolution });
         if (printQuality) printQuality.sample = analysis.detail && analysis.detail.sample;
         // the whole artwork for the zoomed print preview (moved around by hand): the uploaded picture itself
         if (printQuality && !analysis.renderedFromPdf && analysis.previewDataUrl && !String(analysis.previewDataUrl).includes('PDF VECTOR')) {
@@ -280,11 +303,11 @@ const PrecheckEngine = {
         }
       }
       if (printQuality && printQuality.status !== 'good') {
-        resConcern = { ppi: printQuality.real, target, status: printQuality.status, blur: printQuality.real < t.ppiAtOrder, filePpi: t.ppiAtOrder };
-      } else if (!printQuality && t.ppiAtOrder < target) resConcern = { ppi: t.ppiAtOrder, target };
-      else if (!printQuality && blurCrit) resConcern = { ppi: blur.real, target, blur: true, filePpi: t.ppiAtOrder };
+        resConcern = { ppi: printQuality.real, target, status: printQuality.status, blur: printQuality.real < ppiAt, filePpi: ppiAt };
+      } else if (!printQuality && ppiAt < target) resConcern = { ppi: ppiAt, target };
+      else if (!printQuality && blurCrit) resConcern = { ppi: blur.real, target, blur: true, filePpi: ppiAt };
 
-      let st = t.ppiAtOrder >= target ? 'PASS' : t.ppiAtOrder >= minResolution ? 'WARNING' : 'FAIL';
+      let st = ppiAt >= target ? 'PASS' : ppiAt >= minResolution ? 'WARNING' : 'FAIL';
       if (st === 'PASS' && (t.ratioDiffPct > 1.5 || diffPct > 1.5)) st = 'WARNING';
       if (diffPct > 5.0 || t.ratioDiffPct > 5.0) st = 'FAIL';
       let manual = false;
@@ -298,7 +321,7 @@ const PrecheckEngine = {
         ? (isHybrid
             ? `Hybrid Design: Vector contours scale infinitely; embedded raster (${analysis.pixelWidth}×${analysis.pixelHeight} px) matches order aspect ratio within tolerance.`
             : 'Artwork aspect ratio and dimensions match the order within tolerance.')
-        : `Proportion differs by ${actualDiff}% (Artwork ${analysis.aspectRatioArtwork || 'custom'}:1 vs Order ${analysis.aspectRatioOrder || +(printW/printH).toFixed(2)}:1): fitted whole it covers ${t.fitSizeIn.w}" × ${t.fitSizeIn.h}" (gap ${t.gapIn.w}" W / ${t.gapIn.h}" H to extend with background), or filled it crops ${t.cropPctIfFilled}% of the artwork.`;
+        : `Proportion differs by ${actualDiff}% (Artwork ${analysis.aspectRatioArtwork || 'custom'}:1 vs Order ${analysis.aspectRatioOrder || +(printW/printH).toFixed(2)}:1): placed whole it covers ${t.fitSizeIn.w}" × ${t.fitSizeIn.h}"${t.blankPct != null ? ` of ${printW}" × ${printH}" (blank ${t.gapIn.w ? t.gapIn.w + '" W' : t.gapIn.h + '" H'} = ${t.blankPct}% of the size, to extend with background) at ${t.ppiIfFitted} PPI` : ''}; stretched to fill it is distorted ×${t.stretch || '—'} at ${t.ppiAtOrder} PPI; filled without distortion it crops ${t.cropPctIfFilled}% of the artwork.`;
 
       const hybridLabel = isHybrid ? 'Hybrid Vector + Raster: ' : '';
       // PR-DPO-03 artwork placement: not the ordered size → adjust (open) / stretch (flattened) with approval
@@ -312,24 +335,30 @@ const PrecheckEngine = {
         icon: '📐',
         status: st,
         manual,
-        lowPpi: t.ppiAtOrder < target || blurCrit,
+        lowPpi: ppiAt < target || blurCrit,
+        blank,
         // the real error in plain words (the card shows it first; the pixel maths is in "More details")
         error: st === 'PASS' ? '' : [
-          t.ppiAtOrder < target ? `${t.ppiAtOrder < minResolution ? 'Low Resolution' : 'Bit Fuzzy'}: ${t.ppiAtOrder} PPI at the ordered size ${printW}" × ${printH}" — SOP needs ${target} PPI (minimum ${minResolution})` : '',
-          blurCrit ? `Enlarged / blurry picture: ${t.ppiAtOrder} PPI by pixel count, but the real detail is about ${blur.real} PPI — enlarged about ${blur.enlarge}× from a smaller picture${t.ppiAtOrder >= target ? ` (SOP needs ${target} PPI)` : ''}` : '',
-          actualDiff > 1.5 ? `Artwork proportion differs ${actualDiff}% from the order` : ''
+          blank ? `Blank space: placed whole the artwork covers ${blank.artIn.w}" × ${blank.artIn.h}" of the ${printW}" × ${printH}" order — ${blank.gapIn}" (${blank.pct}% of the size) would print empty ${blank.sides}` : '',
+          ppiAt < target ? `${ppiAt < minResolution ? 'Low Resolution' : 'Bit Fuzzy'}: ${ppiAt} PPI at the ordered size ${printW}" × ${printH}"${blank && blank.noStretch ? ' (artwork placed whole)' : ''} — SOP needs ${target} PPI (minimum ${minResolution})` : '',
+          blurCrit ? `Enlarged / blurry picture: ${ppiAt} PPI by pixel count, but the real detail is about ${blur.real} PPI — enlarged about ${blur.enlarge}× from a smaller picture${ppiAt >= target ? ` (SOP needs ${target} PPI)` : ''}` : '',
+          !blank && actualDiff > 1.5 ? `Artwork proportion differs ${actualDiff}% from the order` : ''
         ].filter(Boolean).join(' · '),
-        found: `${hybridLabel}${analysis.pixelWidth} × ${analysis.pixelHeight} px (${analysis.aspectRatioArtwork}:1) → ${printW}" × ${printH}" = ${t.ppiAtOrder} PPI${t.rotated ? ' (artwork rotated vs order)' : ''}${blur && blur.level ? ` · picture looks ${blurWord}: real detail ≈ ${blur.real} PPI` : ''}`,
+        found: `${hybridLabel}${analysis.pixelWidth} × ${analysis.pixelHeight} px (${analysis.aspectRatioArtwork}:1) → ${printW}" × ${printH}" = ${ppiAt} PPI${blank && blank.noStretch ? ` placed whole (${blank.coverPct}% of the size)` : ''}${t.rotated ? ' (artwork rotated vs order)' : ''}${blur && blur.level ? ` · picture looks ${blurWord}: real detail ≈ ${blur.real} PPI` : ''}`,
         required: `${reqTol} · Target ${target} PPI (min ${minResolution}) · Canvas ${canvasTxt}`,
-        detail: `${fitTxt}${sop?.resolution?.source ? ` ${sop.resolution.source}.` : ''}${analysis.detail && typeof DetailCheck !== 'undefined' ? ` Real detail: ${DetailCheck.describe(analysis.detail, t.ppiAtOrder)}` : ''}`,
+        detail: `${fitTxt}${sop?.resolution?.source ? ` ${sop.resolution.source}.` : ''}${analysis.detail && typeof DetailCheck !== 'undefined' ? ` Real detail: ${DetailCheck.describe(analysis.detail, ppiAt)}` : ''}`,
         action: st === 'PASS' ? '' : [
-          t.ppiAtOrder < target || blurCrit
+          blank ? (blank.noStretch
+            ? `Do not stretch it (it would be distorted ×${blank.stretch}): extend the background or rearrange the design to fill ${printW}" × ${printH}", or ask the customer for artwork made at that size — customer approval, Design Review (PR-DPO-03 artwork placement).`
+            : `Extend the background to fill ${printW}" × ${printH}" (stretching would distort the artwork ×${blank.stretch}) — customer approval, Design Review (PR-DPO-03 artwork placement).`) : '',
+          ppiAt < target || blurCrit
             ? `${blurCrit ? 'Ask the customer for the original (larger) picture or a vector logo; if there is nothing better, use' : 'Use'} the "${printQuality && printQuality.status !== 'good' ? printQuality.label : 'Low Resolution'}" status and attach the Print preview screenshot proof (Proof 03) highlighting the soft area — PR-DPO-03.`
             : '',
           manual ? 'Look at the artwork at print size (Photoshop "Print Size"); if it looks soft, use the "Bit Fuzzy" status with the Print preview screenshot (Proof 03).' : '',
-          actualDiff > 1.5 ? (placementAction || 'Confirm with customer: extend background to fill the order size, or crop edge allowance.') : ''
+          !blank && actualDiff > 1.5 ? (placementAction || 'Confirm with customer: extend background to fill the order size, or crop edge allowance.') : ''
         ].filter(Boolean).join(' ')
       });
+      if (blank) blankSpace = blank;
     } else {
       checks.push({
         id: 'sizeTransform',
@@ -391,21 +420,31 @@ const PrecheckEngine = {
         vAction = 'File is resolution-independent vector. Ready for high-definition production at any scale.';
       }
     } else {
-      const gBlur = this._blur(analysis, analysis.effectiveDpi, reqDpi, minDpi);
+      // blank space too large to stretch: judged with the artwork placed whole, like the size card
+      const whole = !!(blankSpace && blankSpace.noStretch);
+      const dpi = whole ? blankSpace.ppiWhole : analysis.effectiveDpi;
+      const good = whole ? dpi >= reqDpi : analysis.isGoodForPrint;
+      const wholeTxt = whole ? ` with the artwork placed whole at ${printW}"×${printH}" (it covers ${blankSpace.coverPct}% of the size — see Size & resolution)` : '';
+      const gBlur = this._blur(analysis, dpi, reqDpi, minDpi);
       if (gBlur && gBlur.level === 'critical') {
         vStatus = 'FAIL';
-        vFound = `Raster (${analysis.effectiveDpi} DPI) · enlarged picture, real detail ≈ ${gBlur.real} PPI`;
-        vDetail = `NOT GOOD FOR PRINT: ${DetailCheck.describe(gBlur.det, analysis.effectiveDpi)}`;
+        vFound = `Raster (${dpi} DPI) · enlarged picture, real detail ≈ ${gBlur.real} PPI`;
+        vDetail = `NOT GOOD FOR PRINT: ${DetailCheck.describe(gBlur.det, dpi)}`;
         vAction = `Request the original (larger) picture or vector artwork from the customer (minimum ${reqDpi} DPI of real detail at ${printW}"×${printH}").`;
-      } else if (gBlur && gBlur.level === 'look' && analysis.isGoodForPrint) {
+      } else if (gBlur && gBlur.level === 'look' && good) {
         vStatus = 'WARNING'; vManual = true;
-        vFound = `Raster (${analysis.effectiveDpi} DPI) · looks ${gBlur.det.verdict === 'sharp' ? 'partly enlarged' : gBlur.det.verdict}, real detail ≈ ${gBlur.real} PPI`;
-        vDetail = DetailCheck.describe(gBlur.det, analysis.effectiveDpi);
+        vFound = `Raster (${dpi} DPI) · looks ${gBlur.det.verdict === 'sharp' ? 'partly enlarged' : gBlur.det.verdict}, real detail ≈ ${gBlur.real} PPI`;
+        vDetail = DetailCheck.describe(gBlur.det, dpi);
         vAction = 'Look at the artwork at print size; if it looks soft, treat it as a low-resolution file.';
-      } else if (analysis.isGoodForPrint) {
+      } else if (good) {
         vStatus = 'PASS';
-        vFound = `Raster (${analysis.effectiveDpi} DPI)`;
-        vDetail = `GOOD FOR PRINT: ${analysis.goodForPrintReason}`;
+        vFound = `Raster (${dpi} DPI)`;
+        vDetail = whole ? `GOOD FOR PRINT: ${dpi} PPI${wholeTxt}; SOP ${reqDpi} PPI.` : `GOOD FOR PRINT: ${analysis.goodForPrintReason}`;
+      } else if (whole) {
+        vStatus = dpi >= minDpi ? 'WARNING' : 'FAIL';
+        vFound = `Raster (${dpi} DPI)`;
+        vDetail = `${dpi >= minDpi ? 'Borderline' : 'Low'} resolution: ${dpi} PPI${wholeTxt}; SOP ${reqDpi} PPI (minimum ${minDpi}).`;
+        vAction = `Request higher resolution artwork from the customer (minimum ${reqDpi} DPI at ${printW}"×${printH}") or vector format.`;
       } else if (!analysis.effectiveDpi) {
         vStatus = 'WARNING'; vManual = true;
         vFound = `${ext} — resolution not readable`;
@@ -561,7 +600,8 @@ const PrecheckEngine = {
       analysis,
       spec,
       dimensions: { widthIn: printW, heightIn: printH },
-      printQuality
+      printQuality,
+      blankSpace
     };
     this.tally(report);
     return report;

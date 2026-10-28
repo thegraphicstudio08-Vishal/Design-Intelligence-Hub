@@ -1318,6 +1318,8 @@ function renderSummaryCard(report) {
   updateFailBadges(counts.fails);
   // print quality Low Resolution / Bit Fuzzy: pop-up alert beside the canvas, like spelling and the safe zone
   if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderDetailAlert) AgenticAiInspector._renderDetailAlert();
+  // blank space: the artwork placed whole leaves part of the ordered size empty
+  if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderBlankAlert) AgenticAiInspector._renderBlankAlert();
   // the status to set (Good to Go / Bit Fuzzy / Low Resolution) with the PPI and the zoomed print preview
   const qualityHtml = typeof PrintQuality !== 'undefined' ? PrintQuality.html(report.printQuality, dimensions) : '';
 

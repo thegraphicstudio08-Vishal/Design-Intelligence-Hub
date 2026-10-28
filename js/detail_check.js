@@ -21,6 +21,8 @@ const DetailCheck = {
   SOFT_MAX: 2.25,       // above this: enlarged about 2× or more
   MIN_EDGES: 60,        // fewer clean edges than this: not enough detail to judge
   TILE_MIN_EDGES: 12,
+  PART_MIN_TILES: 3,    // enlarged areas beside sharp ones: at least this many measured tiles …
+  PART_MIN_SHARE: 0.1,  // … and this share of them make the artwork "partly enlarged"
 
   /**
    * @param source HTMLImageElement | ImageBitmap | HTMLCanvasElement, measured at its own (natural) size
@@ -66,9 +68,10 @@ const DetailCheck = {
     const p25 = this._pct(all, 25), p50 = this._pct(all, 50);
     const verdict = p25 > this.SOFT_MAX ? 'enlarged' : p25 > this.SHARP_MAX ? 'soft' : 'sharp';
     const enlarge = Math.max(1, Math.round((p25 - 0.7) / 0.75 * 10) / 10);
-    // sharp text over an enlarged photo: the photo areas still read as enlarged
+    // sharp text over an enlarged photo / logo: the enlarged areas still print soft. A few clearly enlarged areas are
+    // enough — US2429834: sharp lettering beside an enlarged clip-art truck and sponsor logos = 8 of 48 areas
     const blurTiles = tiles.filter(t => t.state === 'enlarged').length;
-    const partly = verdict === 'sharp' && tiles.length >= 6 && blurTiles / tiles.length >= 0.3;
+    const partly = verdict === 'sharp' && blurTiles >= this.PART_MIN_TILES && blurTiles / tiles.length >= this.PART_MIN_SHARE;
     // the zoomed print preview (PrintQuality) shows the least sharp measured area, at the picture's own pixels
     const focus = tiles.length ? tiles.reduce((a, t) => (t.p25 > a.p25 ? t : a)) : null;
     const sample = focus ? this._sample(source, W, H, focus.x + focus.w / 2, focus.y + focus.h / 2) : null;

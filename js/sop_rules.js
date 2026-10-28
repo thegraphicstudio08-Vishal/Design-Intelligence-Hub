@@ -443,12 +443,14 @@ const SopRules = {
     const boxH = rotated ? W : H;
     const diff = rotated ? rotatedDiff : straightDiff;
 
-    // "Fit" = whole artwork visible (letterbox), "Fill" = cover the size (crop)
-    const fitPpi = Math.min(pxW / boxW, pxH / boxH);
-    const fillPpi = Math.max(pxW / boxW, pxH / boxH);
+    // "Fit" = whole artwork visible, not distorted (blank space beside it): the higher PPI of the two sides;
+    // "Fill" = covers the size (cropped, or stretched — SOP placement 12 / 14): the lower PPI
+    const fitPpi = Math.max(pxW / boxW, pxH / boxH);
+    const fillPpi = Math.min(pxW / boxW, pxH / boxH);
     const fitW = pxW / fitPpi, fitH = pxH / fitPpi;
     const gapW = +(boxW - fitW).toFixed(2), gapH = +(boxH - fitH).toFixed(2);
     const cropPct = +((1 - (boxW * boxH) / ((pxW / fillPpi) * (pxH / fillPpi))) * 100).toFixed(1);
+    const blankPct = +((1 - (fitW * fitH) / (boxW * boxH)) * 100).toFixed(1);
 
     const target = req?.resolution?.target || 125;
     const canvas = req?.canvas;
@@ -460,10 +462,12 @@ const SopRules = {
       ratioDiffPct: +(diff * 100).toFixed(1),
       artRatio: +artRatio.toFixed(3),
       orderRatio: +orderRatio.toFixed(3),
-      ppiAtOrder: Math.round(fitPpi),
-      ppiIfFilled: Math.round(fillPpi),
+      ppiAtOrder: Math.round(fillPpi),       // stretched / filled to the ordered size
+      ppiIfFitted: Math.round(fitPpi),       // placed whole at the ordered size, not distorted
       fitSizeIn: { w: +fitW.toFixed(2), h: +fitH.toFixed(2) },
       gapIn: { w: Math.max(0, gapW), h: Math.max(0, gapH) },
+      blankPct: Math.max(0, blankPct),       // share of the ordered size left empty when placed whole
+      stretch: +(fitPpi / fillPpi).toFixed(2),   // how much one side would be stretched to fill the size
       cropPctIfFilled: Math.max(0, cropPct),
       requiredPx: { w: Math.round(canvasW * target), h: Math.round(canvasH * target) },
       canvasIn: { w: canvasW, h: canvasH }

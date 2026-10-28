@@ -367,7 +367,8 @@ const PostCheck = {
         const e = typeof PrintQuality !== 'undefined' ? PrintQuality.enlargement(q.detail) : null;
         if (!e) return 'none';
         const real = Math.round(q.at / e.all), realPart = e.part ? Math.round(q.at / e.part) : null;
-        if (e.all > 1 && real < res.min) return 'fail';
+        // the least sharp part decides, like the print-quality status (an enlarged part fails too)
+        if ((e.all > 1 && real < res.min) || (realPart && realPart < res.min)) return 'fail';
         return (e.all > 1 && real < res.target) || (realPart && realPart < res.target) ? 'look' : 'ok';
       };
       const bad = pics.filter(q => judge(q) === 'fail'), look = pics.filter(q => judge(q) === 'look');

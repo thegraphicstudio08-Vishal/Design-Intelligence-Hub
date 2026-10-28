@@ -918,6 +918,53 @@ const AgenticAiInspector = {
       </div>`;
   },
 
+  /**
+   * Pop-up alert for blank space: placed whole (not distorted) on the ordered size, the artwork leaves part of it
+   * empty (report.blankSpace, PrecheckEngine._blankSpace). Red when it cannot be stretched to fill, amber otherwise.
+   */
+  _renderBlankAlert() {
+    const report = (typeof appState !== 'undefined') ? appState.report : null;
+    const b = report && report.blankSpace;
+    const check = b && report.checks.find(c => c.id === 'sizeTransform');
+    let box = document.getElementById('blank-alert');
+    if (!b || (check && check.isOverridden)) { if (box) box.remove(); return; }
+    const key = `${(report.analysis && report.analysis.previewDataUrl || '').length}|${b.pct}|${b.orderIn.w}x${b.orderIn.h}`;
+    if (this._blankAlertClosedKey === key) { if (box) box.remove(); return; }
+    this._blankAlertKey = key;
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'blank-alert';
+      box.setAttribute('role', 'alert');
+      const stack = this._alertStack();
+      stack.insertBefore(box, stack.firstChild);
+    }
+    box.className = `spell-alert${b.noStretch ? '' : ' is-warn'}`;
+    box.innerHTML = `
+      <div class="spell-alert-head">⚠️ <span>Blank space: ${b.pct}% of the ${b.orderIn.w}" × ${b.orderIn.h}" order would print empty</span>
+        <button class="spell-alert-close" title="Close" onclick="AgenticAiInspector.closeBlankAlert()">×</button></div>
+      <div class="spell-alert-note">The artwork's proportion is not the order's: placed whole it covers ${b.artIn.w}" × ${b.artIn.h}", leaving ${b.gapIn}" empty ${b.sides} (${b.eachIn}" each side). ${b.noStretch
+        ? `Do not stretch it — it would be distorted ×${b.stretch}. Extend the background or rearrange the design to fill the size, or ask the customer for artwork made at ${b.orderIn.w}" × ${b.orderIn.h}"; customer approval (Design Review).`
+        : `Extend the background to fill the size (stretching would distort it ×${b.stretch}); customer approval (Design Review).`}</div>
+      <div class="spell-alert-row">
+        <div class="spell-alert-words"><span class="spell-alert-kind">Artwork placed whole</span>
+          <span class="sz-dist">${b.coverPct}% of the size · ${b.ppiWhole} PPI</span></div>
+        <button class="spell-alert-show" onclick="AgenticAiInspector.showBlankSpace()">Show</button>
+      </div>`;
+  },
+
+  /** Show button of the blank-space alert: the canvas with the artwork on the ordered size */
+  showBlankSpace() {
+    if (typeof switchTab === 'function') switchTab('checks');
+    const el = document.querySelector('.visual-inspector-card') || document.getElementById('artwork-canvas');
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); }
+  },
+
+  closeBlankAlert() {
+    this._blankAlertClosedKey = this._blankAlertKey;
+    const box = document.getElementById('blank-alert');
+    if (box) box.remove();
+  },
+
   /** Show button of the print-quality alert: the status strip with the zoomed print preview */
   showPrintQuality() {
     const el = document.getElementById('pq-strip');
