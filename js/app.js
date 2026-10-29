@@ -482,6 +482,9 @@ function handleFile(file) {
     return;
   }
   appState.file = file;
+  // a new file: its alerts open in full — "Collapse" folded only the previous file's alerts (the designer closes
+  // them for this file if they want)
+  if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector.foldAlerts) AgenticAiInspector.foldAlerts(false);
   const ext = (file.name.split('.').pop() || '').toUpperCase();
   const sizeKB = (file.size / 1024).toFixed(1);
 
