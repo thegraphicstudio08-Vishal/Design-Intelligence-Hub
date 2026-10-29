@@ -970,7 +970,7 @@ const AgenticAiInspector = {
   _renderBlankAlert() {
     const report = (typeof appState !== 'undefined') ? appState.report : null;
     const b = report && report.blankSpace;
-    const check = b && report.checks.find(c => c.id === 'sizeTransform' || c.id === 'pc-size');
+    const check = b && (report.checks.find(c => c.id === 'blankSpace') || report.checks.find(c => c.id === 'sizeTransform' || c.id === 'pc-size'));
     let box = document.getElementById('blank-alert');
     if (!b || (check && check.isOverridden)) { if (box) box.remove(); return; }
     const key = `${(report.analysis && report.analysis.previewDataUrl || '').length}|${b.pct}|${b.orderIn.w}x${b.orderIn.h}`;
@@ -983,7 +983,8 @@ const AgenticAiInspector = {
       const stack = this._alertStack();
       stack.insertBefore(box, stack.firstChild);
     }
-    box.className = `spell-alert${b.noStretch ? '' : ' is-warn'}`;
+    box.className = `spell-alert${b.noStretch || b.fromBands ? '' : ' is-warn'}`;
+    if (b.fromBands) { this._renderBandAlert(box, b); return; }
     // short first; "Review more" opens the blank space in numbers, a small drawing of the order and what to do
     const lr = b.axis === 'w', side = (lr ? b.artIn.w / b.orderIn.w : b.artIn.h / b.orderIn.h) * 100;
     // a PDF design page has no single PPI (its pictures are measured one by one): sizes only
@@ -1014,6 +1015,38 @@ const AgenticAiInspector = {
           <span class="sz-dist">${b.coverPct}% of the size${ppi(b.ppiWhole)}</span></div>
         <button class="spell-alert-show" onclick="AgenticAiInspector.showBlankSpace()">Show</button>
       </div>`;
+    this._compact(box);
+  },
+
+  /**
+   * The blank-space alert for white strips INSIDE the artwork (PrecheckEngine._bandBlankSpace): the file is the order
+   * size, but the design stops short of the edges — one row per strip with its size, a drawing of the order
+   */
+  _renderBandAlert(box, b) {
+    const len = v => SopRules.lenText(v), f = b.bandsFrac, lr = b.axis === 'w';
+    const strips = Object.entries(b.bandsIn).filter(([, v]) => v > 0);
+    const name = { top: 'Top', bottom: 'Bottom', left: 'Left', right: 'Right' };
+    const a = lr ? f.left : f.top, z = lr ? f.right : f.bottom, mid = Math.max(0, 1 - a - z);
+    box.innerHTML = `
+      <div class="spell-alert-head">⚠️ <span>Blank space: white strips ${b.sides} — ${b.pct}% of the ${SopRules.sizeText(b.orderIn.w, b.orderIn.h)} order would print plain white</span>
+        <button class="spell-alert-close" title="Close" onclick="AgenticAiInspector.closeBlankAlert()">×</button></div>
+      <div class="spell-alert-note">${b.pdfPage ? 'The PDF page is the order size, but the' : 'The'} design stops short of the edges: plain white strips ${b.sides} (${strips.map(([s, v]) => `${s} ${len(v)}`).join(' · ')}). They print as white bands on the banner.</div>
+      <div class="alert-more">
+        <div class="am-diagram${lr ? '' : ' am-v'}" title="The order (${SopRules.sizeText(b.orderIn.w, b.orderIn.h)}) with the white strips">
+          <i style="flex-basis:${(a * 100).toFixed(1)}%"></i><b style="flex-basis:${(mid * 100).toFixed(1)}%">Design</b><i style="flex-basis:${(z * 100).toFixed(1)}%"></i>
+        </div>
+        <dl class="am-facts">
+          <dt>Order size</dt><dd>${SopRules.sizeText(b.orderIn.w, b.orderIn.h)}</dd>
+          <dt>Design area</dt><dd>${SopRules.sizeText(b.artIn.w, b.artIn.h)} · ${b.coverPct}% of the size</dd>
+          <dt>White strips</dt><dd><strong>${strips.map(([s, v]) => `${s} ${len(v)}`).join(' · ')}</strong> (${b.pct}%)</dd>
+        </dl>
+        <div class="am-todo"><strong>What to do:</strong> extend the design's background to every edge of the order size (or rearrange the design to fill it), then check the safe zone again. If the customer wants the white strips, confirm it with them — Design Review (PR-DPO-03 artwork placement).</div>
+      </div>
+      ${strips.map(([s, v]) => `<div class="spell-alert-row">
+        <div class="spell-alert-words"><span class="spell-alert-kind">${name[s]} white strip</span>
+          <span class="sz-dist">${len(v)} deep</span></div>
+        <button class="spell-alert-show" onclick="AgenticAiInspector.showBlankSpace()">Show</button>
+      </div>`).join('')}`;
     this._compact(box);
   },
 

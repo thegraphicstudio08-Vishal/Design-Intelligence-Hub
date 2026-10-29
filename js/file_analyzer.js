@@ -445,6 +445,8 @@ const FileAnalyzer = {
 
           FileAnalyzer._evaluateMeasurementsAndOrientation(res, targetW, targetH);
           FileAnalyzer._detectLinesAndDots(img, res);
+          // white strips where the design stops short of the edges (blank space inside the picture)
+          try { res.bands = FileAnalyzer.blankBands(img); } catch (e) { res.bands = null; }
           resolve(res);
         };
         img.onerror = () => {
@@ -458,6 +460,44 @@ const FileAnalyzer = {
         resolve(res);
       });
     });
+  },
+
+  /**
+   * White / empty strips along the edges of the printed content, read on its pixels whatever the file is made of
+   * (one flattened picture, several pictures, vector): rows / columns of plain paper white or transparent pixels from
+   * an edge inwards, where the design then starts along (nearly) the whole edge — the design stops short of the order
+   * size (AU2434937: the customer's banner fitted into a longer order, white above and below it). A white background
+   * with a logo in the middle is not one: right inside the strip the design must run along ≥ 85 % of the edge.
+   * Returns { top, bottom, left, right } as fractions of the height / width (0 = none), or null.
+   */
+  blankBands(source) {
+    const W0 = source.naturalWidth || source.width, H0 = source.naturalHeight || source.height;
+    if (!(W0 > 20 && H0 > 20)) return null;
+    const k = Math.min(1, 1200 / Math.max(W0, H0));
+    const w = Math.max(8, Math.round(W0 * k)), h = Math.max(8, Math.round(H0 * k));
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(source, 0, 0, w, h);
+    const d = g.getImageData(0, 0, w, h).data;
+    const white = o => d[o + 3] < 40 || (d[o] >= 245 && d[o + 1] >= 245 && d[o + 2] >= 245);
+    // share of white in a row (or column) between a and b
+    const rowW = (y, a = 0, b = w) => { let n = 0; for (let x = a; x < b; x++) if (white((y * w + x) * 4)) n++; return n / Math.max(1, b - a); };
+    const colW = (x, a = 0, b = h) => { let n = 0; for (let y = a; y < b; y++) if (white((y * w + x) * 4)) n++; return n / Math.max(1, b - a); };
+    const depth = (len, share, from, step) => { let i = 0; while (i < len * 0.45 && share(from + step * i) >= 0.995) i++; return i; };
+    const t = depth(h, rowW, 0, 1), b = depth(h, rowW, h - 1, -1), l = depth(w, colW, 0, 1), r = depth(w, colW, w - 1, -1);
+    // the design right inside the strip, along the edge between the side strips: 3 rows / columns ≥ 85 % non-white
+    const starts = (share, from, step, i, a, z) => {
+      let s = 0, n = 0;
+      for (let j = i; j < i + 3; j++) { const p = from + step * j; if (p < 0 || p >= (share === rowW ? h : w)) break; s += 1 - share(p, a, z); n++; }
+      return n && s / n >= 0.85;
+    };
+    const res = {
+      top: t && starts(rowW, 0, 1, t, l, w - r) ? t / h : 0,
+      bottom: b && starts(rowW, h - 1, -1, b, l, w - r) ? b / h : 0,
+      left: l && starts(colW, 0, 1, l, t, h - b) ? l / w : 0,
+      right: r && starts(colW, w - 1, -1, r, t, h - b) ? r / w : 0
+    };
+    return res.top || res.bottom || res.left || res.right ? res : null;
   },
 
   /**

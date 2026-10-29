@@ -37,8 +37,18 @@ const CanvasFx = {
     let html = '';
     // blank space: the trim minus the artwork placed whole — bands left / right or above / below
     const b = report.blankSpace;
-    const sizeCheck = report.checks && report.checks.find(c => c.id === 'sizeTransform' || c.id === 'pc-size');
-    if (b && art && !ci.artRot && !(sizeCheck && sizeCheck.isOverridden)) {
+    const sizeCheck = report.checks && (report.checks.find(c => c.id === 'blankSpace') || report.checks.find(c => c.id === 'sizeTransform' || c.id === 'pc-size'));
+    if (b && b.fromBands && art && !ci.artRot && !(sizeCheck && sizeCheck.isOverridden)) {
+      // white strips inside the artwork: measured on the artwork itself, as fractions of it
+      const f = b.bandsFrac, ax = art.x - trim.x, ay = art.y - trim.y, lab = v => typeof SopRules !== 'undefined' ? SopRules.lenText(v) : v + '"';
+      html += [
+        { s: 'top', x: ax, y: ay, w: art.w, h: art.h * f.top, v: b.bandsIn.top },
+        { s: 'bottom', x: ax, y: ay + art.h * (1 - f.bottom), w: art.w, h: art.h * f.bottom, v: b.bandsIn.bottom },
+        { s: 'left', x: ax, y: ay, w: art.w * f.left, h: art.h, v: b.bandsIn.left },
+        { s: 'right', x: ax + art.w * (1 - f.right), y: ay, w: art.w * f.right, h: art.h, v: b.bandsIn.right }
+      ].filter(r => r.w > 2 && r.h > 2).map(r =>
+        `<div class="fx-blank fx-${r.s}" style="left:${pct(r.x, trim.w)};top:${pct(r.y, trim.h)};width:${pct(r.w, trim.w)};height:${pct(r.h, trim.h)}"><span>White ${lab(r.v)}</span></div>`).join('');
+    } else if (b && art && !ci.artRot && !(sizeCheck && sizeCheck.isOverridden)) {
       const bands = b.axis === 'w'
         ? [{ x: 0, w: art.x - trim.x, s: 'left' }, { x: art.x + art.w - trim.x, w: trim.x + trim.w - art.x - art.w, s: 'right' }].map(r => Object.assign(r, { y: 0, h: trim.h }))
         : [{ y: 0, h: art.y - trim.y, s: 'top' }, { y: art.y + art.h - trim.y, h: trim.y + trim.h - art.y - art.h, s: 'bottom' }].map(r => Object.assign(r, { x: 0, w: trim.w }));

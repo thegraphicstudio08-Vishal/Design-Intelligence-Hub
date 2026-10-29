@@ -44,6 +44,9 @@ const PostCheck = {
       if (!drawn) task.cancel();
       stop();
       const preview = drawn ? cv.toDataURL('image/jpeg', 0.92) : '';
+      // white strips where the design stops short of the page edges — read on the drawn page, whatever it is made of
+      let bands = null;
+      try { bands = drawn && typeof FileAnalyzer.blankBands === 'function' ? FileAnalyzer.blankBands(cv) : null; } catch (e) { bands = null; }
       const ol = (drawn && this._renderedOps(pg)) || await pg.getOperatorList();
       const dicts = await dictsP;
       stop();
@@ -116,7 +119,7 @@ const PostCheck = {
         pageIn, rotate: pg.rotate || 0, vpW: vp.width, vpH: vp.height,
         preview, previewW: cv.width, previewH: cv.height,
         kind, cover, paths: w.paths, shadings: w.shadings, texts: w.texts, masks: pics.filter(p => p.kind === 'mask').length,
-        pics, fonts, colourPartial: !!dicts.partial, fineMarks
+        pics, fonts, colourPartial: !!dicts.partial, fineMarks, bands
       };
     } finally {
       doc.destroy();

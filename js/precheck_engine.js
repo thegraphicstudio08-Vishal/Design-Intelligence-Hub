@@ -255,6 +255,47 @@ const PrecheckEngine = {
     return b;
   },
 
+  /**
+   * Blank space INSIDE the artwork: white strips along the edges where the design stops short (FileAnalyzer
+   * .blankBands, read on the printed pixels whatever the file is made of). AU2434937: the designer's PDF is exactly the
+   * order size, but the customer's banner was fitted in with white above and below it. A strip counts from 0.25" and
+   * 1 % of that side. bands: fractions of the artwork's height / width; W × H the order (inches).
+   */
+  _bandBlankSpace(bands, W, H, extra) {
+    if (!bands) return null;
+    const inch = { top: bands.top * H, bottom: bands.bottom * H, left: bands.left * W, right: bands.right * W };
+    const on = Object.keys(inch).filter(s => inch[s] >= Math.max(0.25, 0.01 * (s === 'top' || s === 'bottom' ? H : W)));
+    if (!on.length) return null;
+    const get = s => on.includes(s) ? +inch[s].toFixed(2) : 0;
+    const gw = get('left') + get('right'), gh = get('top') + get('bottom');
+    const artW = W - gw, artH = H - gh, pct = +((1 - (artW * artH) / (W * H)) * 100).toFixed(1);
+    const where = { top: 'at the top', bottom: 'at the bottom', left: 'on the left', right: 'on the right' };
+    const sides = on.length === 4 ? 'all round'
+      : on.length === 2 && on.includes('top') && on.includes('bottom') ? 'above and below'
+      : on.length === 2 && on.includes('left') && on.includes('right') ? 'left and right' : on.map(s => where[s]).join(' and ');
+    const axis = gh >= gw ? 'h' : 'w', gap = axis === 'h' ? gh : gw;
+    return Object.assign({
+      pct, coverPct: +(100 - pct).toFixed(1), artIn: { w: +artW.toFixed(2), h: +artH.toFixed(2) }, orderIn: { w: W, h: H },
+      gapIn: +gap.toFixed(2), eachIn: +(gap / 2).toFixed(2), sides, axis,
+      stretch: +(axis === 'h' ? H / artH : W / artW).toFixed(2), noStretch: pct >= this.BLANK_NO_STRETCH,
+      ppiWhole: null, ppiStretched: null, cropPct: null, fromBands: true,
+      bandsIn: { top: get('top'), bottom: get('bottom'), left: get('left'), right: get('right') },
+      bandsFrac: { top: get('top') / H, bottom: get('bottom') / H, left: get('left') / W, right: get('right') / W }
+    }, extra || {});
+  },
+
+  /** The check card for white strips inside the artwork (Critical: the order prints with plain white strips) */
+  _blankCard(b, W, H) {
+    const list = Object.entries(b.bandsIn).filter(([, v]) => v > 0)
+      .map(([s, v]) => `${s} ${typeof SopRules !== 'undefined' ? SopRules.lenText(v) : v + '"'}`).join(' · ');
+    return { id: 'blankSpace', name: 'Blank space in the artwork', icon: '▭', status: 'FAIL', blank: b,
+      error: `White strips where the design stops (${list}) — ${b.pct}% of the ${orderSizeText(W, H)} order would print plain white`,
+      found: `Design area ${orderSizeText(b.artIn.w, b.artIn.h)} of ${orderSizeText(W, H)} · white strips: ${list}`,
+      required: 'The design (its background) runs to every edge of the order size — no empty strips',
+      detail: 'Read on the printed content itself, whatever the file is made of (one flattened picture, several pictures or vector): plain white rows / columns run in from the edge and the design starts along the whole edge right after them — the artwork was fitted into the order size without filling it.',
+      action: 'Extend the design\'s background to every edge of the order size (or rearrange the design to fill it), then check the safe zone again. If the customer wants the white strips, confirm it with them — Design Review (PR-DPO-03 artwork placement).' };
+  },
+
   evaluate(analysis, spec, userDims, overrides = {}) {
     const checks = [];
     const printW = userDims?.widthIn || spec.defaultW || 36;
@@ -286,6 +327,14 @@ const PrecheckEngine = {
       resConcern = design.resConcern;
       printQuality = design.quality || null;
       blankSpace = this._pageBlankSpace(analysis, design, printW, printH, sop);
+      // the page is the order size (or the SOP canvas): blank space can still be INSIDE it — white strips where the
+      // design stops (a larger page is bleed / margins, a smaller one is the case above)
+      const size = design.checks.find(c => c.id === 'pc-size');
+      if (!blankSpace && size && size.status === 'PASS' && design.r && design.r.bands) {
+        blankSpace = this._bandBlankSpace(design.r.bands, printW, printH,
+          { pdfPage: true, pageIn: { w: analysis.detectedInchesW, h: analysis.detectedInchesH } });
+        if (blankSpace) checks.push(this._blankCard(blankSpace, printW, printH));
+      }
     } else if (analysis.isVector && !analysis.embeddedRasterFound) {
       if (typeof PrintQuality !== 'undefined') printQuality = PrintQuality.vector();
       const art = analysis.detectedInchesW ? `${orderSizeText(analysis.detectedInchesW, analysis.detectedInchesH)} artboard` : 'Vector artwork';
@@ -388,6 +437,11 @@ const PrecheckEngine = {
         ].filter(Boolean).join(' ')
       });
       if (blank) blankSpace = blank;
+      // the artwork has the order's proportion, but white strips inside the picture where the design stops
+      else if (analysis.bands && !t.rotated && !(t.blankPct >= this.BLANK_MIN)) {
+        const bb = this._bandBlankSpace(analysis.bands, printW, printH);
+        if (bb) { blankSpace = bb; checks.push(this._blankCard(bb, printW, printH)); }
+      }
     } else {
       checks.push({
         id: 'sizeTransform',
