@@ -88,7 +88,17 @@ const PostCheck = {
         p.detail.tiles = (p.detail.tiles || []).filter(t => t.state !== 'sharp').map(t => Object.assign(t, { vbox: this._tileBox(p, t, vp) }));
         // the whole picture for the zoomed print preview (moved around by hand)
         if (src) p.full = await this._fullCopy(src);
+        // small stray lines / dots at the picture's own size: on the page copy the other checks read (2400 px) a
+        // hairline of a large print file is less than a pixel (FineMarks)
+        if (src && typeof FineMarks !== 'undefined') {
+          step(`Looking for small stray marks on picture ${p.n} at full size…`);
+          p.fine = await FineMarks.scan(src, { pxPerIn: p.ppi, alive }).catch(e => { console.warn('Full-size mark check:', e); return null; });
+          stop();
+        }
       }
+      // their place on the page (fractions), for the Lines & Dots check on the page copy
+      const fineMarks = [];
+      measured.forEach(p => ((p.fine && p.fine.marks) || []).forEach(m => { const f = this._onPageFraction(p, m, vp); if (f) fineMarks.push(f); }));
 
       step('Checking the fonts…');
       const fonts = [];
@@ -106,7 +116,7 @@ const PostCheck = {
         pageIn, rotate: pg.rotate || 0, vpW: vp.width, vpH: vp.height,
         preview, previewW: cv.width, previewH: cv.height,
         kind, cover, paths: w.paths, shadings: w.shadings, texts: w.texts, masks: pics.filter(p => p.kind === 'mask').length,
-        pics, fonts, colourPartial: !!dicts.partial
+        pics, fonts, colourPartial: !!dicts.partial, fineMarks
       };
     } finally {
       doc.destroy();
@@ -178,6 +188,20 @@ const PostCheck = {
     // a repeated picture's size comes from its first normal placement, if any
     places.filter(p => !p.w).forEach(p => { const o = places.find(q => q.id === p.id && q.w); if (o) Object.assign(p, { w: o.w, h: o.h }); });
     return { places: places.filter(p => p.w > 0), paths, shadings, texts, fonts: [...fonts] };
+  },
+
+  /**
+   * A mark found on a picture (its own pixels) → its place on the page as fractions { x, y, w, h, cx, cy }, for a
+   * picture placed upright (not turned or mirrored); null when it lies outside the page
+   */
+  _onPageFraction(p, m, vp) {
+    const c = p.ctm || [];
+    if (!(Math.abs(c[1]) < 1e-6 && Math.abs(c[2]) < 1e-6 && c[0] > 0 && c[3] > 0)) return null;
+    const sx = (p.box[2] - p.box[0]) / p.w, sy = (p.box[3] - p.box[1]) / p.h;
+    const f = { x: (p.box[0] + m.x * sx) / vp.width, y: (p.box[1] + m.y * sy) / vp.height, w: m.w * sx / vp.width, h: m.h * sy / vp.height };
+    f.cx = f.x + f.w / 2; f.cy = f.y + f.h / 2;
+    if (f.cx < 0 || f.cy < 0 || f.cx > 1 || f.cy > 1) return null;
+    return Object.assign(f, { mark: m, pic: p.n, ppi: p.ppi });
   },
 
   _obj(pg, id, font) {

@@ -1506,6 +1506,12 @@ const AgenticAiInspector = {
 
     this._textRowMarks = res.textRowMarks || [];
     res.marks.forEach((m, i) => this.defects.push(this._markDefect(m, `${i + 1}`, W, H)));
+    // small marks found at full size (FineMarks) — the scan above reads a copy of at most 2000 px: a PDF's pictures
+    // were read with the file (PostCheck), a JPG / PNG is read now, in the background
+    const an = typeof appState !== 'undefined' ? appState.analysis : null;
+    const des = an && an.design && an.design.r;
+    if (des && Array.isArray(des.fineMarks)) this._addFineMarks(des.fineMarks.map(f => this._pageMark(f, W, H)));
+    else if (!(an && an.renderedFromPdf)) this._fineScan(img, res, dims);
     this._tagFinishingMarks();
 
     if (res.edgeLines.length) {
@@ -1532,6 +1538,47 @@ const AgenticAiInspector = {
         dismissed: false
       });
     }
+  },
+
+  /** A full-size find on a PDF picture (page fractions, PostCheck) → a mark on the page copy (W × H px) */
+  _pageMark(f, W, H) {
+    return Object.assign({}, f.mark, {
+      x: Math.round(f.x * W), y: Math.round(f.y * H), w: Math.max(1, Math.round(f.w * W)), h: Math.max(1, Math.round(f.h * H)),
+      cx: Math.round(f.cx * W), cy: Math.round(f.cy * H), pic: f.pic
+    });
+  },
+
+  /** Full-size finds as Lines & Dots findings, except where the normal scan already marked something */
+  _addFineMarks(marks) {
+    const r = this.scanResult;
+    if (!r || !marks || !marks.length) return 0;
+    const pad = Math.max(4, 0.004 * Math.max(r.width, r.height));
+    const known = this.defects.filter(d => d._mark && !d._mark.fine).map(d => d._mark);
+    let n = 0;
+    marks.forEach(m => {
+      if (known.some(k => m.cx >= k.x - pad && m.cx <= k.x + k.w + pad && m.cy >= k.y - pad && m.cy <= k.y + k.h + pad)) return;
+      const size = m.inches ? ` — ${m.inches.len}" long, ${m.inches.thick}" thick when printed` : '';
+      this.defects.push(this._markDefect(m, `f${++n}`, r.width, r.height,
+        `Found on the full-size ${m.pic ? 'picture ' + m.pic : 'artwork'} (the size is in its own pixels${size}), too small to show on a scaled copy; its colour is not used anywhere else in the design.`));
+    });
+    return n;
+  },
+
+  /** JPG / PNG: the full-size pass in the background; its finds join the Lines & Dots check when it is done */
+  async _fineScan(img, res, dims) {
+    if (typeof FineMarks === 'undefined' || !img || !(img.naturalWidth > 0)) return;
+    const src = this._lastScannedSrc, W = img.naturalWidth, H = img.naturalHeight;
+    const ow = dims && dims.widthIn, oh = dims && dims.heightIn;
+    // pixels per printed inch: the artwork fitted on the order, either way round
+    const pxPerIn = ow > 0 && oh > 0 ? Math.max(Math.min(W / ow, H / oh), Math.min(W / oh, H / ow)) : 0;
+    const current = () => this._lastScannedSrc === src && this.scanResult === res;
+    let r = null;
+    try { r = await FineMarks.scan(img, { pxPerIn, alive: current }); } catch (e) { console.warn('Full-size mark check:', e); }
+    if (!r || !current() || !this._addFineMarks(r.marks)) return;
+    this._tagFinishingMarks();
+    this.renderOverlay();
+    this.updateControlsUI();
+    this.syncPrecheckReport();
   },
 
   /**
@@ -1656,6 +1703,8 @@ const AgenticAiInspector = {
     if (!boxes.length) return;
     this.defects = this.defects.filter(d => {
       if (d.type !== 'stray_dot' && d.type !== 'stray_line') return true;
+      // a full-size find is in a colour the design does not use: not a letter part, even inside a word's box
+      if (d._mark && d._mark.fine) return true;
       const x0 = d.xPercent, y0 = d.yPercent;
       const x1 = x0 + d.metrics.sizePx[0] / r.width * 100, y1 = y0 + d.metrics.sizePx[1] / r.height * 100;
       return !boxes.some(b => x0 >= b.x0 && x1 <= b.x1 && y0 >= b.y0 && y1 <= b.y1);
