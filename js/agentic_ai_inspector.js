@@ -1557,9 +1557,11 @@ const AgenticAiInspector = {
     let n = 0;
     marks.forEach(m => {
       if (known.some(k => m.cx >= k.x - pad && m.cx <= k.x + k.w + pad && m.cy >= k.y - pad && m.cy <= k.y + k.h + pad)) return;
-      const size = m.inches ? ` — ${m.inches.len}" long, ${m.inches.thick}" thick when printed` : '';
+      const size = m.inches ? ` — ${m.inches.len}" ${m.kind === 'line' ? `long, ${m.inches.thick}" thick` : 'across'} when printed` : '';
       this.defects.push(this._markDefect(m, `f${++n}`, r.width, r.height,
-        `Found on the full-size ${m.pic ? 'picture ' + m.pic : 'artwork'} (the size is in its own pixels${size}), too small to show on a scaled copy; its colour is not used anywhere else in the design.`));
+        `Found on the full-size ${m.pic ? 'picture ' + m.pic : 'artwork'} (the size is in its own pixels${size}), too small to show on a scaled copy; `
+        + (m.speck ? 'it sits alone inside a solid area (a letter, a shape or a plain background) — a font or a flat fill never has a speck.'
+          : 'its colour is not used anywhere else in the design.')));
     });
     return n;
   },
