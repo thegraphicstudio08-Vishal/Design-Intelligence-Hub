@@ -20,6 +20,7 @@ const SopRules = {
     small300: 'Production print files: hand flags 6x4 in and business cards printed at 300 ppi',
     hem: 'Production print files: hemmed / stitched / welded edges stated in the file name = order size + 1.25" each side (grommets alone add no hem)',
     polePocket: 'Production print file US2382836 (Top Pole Pocket): height + 5.25", width unchanged',
+    polePocketDS: 'SOP 1_Banners slides 10, 18, 25 · double-sided print file: 4" pole pocket band on each pocket side, stitch 3" in',
     resolutionChart: 'SOP Banner (ISO 2026) slide 2 + PR-DPO-03 Rev 15 · resolution chart: up to 12" 600 ppi · 12–24" 300 · 24–120" 125 · over 120" 72',
     vendorGiant: 'PR-DPO-03 Rev 15 · Giant Media vendor files at 100 ppi',
     bannerSafe: 'SOP Banner (ISO 2026) slide 6 · safe area 1" inside the visible (finished) edge',
@@ -32,6 +33,40 @@ const SopRules = {
     mockup: 'SOP 1_Banners · 5) Mockup guideline (orientation change after customer approval)',
     colour: 'SOP PS Settings · CMYK 8-bit, Working CMYK U.S. Web Coated (SWOP) v2, square pixels',
     format: 'SOP · final print file saved as .PDF (die-cut artwork as .AI)'
+  },
+
+  // ── Order units ────────────────────────────────────────────────────────
+  // Every check works in inches; sizes are SHOWN as the order states them — mm / cm / m orders (UK, AU, NZ) in
+  // their own unit with the inches beside it ("300 × 60 cm (118.11" × 23.62")"), feet and inch orders as before
+  UNIT_IN: { in: 1, ft: 12, cm: 1 / 2.54, mm: 1 / 25.4, m: 100 / 2.54 },   // inches in one unit
+
+  /** The order's unit: the dims' own, else the order form's */
+  orderUnit(dims) {
+    const u = (dims && dims.unit) || (typeof appState !== 'undefined' && appState.userDims && appState.userDims.unit) || 'in';
+    return this.UNIT_IN[u] ? u : 'in';
+  },
+
+  isMetric(unit) { return unit === 'mm' || unit === 'cm' || unit === 'm'; },
+
+  /** A length in inches in that unit, rounded as written on orders: 118.11 → 300 (cm), 4.33 → 110 (mm), 0.037 → 0.9 (mm) */
+  toUnit(inches, unit) {
+    const v = inches / (this.UNIT_IN[unit] || 1);
+    return +v.toFixed(unit === 'mm' ? (Math.abs(v) < 10 ? 1 : 0) : unit === 'cm' ? (Math.abs(v) < 1 ? 2 : 1) : 2);
+  },
+
+  /** A length for labels: '300 cm (118.11")' / '3.2 mm (0.125")' on a metric order, '118.11"' otherwise */
+  lenText(inches, dims) {
+    const u = this.orderUnit(dims), inch = `${+(+inches).toFixed(Math.abs(inches) < 1 ? 3 : 2)}"`;
+    return this.isMetric(u) ? `${this.toUnit(inches, u)} ${u} (${inch})` : inch;
+  },
+
+  /** A size for labels: '300 × 60 cm (118.11" × 23.62")' on a metric order ('300 × 60 cm' when short, for buttons),
+   *  '118.11" × 23.62"' otherwise */
+  sizeText(wIn, hIn, dims, short) {
+    const u = this.orderUnit(dims), f = v => +(+v).toFixed(2), inch = `${f(wIn)}" × ${f(hIn)}"`;
+    if (!this.isMetric(u)) return inch;
+    const metric = `${this.toUnit(wIn, u)} × ${this.toUnit(hIn, u)} ${u}`;
+    return short ? metric : `${metric} (${inch})`;
   },
 
   _text(spec, parsed) {
@@ -95,7 +130,9 @@ const SopRules = {
   // up to 4.00 ft → 2 · 4.01–8.99 → 3 · 9.00–11.99 → 4 · … · 27.00–29.99 → 10
   GROMMET_TABLE: [[4.00, 2], [8.99, 3], [11.99, 4], [14.99, 5], [17.99, 6], [20.99, 7], [23.99, 8], [26.99, 9], [29.99, 10]],
   BANNER_SAFE_IN: 1,        // SOP Banner (ISO 2026) slide 6: safe area 1" inside the visible edge
-  POCKET_IN: 5.25,          // pole pocket allowance per side (production print file US2382836)
+  POCKET_IN: 5.25,          // pole pocket allowance per side, single-sided (production print file US2382836)
+  POCKET_DS_IN: 4,          // double-sided banner: 4" pole pocket band per pocket side (SOP 1_Banners slides 10, 18, 25)
+  POCKET_STITCH_IN: 3,      // double-sided pole pocket stitch, 3" in from the finished edge (same slides)
   HEM_IN: 1.25,             // hem allowance per side, only when the file name states hemmed / stitched / welded edges
   GROMMET_INSET_IN: 1,      // grommet centre 1" inside the finished edge
   // SOP 1_Banners slide 7: pole diameter / pole in inch → material to leave (inches)
@@ -215,9 +252,11 @@ const SopRules = {
     const name = ((parsed && parsed.fname) || '').replace(/\.[a-z0-9]+$/i, '');
     const norm = t => ' ' + String(t || '').replace(/[_\-()]+/g, ' ').replace(/\s+/g, ' ').toLowerCase() + ' ';
     const fromName = name ? this._readFinishing(norm(name)) : null;
-    if (fromName && fromName.found) return Object.assign(fromName, { source: 'filename' });
+    // double-sided banners get their own pole pocket size (4", SOP slides 10, 18, 25)
+    const doubleSided = !!(parsed && parsed.isDoubleSided) || / double sided | front and back /.test(norm(name));
+    if (fromName && fromName.found) return Object.assign(fromName, { source: 'filename', doubleSided });
     const fromForm = this._readFinishing(norm(parsed && parsed.finishing));
-    return Object.assign(fromForm, { source: fromForm.found ? 'form' : 'none' });
+    return Object.assign(fromForm, { source: fromForm.found ? 'form' : 'none', doubleSided });
   },
 
   _readFinishing(t) {
@@ -261,7 +300,8 @@ const SopRules = {
 
   /**
    * Where the finishing goes on a banner of the ordered size. Inches; origin = top-left corner of the
-   * FINISHED size. Pole pocket bands (+5.25" on each pocket side), hem bands (+1.25" on the other sides,
+   * FINISHED size. Pole pocket bands (+5.25" on each pocket side, +4" on a double-sided banner with the stitch 3"
+   * in), hem bands (+1.25" on the other sides,
    * only when the file name states hemmed / stitched / welded edges — grommets alone add no hem), grommet
    * centres 1" inside the finished edge — per-side counts from the SOP grommet table, evenly spaced,
    * corners included — and the canvas.
@@ -269,7 +309,7 @@ const SopRules = {
   bannerLayout(dims, fin) {
     const W = dims.widthIn, H = dims.heightIn;
     const pocketSides = (fin.pockets && fin.pockets.sides) || [];
-    const pocketMat = this.pocketMaterial(fin.pockets);             // custom size from the name → SOP slide 7 value
+    const pocketMat = this.pocketMaterial(fin.pockets, fin.doubleSided);   // custom size from the name → SOP slide 7 value
     const hemOn = !!fin.hem;
     const allow = {};
     ['top', 'bottom', 'left', 'right'].forEach(s => { allow[s] = pocketSides.includes(s) ? pocketMat.inches : hemOn ? this.HEM_IN : 0; });
@@ -312,11 +352,17 @@ const SopRules = {
     };
   },
 
-  /** Material to leave for a custom pole pocket size given in the file name (SOP slide 7), else the standard 5.25" */
-  pocketMaterial(pockets) {
-    if (!pockets || pockets.sizeIn == null) return { inches: this.POCKET_IN, custom: false };
+  /**
+   * Material to leave for a custom pole pocket size given in the file name (SOP slide 7), else the standard: 4" band
+   * on a double-sided banner (stitch 3" in, SOP slides 10, 18, 25), 5.25" single-sided (print file US2382836)
+   */
+  pocketMaterial(pockets, doubleSided) {
+    const std = doubleSided
+      ? { inches: this.POCKET_DS_IN, custom: false, doubleSided: true, stitchIn: this.POCKET_STITCH_IN }
+      : { inches: this.POCKET_IN, custom: false };
+    if (!pockets || pockets.sizeIn == null) return std;
     const row = this.POCKET_SIZE_TABLE.find(r => r[1] === pockets.sizeIn) || this.POCKET_SIZE_TABLE.find(r => r[0] === pockets.sizeIn);
-    return row ? { inches: row[2], custom: true, size: pockets.sizeIn } : { inches: this.POCKET_IN, custom: true, size: pockets.sizeIn, unmatched: true };
+    return row ? { inches: row[2], custom: true, size: pockets.sizeIn } : Object.assign({}, std, { custom: true, size: pockets.sizeIn, unmatched: true });
   },
 
   /** One-line description of the finishing for labels and the report */
@@ -348,7 +394,7 @@ const SopRules = {
     return `
       <div class="sop-section" style="margin-top:14px;">
         <div class="sop-section-title">Banner finishing — grommets, pole pockets, hems</div>
-        <div style="font-size:11.5px; color:#64748b; margin-bottom:10px;">Read from the production file name and drawn on the canvas. Sources: ${this.SOURCES.grommets}; ${this.SOURCES.hangingOptions}; ${this.SOURCES.polePocket}; ${this.SOURCES.hem}.</div>
+        <div style="font-size:11.5px; color:#64748b; margin-bottom:10px;">Read from the production file name and drawn on the canvas. Sources: ${this.SOURCES.grommets}; ${this.SOURCES.hangingOptions}; ${this.SOURCES.polePocket}; ${this.SOURCES.polePocketDS}; ${this.SOURCES.hem}.</div>
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px; font-size:12px;">
           <div>
             <div style="font-weight:800; margin-bottom:6px;">Standard grommets placement</div>
@@ -361,7 +407,8 @@ const SopRules = {
           <div>
             <div style="font-weight:800; margin-bottom:6px;">Pole pockets &amp; hems (production canvas)</div>
             <ul style="margin:0; padding-left:18px; line-height:1.6; color:#334155;">
-              <li>Pole pocket: <strong>+${this.POCKET_IN}"</strong> on each pocket side (top · top &amp; bottom · left &amp; right), no grommets on that side</li>
+              <li>Pole pocket, single-sided: <strong>+${this.POCKET_IN}"</strong> on each pocket side (top · top &amp; bottom · left &amp; right), no grommets on that side</li>
+              <li>Pole pocket, double-sided: <strong>+${this.POCKET_DS_IN}"</strong> band on each pocket side, stitch ${this.POCKET_STITCH_IN}" in from the trim (front and back files)</li>
               <li>Hemmed / stitched / welded edges stated in the file name: <strong>+${this.HEM_IN}"</strong> hem on each other side</li>
               <li>Grommets without a hem in the file name, no grommet, adhesive tabs: no hem allowance (order size on those sides)</li>
               <li>Safe area ${this.BANNER_SAFE_IN}" inside the finished (visible) edge</li>
@@ -393,7 +440,7 @@ const SopRules = {
       if (fin.found) {
         const lay = this.bannerLayout({ widthIn: w, heightIn: h }, fin);
         const a = lay.allow, parts = [];
-        if (lay.pocketSides.length) parts.push(`pole pocket +${lay.pocketMaterial.inches}" ${lay.pocketSides.join(' & ')}`);
+        if (lay.pocketSides.length) parts.push(`pole pocket +${lay.pocketMaterial.inches}" ${lay.pocketSides.join(' & ')}${lay.pocketMaterial.doubleSided ? ' (double-sided)' : ''}`);
         const hemSides = ['top', 'bottom', 'left', 'right'].filter(s => !lay.pocketSides.includes(s) && a[s] === this.HEM_IN);
         if (hemSides.length) parts.push(`+${this.HEM_IN}" hem ${hemSides.length === 4 ? 'each side' : hemSides.join(' & ')}`);
         if (!parts.length) parts.push('no allowance (order size)');
@@ -401,7 +448,8 @@ const SopRules = {
         return {
           wIn: lay.canvas.wIn, hIn: lay.canvas.hIn, confirmed: !unsure,
           note: unsure ? 'Pole pocket side not stated in the file name — confirm top / top & bottom / left & right' : parts.join(', '),
-          source: [lay.pocketSides.length ? this.SOURCES.polePocket : '', hemSides.length ? this.SOURCES.hem : '', this.SOURCES.hangingOptions].filter(Boolean).join(' · '),
+          source: [lay.pocketSides.length ? (lay.pocketMaterial.doubleSided ? this.SOURCES.polePocketDS : this.SOURCES.polePocket) : '',
+            hemSides.length ? this.SOURCES.hem : '', this.SOURCES.hangingOptions].filter(Boolean).join(' · '),
           finishing: fin, layout: lay
         };
       }

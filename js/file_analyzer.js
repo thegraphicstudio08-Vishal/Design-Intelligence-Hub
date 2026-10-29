@@ -669,6 +669,56 @@ const FileAnalyzer = {
     `);
   },
 
+  // Units a production file name gives sizes in: [words, unit kept for the order, inches in one]
+  SIZE_UNITS: [
+    [/^(?:mm|millimet(?:er|re)s?)$/i, 'mm', 1 / 25.4],
+    [/^(?:cm|cms|centimet(?:er|re)s?)$/i, 'cm', 1 / 2.54],
+    [/^(?:m|mt|mtr|mtrs|met(?:er|re)s?)$/i, 'm', 100 / 2.54],
+    [/^(?:ft|feet|foot)$/i, 'ft', 12],
+    [/^(?:yd|yds|yards?)$/i, 'yd', 36],
+    [/^(?:in|inch|inches)$/i, 'in', 1]
+  ],
+  SIZE_UNIT_RE: "mm|millimet(?:er|re)s?|cms?|centimet(?:er|re)s?|mtrs?|mt|met(?:er|re)s?|m|ft|feet|foot|yds?|yards?|inch(?:es)?|in",
+
+  /**
+   * The order size in a file name, in the unit the name gives it — every scale BannerBuzz uses:
+   *  "2_x_4_(FT)", "2_Ft_x_5.33_Ft_(FT)", "36_x_136_(Inch)", "110_mm_x_140_mm_(MM)", "300_x_60_(CM)",
+   *  "12_x_0.60_(MT)", also "(Feet)", "(Inches)", "(M)", "(Metres)", "(YD)" and units on the numbers ("300cm_x_60cm").
+   * Returns { rawW, rawH, unit, widthIn, heightIn, rawDim } — raw sizes in the order's unit (yards as feet: the order
+   * form has no yards), inches for the checks — or null.
+   */
+  sizeFromName(clean, orderNum) {
+    const U = this.SIZE_UNIT_RE, N = '(\\d+(?:\\.\\d+)?)', X = "[_\\s]*(?:x|×)[_\\s]*";
+    const unitOf = t => { const u = t && this.SIZE_UNITS.find(([re]) => re.test(t)); return u ? { key: u[1], inches: u[2] } : null; };
+    let m = null, unit = null;
+    // 1. a size followed by its unit in brackets: the order size. The last one counts — a product name may carry
+    //    another size before it ("10_ft_x_8_ft_Step_and_Repeat_…_Graphic_10_Ft_x_8_Ft_(FT)")
+    const reBr = new RegExp(`${N}[_\\s]*(?:'|${U})?${X}${N}[_\\s]*(?:'|${U})?[_\\s]*\\((${U})\\)(?=[_\\s.]|$)`, 'gi');
+    for (const x of clean.matchAll(reBr)) { const u = unitOf(x[3]); if (u) { m = x; unit = u; } }
+    // 2. the unit written on both numbers: "300cm_x_60cm", "300_cm_x_60_cm", "4 ft x 2 ft", "300 mm by 600 mm"
+    if (!m) {
+      const x = clean.match(new RegExp(`${N}[_\\s]*(${U})[_\\s]*(?:x|×|by)[_\\s]*${N}[_\\s]*(${U})(?![a-z])`, 'i'));
+      const u1 = x && unitOf(x[2]), u2 = x && unitOf(x[4]);
+      if (u1 && u2 && u1.key === u2.key) { m = [x[0], x[1], x[3]]; unit = u1; }
+    }
+    // 3. a bare "W_x_H" (inches) only in a real production name (with an order number): a stray "3x5" in a
+    //    customer's filename must never become the order size
+    if (!m && orderNum) {
+      const x = clean.match(/(\d+(?:\.\d+)?)\s*(?:_x_)\s*(\d+(?:\.\d+)?)/i);
+      if (x) { m = x; unit = unitOf('in'); }
+    }
+    if (!m || !unit) return null;
+    const w = parseFloat(m[1]), h = parseFloat(m[2]);
+    if (!(w > 0 && h > 0)) return null;
+    const asFt = unit.key === 'yd' ? 3 : 1;                     // yards → feet
+    const inch = v => unit.key === 'in' ? v : +(v * unit.inches).toFixed(2);   // inch sizes exactly as written
+    return {
+      rawW: +(w * asFt).toFixed(3), rawH: +(h * asFt).toFixed(3), unit: unit.key === 'yd' ? 'ft' : unit.key,
+      widthIn: inch(w), heightIn: inch(h),
+      rawDim: String(m[0]).replace(/^[_\s]+/, '')
+    };
+  },
+
   /**
    * Parse order, product, dimensions, and finishing metadata from real BannerBuzz production file names
    * Sourced from EXAMPLE OF FILE NAME THAT WE USE FOR PRE CHECK
@@ -704,7 +754,7 @@ const FileAnalyzer = {
     // Designer code is the last "(XX)" token that is not a unit, e.g. (PO), (SS), (ES), (4E)
     const designerCode = [...clean.matchAll(/_\(([A-Z0-9]{1,3})\)(?=_|\s|$)/g)]
       .map(m => m[1])
-      .filter(c => !/^(FT|MM|CM|IN)$/i.test(c))
+      .filter(c => !/^(FT|MM|CM|IN|MT|MTR|YD)$/i.test(c))
       .pop() || null;
     const fileRole = /print_file/i.test(clean) ? 'Print File'
       : /cropshot|crop_shot|_cop\b|cop$/i.test(clean) ? 'Crop Shot Proof'
@@ -712,84 +762,23 @@ const FileAnalyzer = {
       : /mockup/i.test(clean) ? 'Mockup'
       : 'Artwork';
 
-    // 2. Extract dimensions: (FT), (MM), (Inch)
-    // No size in the filename → dimensions stay null so the designer's entered order size is never overwritten.
+    // 2. Size and its unit, exactly as the name states it (sizeFromName). No size in the filename → dimensions stay
+    // null so the designer's entered order size is never overwritten.
     let rawW = null, rawH = null, widthIn = null, heightIn = null, rawDim = '', detectedUnit = 'in';
+    const size = this.sizeFromName(clean, orderNum);
+    if (size) ({ rawW, rawH, widthIn, heightIn, rawDim, unit: detectedUnit } = size);
 
-    // (FT)
-    const ftMatch = clean.match(/(\d+(?:\.\d+)?)'?\s*(?:_Ft)?_x_(\d+(?:\.\d+)?)'?\s*(?:_Ft)?_\(FT\)/i) ||
-                    clean.match(/(\d+(?:\.\d+)?)\s*(?:ft|feet)\s*(?:x|by)\s*(\d+(?:\.\d+)?)\s*(?:ft|feet)/i);
-    if (ftMatch) {
-      rawW = parseFloat(ftMatch[1]);
-      rawH = parseFloat(ftMatch[2]);
-      widthIn = +(rawW * 12).toFixed(2);
-      heightIn = +(rawH * 12).toFixed(2);
-      rawDim = `${rawW}_x_${rawH}_(FT)`;
-      detectedUnit = 'ft';
-    }
-
-    // (MM)
-    if (!ftMatch) {
-      const mmMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:_mm)?_x_(\d+(?:\.\d+)?)\s*(?:_mm)?_\(MM\)/i) ||
-                      clean.match(/(\d+(?:\.\d+)?)\s*mm\s*(?:x|by)\s*(\d+(?:\.\d+)?)\s*mm/i);
-      if (mmMatch) {
-        rawW = parseFloat(mmMatch[1]);
-        rawH = parseFloat(mmMatch[2]);
-        widthIn = +(rawW / 25.4).toFixed(2);
-        heightIn = +(rawH / 25.4).toFixed(2);
-        rawDim = `${rawW}_mm_x_${rawH}_mm_(MM)`;
-        detectedUnit = 'mm';
-      }
-    }
-
-    // (CM)  e.g. "Teardrop_Flags_-_Graphic_61_cm_x_152_cm_(CM)"
-    const cmMatch = !ftMatch && clean.match(/(\d+(?:\.\d+)?)\s*(?:_cm)?_x_(\d+(?:\.\d+)?)\s*(?:_cm)?_\(CM\)/i);
-    if (cmMatch) {
-      rawW = parseFloat(cmMatch[1]);
-      rawH = parseFloat(cmMatch[2]);
-      widthIn = +(rawW / 2.54).toFixed(2);
-      heightIn = +(rawH / 2.54).toFixed(2);
-      rawDim = `${rawW}_cm_x_${rawH}_cm_(CM)`;
-      detectedUnit = 'cm';
-    }
-
-    // (MT) metres, e.g. "Personalised_Flags_8_x_2.3_(MT)" — shown in CM (the size fields have no metre unit)
-    const mtMatch = !ftMatch && !cmMatch && clean.match(/(\d+(?:\.\d+)?)\s*(?:_m|_mt)?_x_(\d+(?:\.\d+)?)\s*(?:_m|_mt)?_\(MT\)/i);
-    if (mtMatch) {
-      rawW = +(parseFloat(mtMatch[1]) * 100).toFixed(1);
-      rawH = +(parseFloat(mtMatch[2]) * 100).toFixed(1);
-      widthIn = +(rawW / 2.54).toFixed(2);
-      heightIn = +(rawH / 2.54).toFixed(2);
-      rawDim = `${mtMatch[1]}_x_${mtMatch[2]}_(MT)`;
-      detectedUnit = 'cm';
-    }
-
-    // (Inch)
-    if (!ftMatch && !cmMatch && !mtMatch && !clean.match(/\(MM\)/i)) {
-      const inMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:_Inch)?_x_(\d+(?:\.\d+)?)\s*(?:_Inch)?_\(Inch\)/i) ||
-                      // Loose "W_x_H" only for real production names (with an order number):
-                      // a stray "3x5" in a customer's filename must never become the order size.
-                      (orderNum && clean.match(/(\d+(?:\.\d+)?)\s*(?:_x_)\s*(\d+(?:\.\d+)?)/i));
-      if (inMatch) {
-        rawW = parseFloat(inMatch[1]);
-        rawH = parseFloat(inMatch[2]);
-        widthIn = rawW;
-        heightIn = rawH;
-        rawDim = `${rawW}_x_${rawH}_(Inch)`;
-        detectedUnit = 'in';
-      }
-    }
-
-    // 3. Product Name extraction:
+    // 3. Product Name extraction (the words before the size):
     let rawProdName = null;
-    const prodQtyMatch = clean.match(/_qty_(.*?)(?=_\d+(?:\.\d+)?(?:_Ft|_mm|_Inch|_cm)?_x_)/i);
+    const SIZE_AHEAD = `(?=_\\d+(?:\\.\\d+)?[_\\s]*(?:${this.SIZE_UNIT_RE})?[_\\s]*(?:x|×)[_\\s]*\\d)`;
+    const prodQtyMatch = clean.match(new RegExp('_qty_(.*?)' + SIZE_AHEAD, 'i'));
     if (prodQtyMatch) {
       rawProdName = prodQtyMatch[1].replace(/^\d+_piece_/i, '');
     }
 
     if (!rawProdName && orderNum) {
       const orderEscaped = orderNum.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const orderPrefixMatch = clean.match(new RegExp('^' + orderEscaped + '_(.*?)(?=_[0-9]+(?:\\.[0-9]+)?(?:_Ft|_mm|_Inch|_cm)?_x_)', 'i'));
+      const orderPrefixMatch = clean.match(new RegExp('^' + orderEscaped + '_(.*?)' + SIZE_AHEAD, 'i'));
       if (orderPrefixMatch) {
         rawProdName = orderPrefixMatch[1].replace(/^\d+_piece_/i, '').replace(/^_qty_/i, '');
       }

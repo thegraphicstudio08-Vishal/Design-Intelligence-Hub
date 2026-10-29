@@ -65,6 +65,7 @@ const ArtworkTextCheck = {
   _loading: null,
   _worker: null,
   _psm: null,
+  _seq: 0,                 // the reading in progress: a newer run() stops an older one at its next step
   _dicts: [],
   status: 'idle',          // idle | loading | reading | done | unavailable
   statusText: '',
@@ -267,8 +268,16 @@ const ArtworkTextCheck = {
   },
 
   // ── reading ───────────────────────────────────────────────────────────
-  async _readOnce(source, cfg, angle) {
+  /** A new file was uploaded while this one was still read: stop — its steps share the reader (and its reading
+   *  mode) with the new file's reading, which then read the new artwork in the wrong mode */
+  _alive(seq) {
+    if (seq != null && seq !== this._seq) throw new Error('superseded by a newer reading');
+  },
+
+  async _readOnce(source, cfg, angle, seq) {
+    this._alive(seq);
     if (this._psm !== cfg.psm) { await this._worker.setParameters({ tessedit_pageseg_mode: cfg.psm }); this._psm = cfg.psm; }
+    this._alive(seq);
     const view = this._canvasFrom(source, cfg, angle);
     const { data } = await this._worker.recognize(view.canvas);
     let words = data.words;
@@ -281,7 +290,7 @@ const ArtworkTextCheck = {
   },
 
   /** Combine several readings; where they overlap keep the better word (a real word beats a misread) */
-  async _read(source, angle, cfgs) {
+  async _read(source, angle, cfgs, seq) {
     const iou = (p, q) => {
       const ix = Math.max(0, Math.min(p.x + p.w, q.x + q.w) - Math.max(p.x, q.x));
       const iy = Math.max(0, Math.min(p.y + p.h, q.y + q.h) - Math.max(p.y, q.y));
@@ -291,7 +300,7 @@ const ArtworkTextCheck = {
     const list = [];
     const all = [];
     for (const cfg of cfgs) {
-      const words = await this._readOnce(source, cfg, angle);
+      const words = await this._readOnce(source, cfg, angle, seq);
       all.push(words);
       this._mergeInto(list, words);
     }
@@ -415,13 +424,15 @@ const ArtworkTextCheck = {
   },
 
   /** Read each text line on its own: crop, scale to ~64 px tall, black & white, single-line reading */
-  async _readLines(source, angle, lineH = 64) {
+  async _readLines(source, angle, lineH = 64, seq) {
     const view = this._canvasFrom(source, { side: 2000, pad: 0 }, angle);
     const lines = this._findTextLines(view.canvas);
     const out = [];
     if (!lines.length) return out;
+    this._alive(seq);
     if (this._psm !== '7') { await this._worker.setParameters({ tessedit_pageseg_mode: '7' }); this._psm = '7'; }
     for (const ln of lines) {
+      this._alive(seq);
       const h = ln.y1 - ln.y0, pad = Math.round(h * 0.35);
       const sx = Math.max(0, Math.round(ln.x0 - pad)), sy = Math.max(0, Math.round(ln.y0 - pad));
       const sw = Math.min(view.canvas.width, Math.round(ln.x1 + pad)) - sx, sh = Math.min(view.canvas.height, Math.round(ln.y1 + pad)) - sy;
@@ -463,30 +474,34 @@ const ArtworkTextCheck = {
       return { available: false };
     }
 
+    // this reading replaces any still running (an earlier file): the reader's mode is set again for this one
+    const seq = ++this._seq;
+    this._psm = null;
     say('reading', 'Reading the text on the artwork…');
-    const upright = await this._read(source, 0, this.READINGS);
+    const upright = await this._read(source, 0, this.READINGS, seq);
     let reading = upright;
     const tried = { 0: upright.good };
     let angle = 0;
     // Few real words upright → read the artwork turned (sideways / upside-down content)
     if (upright.good < 4) {
       say('reading', 'Checking which way the text runs…');
-      let best = { angle: 0, good: (await this._read(source, 0, this.ORIENT_READINGS)).good };
+      let best = { angle: 0, good: (await this._read(source, 0, this.ORIENT_READINGS, seq)).good };
       tried[0] = best.good;
       for (const a of [90, 270, 180]) {
-        const r = await this._read(source, a, this.ORIENT_READINGS);
+        const r = await this._read(source, a, this.ORIENT_READINGS, seq);
         tried[a] = r.good;
         if (r.good > best.good) best = r;
       }
       const runnerUp = Math.max(...Object.entries(tried).filter(([k]) => +k !== best.angle).map(([, v]) => v));
       if (best.angle !== 0 && best.good >= 4 && best.good >= 2 * (Math.max(upright.good, tried[0]) + 1) && best.good >= runnerUp + 2) {
         angle = best.angle;
-        reading = await this._read(source, angle, this.READINGS);   // full reading in the right direction
+        reading = await this._read(source, angle, this.READINGS, seq);   // full reading in the right direction
       }
     }
     say('reading', 'Reading each line of text…');
-    const lineSmall = await this._readLines(source, angle, 56);
-    const lineLarge = await this._readLines(source, angle, 100);
+    const lineSmall = await this._readLines(source, angle, 56, seq);
+    const lineLarge = await this._readLines(source, angle, 100, seq);
+    this._alive(seq);
     this._mergeInto(reading.words, lineSmall);
     this._mergeInto(reading.words, lineLarge);
     const allReadings = (reading.all || []).concat([lineSmall, lineLarge]);

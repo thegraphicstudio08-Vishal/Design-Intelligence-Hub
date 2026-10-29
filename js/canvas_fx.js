@@ -37,13 +37,13 @@ const CanvasFx = {
     let html = '';
     // blank space: the trim minus the artwork placed whole — bands left / right or above / below
     const b = report.blankSpace;
-    const sizeCheck = report.checks && report.checks.find(c => c.id === 'sizeTransform');
+    const sizeCheck = report.checks && report.checks.find(c => c.id === 'sizeTransform' || c.id === 'pc-size');
     if (b && art && !ci.artRot && !(sizeCheck && sizeCheck.isOverridden)) {
       const bands = b.axis === 'w'
         ? [{ x: 0, w: art.x - trim.x, s: 'left' }, { x: art.x + art.w - trim.x, w: trim.x + trim.w - art.x - art.w, s: 'right' }].map(r => Object.assign(r, { y: 0, h: trim.h }))
         : [{ y: 0, h: art.y - trim.y, s: 'top' }, { y: art.y + art.h - trim.y, h: trim.y + trim.h - art.y - art.h, s: 'bottom' }].map(r => Object.assign(r, { x: 0, w: trim.w }));
       html += bands.filter(r => r.w > 2 && r.h > 2).map(r =>
-        `<div class="fx-blank fx-${r.s}" style="left:${pct(r.x, trim.w)};top:${pct(r.y, trim.h)};width:${pct(r.w, trim.w)};height:${pct(r.h, trim.h)}"><span>Blank ${b.eachIn}"</span></div>`).join('');
+        `<div class="fx-blank fx-${r.s}" style="left:${pct(r.x, trim.w)};top:${pct(r.y, trim.h)};width:${pct(r.w, trim.w)};height:${pct(r.h, trim.h)}"><span>Blank ${typeof SopRules !== 'undefined' ? SopRules.lenText(b.eachIn) : b.eachIn + '"'}</span></div>`).join('');
     }
     // the safe-zone line (banner templates, where the canvas knows its inset)
     if (ci.safeInset > 0 && (!ci.guides || ci.guides.safeArea !== false)) {

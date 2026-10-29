@@ -886,7 +886,7 @@ const AgenticAiInspector = {
       btn(rot ? `↻ Rotate artwork (now ${rot}°)` : `↻ Rotate artwork ${turn ? howTo : '90°'}`,
         rot ? 'CanvasInspector.rotate90()' : `AgenticAiInspector.previewOrientation('turn', ${turn || 90})`,
         recArt && !rot, "Turn the customer's artwork on the template board as it is"),
-      btn(turned ? `⤾ Artboard back to ${W}" × ${H}"` : `⤾ Rotate artboard to ${H}" × ${W}"`,
+      btn(turned ? `⤾ Artboard back to ${SopRules.sizeText(W, H, null, true)}` : `⤾ Rotate artboard to ${SopRules.sizeText(H, W, null, true)}`,
         `AgenticAiInspector.previewOrientation('order', ${!turned})`,
         recBoard && !turned, 'Turn the template board (artboard); the artwork stays as supplied')
     ];
@@ -905,16 +905,16 @@ const AgenticAiInspector = {
     }
     box.className = `spell-alert orient-alert ${check.status === 'FAIL' ? 'is-fail' : 'is-warn'}`;
     const states = [];
-    if (turned) states.push(`artboard turned to ${H}" × ${W}" (update the admin size before printing)`);
+    if (turned) states.push(`artboard turned to ${SopRules.sizeText(H, W)} (update the admin size before printing)`);
     if (rot) states.push(`artwork turned ${rot}°`);
     const preview = states.length ? `Canvas and proof show: ${states.join(' · ')} — preview only.`
-      : check.scenario === 'otherSize' ? `Proof stays in the ordered orientation (${W}" × ${H}") with the artwork fitted — customer approval required.` : '';
+      : check.scenario === 'otherSize' ? `Proof stays in the ordered orientation (${SopRules.sizeText(W, H)}) with the artwork fitted — customer approval required.` : '';
     box.innerHTML = `
       <div class="spell-alert-head">🔄 <span>Orientation${turn ? ' issue: text is ' + (turn === 180 ? 'upside down' : 'sideways') : check.scenario === 'turned' ? ': artwork is the ordered size turned' : ' mismatch'}</span>
         <button class="spell-alert-close" title="Close" onclick="AgenticAiInspector.closeOrientationAlert()">×</button></div>
       <div class="orient-alert-facts">
         <div><span>Customer artwork</span><strong>${a.orientationArtwork}${artSize ? ' · ' + artSize : ''}</strong></div>
-        <div><span>Ordered size</span><strong>${a.orientationOrder} · ${W}" W × ${H}" H</strong></div>
+        <div><span>Ordered size</span><strong>${a.orientationOrder} · ${SopRules.isMetric(SopRules.orderUnit()) ? SopRules.sizeText(W, H, null, true) + ' (W × H)' : `${W}" W × ${H}" H`}</strong></div>
       </div>
       <div class="spell-alert-note">${check.action || check.detail}</div>
       ${preview ? `<div class="orient-alert-preview">${preview}</div>` : ''}
@@ -970,7 +970,7 @@ const AgenticAiInspector = {
   _renderBlankAlert() {
     const report = (typeof appState !== 'undefined') ? appState.report : null;
     const b = report && report.blankSpace;
-    const check = b && report.checks.find(c => c.id === 'sizeTransform');
+    const check = b && report.checks.find(c => c.id === 'sizeTransform' || c.id === 'pc-size');
     let box = document.getElementById('blank-alert');
     if (!b || (check && check.isOverridden)) { if (box) box.remove(); return; }
     const key = `${(report.analysis && report.analysis.previewDataUrl || '').length}|${b.pct}|${b.orderIn.w}x${b.orderIn.h}`;
@@ -986,28 +986,32 @@ const AgenticAiInspector = {
     box.className = `spell-alert${b.noStretch ? '' : ' is-warn'}`;
     // short first; "Review more" opens the blank space in numbers, a small drawing of the order and what to do
     const lr = b.axis === 'w', side = (lr ? b.artIn.w / b.orderIn.w : b.artIn.h / b.orderIn.h) * 100;
+    // a PDF design page has no single PPI (its pictures are measured one by one): sizes only
+    const ppi = v => b.pdfPage || v == null ? '' : ` · ${v} PPI`;
+    const what = b.pdfPage ? 'The PDF page' : 'The artwork', len = v => SopRules.lenText(v);
     box.innerHTML = `
-      <div class="spell-alert-head">⚠️ <span>Blank space: ${b.pct}% of the ${b.orderIn.w}" × ${b.orderIn.h}" order would print empty</span>
+      <div class="spell-alert-head">⚠️ <span>Blank space: ${b.pct}% of the ${SopRules.sizeText(b.orderIn.w, b.orderIn.h)} order would print empty</span>
         <button class="spell-alert-close" title="Close" onclick="AgenticAiInspector.closeBlankAlert()">×</button></div>
-      <div class="spell-alert-note">The artwork covers only ${b.coverPct}% of the order: ${b.gapIn}" would print empty ${b.sides}.${b.noStretch ? ' Do not stretch it.' : ''}</div>
+      <div class="spell-alert-note">${what} covers only ${b.coverPct}% of the order: ${len(b.gapIn)} would print empty ${b.sides}.${b.noStretch ? ' Do not stretch it.' : ''}</div>
       <div class="alert-more">
-        <div class="am-diagram${lr ? '' : ' am-v'}" title="The order (${b.orderIn.w}" × ${b.orderIn.h}") with the artwork placed whole">
+        <div class="am-diagram${lr ? '' : ' am-v'}" title="The order (${SopRules.sizeText(b.orderIn.w, b.orderIn.h)}) with the artwork placed whole">
           <i style="flex-basis:${((100 - side) / 2).toFixed(1)}%"></i><b style="flex-basis:${side.toFixed(1)}%">Artwork</b><i style="flex-basis:${((100 - side) / 2).toFixed(1)}%"></i>
         </div>
         <dl class="am-facts">
-          <dt>Order size</dt><dd>${b.orderIn.w}" × ${b.orderIn.h}"</dd>
-          <dt>Artwork placed whole</dt><dd>${b.artIn.w}" × ${b.artIn.h}" · ${b.coverPct}% of the size · ${b.ppiWhole} PPI</dd>
-          <dt>Empty</dt><dd><strong>${b.gapIn}" (${b.pct}%)</strong> — ${b.eachIn}" ${lr ? 'left · ' + b.eachIn + '" right' : 'above · ' + b.eachIn + '" below'}</dd>
-          <dt>Stretched to fill</dt><dd>distorted ×${b.stretch} · ${b.ppiStretched} PPI${b.noStretch ? ' — not acceptable' : ''}</dd>
+          <dt>Order size</dt><dd>${SopRules.sizeText(b.orderIn.w, b.orderIn.h)}</dd>
+          ${b.pageIn ? `<dt>PDF page</dt><dd>${SopRules.sizeText(b.pageIn.w, b.pageIn.h)}</dd>` : ''}
+          <dt>${b.pdfPage ? 'Page' : 'Artwork'} placed whole</dt><dd>${SopRules.sizeText(b.artIn.w, b.artIn.h)} · ${b.coverPct}% of the size${ppi(b.ppiWhole)}</dd>
+          <dt>Empty</dt><dd><strong>${len(b.gapIn)} (${b.pct}%)</strong> — ${len(b.eachIn)} ${lr ? 'left · ' + len(b.eachIn) + ' right' : 'above · ' + len(b.eachIn) + ' below'}</dd>
+          <dt>Stretched to fill</dt><dd>distorted ×${b.stretch}${ppi(b.ppiStretched)}${b.noStretch ? ' — not acceptable' : ''}</dd>
           <dt>Filled, not distorted</dt><dd>${b.cropPct}% of the artwork cut off</dd>
         </dl>
         <div class="am-todo"><strong>What to do:</strong> ${b.noStretch
-          ? `extend the background or rearrange the design to fill ${b.orderIn.w}" × ${b.orderIn.h}", or ask the customer for artwork made at that size.`
+          ? `extend the background or rearrange the design to fill ${SopRules.sizeText(b.orderIn.w, b.orderIn.h)}, or ask the customer for artwork made at that size.`
           : `extend the background to fill the size (stretching distorts it ×${b.stretch}).`} Customer approval — Design Review (PR-DPO-03 artwork placement).</div>
       </div>
       <div class="spell-alert-row">
-        <div class="spell-alert-words"><span class="spell-alert-kind">Artwork placed whole</span>
-          <span class="sz-dist">${b.coverPct}% of the size · ${b.ppiWhole} PPI</span></div>
+        <div class="spell-alert-words"><span class="spell-alert-kind">${b.pdfPage ? 'PDF page' : 'Artwork'} placed whole</span>
+          <span class="sz-dist">${b.coverPct}% of the size${ppi(b.ppiWhole)}</span></div>
         <button class="spell-alert-show" onclick="AgenticAiInspector.showBlankSpace()">Show</button>
       </div>`;
     this._compact(box);
@@ -1137,8 +1141,12 @@ const AgenticAiInspector = {
     // opts.early: called right after upload, before any pre-check run — the stored analysis (if any)
     // belongs to the previous file, so the file type comes from the uploaded file's name
     const early = !!(opts && opts.early);
-    const analysis = (typeof appState !== 'undefined' && !early) ? appState.analysis : null;
     const fileName = (typeof appState !== 'undefined' && appState.file && appState.file.name) || '';
+    // a new file is drawn on the canvas before its own pre-check stores its analysis: the stored one is the previous
+    // file's — its picture is not this one, which must not read as "the browser could not display this file" (the
+    // text reader and Lines & Dots were then skipped for the new file)
+    let analysis = (typeof appState !== 'undefined' && !early) ? appState.analysis : null;
+    if (analysis && fileName && analysis.filename && analysis.filename !== fileName) analysis = null;
     // after "Clear" + a new upload the canvas draws the artwork before the pre-check stores its analysis: the
     // uploaded file's name then gives the type
     const ext = ((analysis && analysis.fileExt) || (fileName.includes('.') ? fileName.split('.').pop() : '') || '').toLowerCase();

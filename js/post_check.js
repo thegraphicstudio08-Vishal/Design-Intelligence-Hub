@@ -317,8 +317,12 @@ const PostCheck = {
     r.pics.forEach(q => { q.at = Math.round(q.ppi / scale); });
     const pics = r.pics.filter(q => q.kind !== 'mask' && q.areaIn >= 1);
     const f1 = v => (+v).toFixed(1).replace(/\.0$/, '');
-    const pagePx = `${f1(r.pageIn.w)}" × ${f1(r.pageIn.h)}"`;
-    const order = dims ? `${f1(dims.widthIn)}" × ${f1(dims.heightIn)}"` : '';
+    // sizes as the order states them: a mm / cm / m order in its own unit, the inches beside it
+    const unit = typeof SopRules !== 'undefined' && SopRules.orderUnit ? SopRules.orderUnit(dims) : 'in';
+    const metric = unit !== 'in' && unit !== 'ft' && typeof SopRules !== 'undefined';
+    const sz = (w, h) => metric ? `${SopRules.toUnit(w, unit)} × ${SopRules.toUnit(h, unit)} ${unit} (${f1(w)}" × ${f1(h)}")` : `${f1(w)}" × ${f1(h)}"`;
+    const pagePx = sz(r.pageIn.w, r.pageIn.h);
+    const order = dims ? sz(dims.widthIn, dims.heightIn) : '';
     const checks = [];
     const show = q => `<button type="button" class="cc-show" onclick="PostCheck.showPic(${q.n})">Show</button>`;
     const picName = q => `Picture ${q.n} (${q.w.toLocaleString()} × ${q.h.toLocaleString()} px, placed ${f1(q.inW)}" × ${f1(q.inH)}")`;
@@ -339,7 +343,7 @@ const PostCheck = {
         detail: `The file name does not carry the order size, so the page cannot be compared with the order.${r.userUnit !== 1 ? ` (Page scale /UserUnit ${r.userUnit} applied.)` : ''}`,
         action: 'Enter the order size in Order Details on the left — the checks update at once.' });
     } else {
-      checks.push(this._sizeCheck(r, dims, req && req.canvas, pagePx, order, f1, scale));
+      checks.push(this._sizeCheck(r, dims, req && req.canvas, pagePx, order, f1, scale, sz));
     }
 
     // 4. Picture resolution where it is placed
@@ -463,21 +467,22 @@ const PostCheck = {
   },
 
   /** Page size: the SOP production canvas when the file name states the finishing (banners), otherwise the order size + bleed */
-  _sizeCheck(r, dims, canvas, pagePx, order, f1, scale) {
+  _sizeCheck(r, dims, canvas, pagePx, order, f1, scale, sz) {
+    sz = sz || ((w, h) => `${f1(w)}" × ${f1(h)}"`);
     const W = r.pageIn.w, H = r.pageIn.h, tol = 0.5;
     const turned = (W > H) !== (dims.widthIn > dims.heightIn);
     const [ow, oh] = turned ? [dims.heightIn, dims.widthIn] : [dims.widthIn, dims.heightIn];
     const cv = canvas && canvas.confirmed ? (turned ? { w: canvas.hIn, h: canvas.wIn } : { w: canvas.wIn, h: canvas.hIn }) : null;
     const near = (a, b) => Math.abs(a - b) <= tol;
     const base = { id: 'pc-size', name: 'Page size against the order', icon: '📐',
-      required: cv ? `SOP production canvas ${f1(canvas.wIn)}" × ${f1(canvas.hIn)}" (${canvas.note}) · ±${tol}"`
+      required: cv ? `SOP production canvas ${sz(canvas.wIn, canvas.hIn)} (${canvas.note}) · ±${tol}"`
         : `Order ${order} (+ bleed / template allowance) · ±${tol}"`,
-      found: `Page ${pagePx}${r.userUnit !== 1 ? ` (page scale /UserUnit ${r.userUnit})` : ''} · order ${order}${cv ? ` · canvas ${f1(canvas.wIn)}" × ${f1(canvas.hIn)}"` : ''}` };
+      found: `Page ${pagePx}${r.userUnit !== 1 ? ` (page scale /UserUnit ${r.userUnit})` : ''} · order ${order}${cv ? ` · canvas ${sz(canvas.wIn, canvas.hIn)}` : ''}` };
     const extraW = W - ow, extraH = H - oh;
     if (scale > 1) {
       return Object.assign(base, { status: 'INFO',
         found: base.found + ` · designed at 1:${scale}`,
-        detail: `The page has the order's proportion at 1:${scale} scale (${pagePx} × ${scale} = ${f1(W * scale)}" × ${f1(H * scale)}"). Large prints are sometimes designed at scale; the picture resolution is judged at the full order size.`,
+        detail: `The page has the order's proportion at 1:${scale} scale (${pagePx} × ${scale} = ${sz(W * scale, H * scale)}). Large prints are sometimes designed at scale; the picture resolution is judged at the full order size.`,
         action: `Confirm the print file is enlarged ×${scale} to the order size (or save it at full size).` });
     }
     if (cv && near(W, cv.w) && near(H, cv.h)) {
@@ -488,7 +493,7 @@ const PostCheck = {
     if (near(W, ow) && near(H, oh)) {
       const later = cv && (cv.w - ow > tol || cv.h - oh > tol);
       return Object.assign(base, { status: 'PASS',
-        detail: `The page is the order size.${later ? ` The SOP finishing allowance (${canvas.note}) is added when the print file is made (production canvas ${f1(canvas.wIn)}" × ${f1(canvas.hIn)}").` : ''}`, action: '' });
+        detail: `The page is the order size.${later ? ` The SOP finishing allowance (${canvas.note}) is added when the print file is made (production canvas ${sz(canvas.wIn, canvas.hIn)}).` : ''}`, action: '' });
     }
     // No SOP canvas for this product (template products: stands, flags, table covers…): a larger page is normally the
     // template's bleed / sleeve / stand allowance — the tool cannot confirm it, so it is a look by eye, never Critical
@@ -503,7 +508,7 @@ const PostCheck = {
       return Object.assign(base, { status: 'FAIL',
         error: `The page ${pagePx} is smaller than the order ${order}`,
         detail: 'A page smaller than the order is stretched at print, or prints short.',
-        action: `Make the page the order size${cv ? ` + allowance (${f1(canvas.wIn)}" × ${f1(canvas.hIn)}")` : ''} and save the PDF again.` });
+        action: `Make the page the order size${cv ? ` + allowance (${sz(canvas.wIn, canvas.hIn)})` : ''} and save the PDF again.` });
     }
     // Larger than the SOP canvas on both sides: extra bleed (seen in real UK print files: +1.25" each side) — a look by eye
     if (cv && W >= cv.w - tol && H >= cv.h - tol) {
@@ -513,7 +518,7 @@ const PostCheck = {
         action: `Confirm the extra ${f1((W - cv.w) / 2)}" / ${f1((H - cv.h) / 2)}" per side is bleed the printer expects.` });
     }
     return Object.assign(base, { status: 'FAIL',
-      error: `The page ${pagePx} does not match the order ${order}${cv ? ` or the SOP canvas ${f1(canvas.wIn)}" × ${f1(canvas.hIn)}"` : ''}`,
+      error: `The page ${pagePx} does not match the order ${order}${cv ? ` or the SOP canvas ${sz(canvas.wIn, canvas.hIn)}` : ''}`,
       detail: `Width ${extraW >= 0 ? '+' : ''}${f1(extraW)}", height ${extraH >= 0 ? '+' : ''}${f1(extraH)}" against the order.`,
       action: 'Set the page to the order size (+ the SOP finishing allowance) and save the PDF again.' });
   },
@@ -586,7 +591,7 @@ const PostCheck = {
           <span class="pc-tag">🖼️ ${nPics} picture${nPics === 1 ? '' : 's'}</span>
           <span class="pc-tag">✏️ ${r.paths + r.shadings} vector shape${r.paths + r.shadings === 1 ? '' : 's'}</span>
           <span class="pc-tag">🔤 ${r.texts ? `${r.texts} live text run${r.texts === 1 ? '' : 's'}` : 'No live text'}</span>
-          <span class="pc-tag">📄 ${r.pages} page${r.pages === 1 ? '' : 's'} · ${(+r.pageIn.w).toFixed(2)}" × ${(+r.pageIn.h).toFixed(2)}" · ${r.sizeMB} MB</span>
+          <span class="pc-tag">📄 ${r.pages} page${r.pages === 1 ? '' : 's'} · ${typeof SopRules !== 'undefined' ? SopRules.sizeText(r.pageIn.w, r.pageIn.h) : `${(+r.pageIn.w).toFixed(2)}" × ${(+r.pageIn.h).toFixed(2)}"`} · ${r.sizeMB} MB</span>
         </div>
         ${nPics ? `
         <details class="pc-more" id="pc-more"${issues ? ' open' : ''}>

@@ -114,7 +114,12 @@ const SafeZoneCheck = {
 
   /** "0.25" safe zone" or "template safe area" */
   _zone(g) {
-    return g && g.qnap ? 'template safe area' : g && g.safeIn ? `${this._fmt(g.safeIn)} safe zone` : 'safe zone';
+    return g && g.qnap ? 'template safe area' : g && g.safeIn ? `${this._len(g.safeIn)} safe zone` : 'safe zone';
+  },
+
+  /** A length as the order states its size: "3.2 mm (0.125")" on a mm / cm / m order, else 0.125" */
+  _len(v) {
+    return typeof SopRules !== 'undefined' && SopRules.isMetric && SopRules.isMetric(SopRules.orderUnit()) ? SopRules.lenText(v) : this._fmt(v);
   },
 
   /** The product template measured on: 'production standard template “…”', 'website design template “…”' or 'QNAP … “…”' */
@@ -668,8 +673,8 @@ const SafeZoneCheck = {
   where(it, g) {
     if (g && g.qnap) return it.intoBleed ? `runs into the bleed on the ${it.side} (it will be cut off)` : `crosses the template safe area on the ${it.side}`;
     if (it.dist <= 0.005) return it.kind === 'object' ? `runs off the ${it.side} edge — fine only if it is background / bleed` : `touches the ${it.side} edge (it will be cut)`;
-    const also = (it.sides || []).filter(s => s !== it.side && it.d).map(s => `${this._fmt(Math.max(0, it.d[s]))} from the ${s}`);
-    return `is ${this._fmt(it.dist)} from the ${it.side} edge${also.length ? ` and ${also.join(', ')}` : ''}`;
+    const also = (it.sides || []).filter(s => s !== it.side && it.d).map(s => `${this._len(Math.max(0, it.d[s]))} from the ${s}`);
+    return `is ${this._len(it.dist)} from the ${it.side} edge${also.length ? ` and ${also.join(', ')}` : ''}`;
   },
 
   /** The pre-check card */
@@ -678,9 +683,9 @@ const SafeZoneCheck = {
     const r = this.evaluate(report || {});
     this._last = Object.assign({ key: this._key(report) }, r);
     const spec = (report && report.spec) || {};
-    const safeTxt = r.g && r.g.safeIn ? this._fmt(r.g.safeIn) : (spec.safeArea || '');
+    const safeTxt = r.g && r.g.safeIn ? this._len(r.g.safeIn) : (spec.safeArea || '');
     const zone = r.g ? this._zone(r.g) : `${safeTxt} safe zone`;
-    const onWhat = r.g && r.g.qnap ? `the ${this._tplName(r.g)}` : r.g ? `the ordered size ${this._fmt(r.g.W)} × ${this._fmt(r.g.H)}` : '';
+    const onWhat = r.g && r.g.qnap ? `the ${this._tplName(r.g)}` : r.g ? `the ordered size ${typeof SopRules !== 'undefined' && SopRules.isMetric(SopRules.orderUnit()) ? SopRules.sizeText(r.g.W, r.g.H) : this._fmt(r.g.W) + ' × ' + this._fmt(r.g.H)}` : '';
     base.required = r.g && r.g.qnap ? 'Text, logos and important graphics inside the template safe area (green dashed line)'
       : `Text, logos and important graphics at least ${safeTxt} inside the trim`;
     if (r.state === 'na') {
@@ -820,14 +825,14 @@ const SafeZoneCheck = {
     const zone = this._zone(r.g);
     const kindLabel = { text: 'Text', lettering: 'Lettering', object: 'Graphic' };
     const dist = it => r.g.qnap ? this.where(it, r.g)
-      : it.dist <= 0.005 ? (it.kind === 'object' ? 'runs off the ' : 'touches the ') + it.side + ' edge' : this._fmt(it.dist) + ' from the ' + it.side + ' edge';
+      : it.dist <= 0.005 ? (it.kind === 'object' ? 'runs off the ' : 'touches the ') + it.side + ' edge' : this._len(it.dist) + ' from the ' + it.side + ' edge';
     box.innerHTML = `
       <div class="spell-alert-head">⚠️ <span>${crit ? `${crit} text / logo item${crit > 1 ? 's' : ''} outside the ${zone}${gfx ? ` · ${gfx} graphic${gfx > 1 ? 's' : ''}` : ''}`
         : `${gfx} graphic${gfx > 1 ? 's' : ''} outside the ${zone} — check by eye`}</span>
         <button class="spell-alert-close" title="Close" onclick="SafeZoneCheck.closeAlert()">×</button></div>
       <div class="spell-alert-note">${r.g.qnap
         ? `Measured on the ${this._tplName(r.g, esc)}: important text and logos must stay inside its safe area (green dashed line) — outside it they can be cut off, hemmed, folded under or hidden by the hardware.`
-        : `Important text and logos must stay ${this._fmt(r.g.safeIn)} inside the trim — closer to the edge they can be cut off, hemmed or grommeted.`}${r.textRead ? ''
+        : `Important text and logos must stay ${this._len(r.g.safeIn)} inside the trim — closer to the edge they can be cut off, hemmed or grommeted.`}${r.textRead ? ''
         : ' <strong>The text reader did not run on this file</strong> — lettering was measured from its shapes; check the text by eye.'}</div>
       ${r.items.slice(0, 6).map((it, i) => `
         <div class="spell-alert-row">

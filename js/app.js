@@ -300,20 +300,24 @@ function onUnitChange() {
   let w = parseFloat(wEl.value) || 36;
   let h = parseFloat(hEl.value) || 24;
 
-  // Convert to Inches for storage
-  if (unit === 'ft') {
-    appState.userDims.widthIn = w * 12;
-    appState.userDims.heightIn = h * 12;
-  } else if (unit === 'cm') {
-    appState.userDims.widthIn = w / 2.54;
-    appState.userDims.heightIn = h / 2.54;
-  } else if (unit === 'mm') {
-    appState.userDims.widthIn = w / 25.4;
-    appState.userDims.heightIn = h / 25.4;
-  } else {
-    appState.userDims.widthIn = w;
-    appState.userDims.heightIn = h;
-  }
+  // Convert to Inches for storage; the unit is kept for showing the size as ordered
+  const per = unitInches(unit);
+  appState.userDims.widthIn = w * per;
+  appState.userDims.heightIn = h * per;
+  Object.assign(appState.userDims, { unit, rawW: w, rawH: h });
+}
+
+/** Inches in one of the order form's units (in · ft · cm · mm · m) */
+function unitInches(unit) {
+  return (typeof SopRules !== 'undefined' && SopRules.UNIT_IN[unit]) || ({ ft: 12, cm: 1 / 2.54, mm: 1 / 25.4, m: 100 / 2.54 })[unit] || 1;
+}
+
+/** The order size as the file name states it: "300 × 60 cm" with the inches under it; inch orders as before */
+function orderSizeHtml(parsed) {
+  const inch = `${parsed.widthIn}" × ${parsed.heightIn}"`;
+  const u = parsed.detectedUnit || 'in';
+  if (u === 'in' || parsed.rawW == null) return inch;
+  return `${+parsed.rawW} × ${+parsed.rawH} ${u}<em class="fnb-sub">${inch}</em>`;
 }
 
 /**
@@ -338,11 +342,12 @@ function sopSummaryText(spec, parsed) {
   if (typeof SopRules === 'undefined') {
     return `SOP Requirement: ${spec.resolution} · Safe Area: ${spec.safeArea} · Bleed: ${spec.bleed}`;
   }
-  const dims = parsed?.hasSize ? { widthIn: parsed.widthIn, heightIn: parsed.heightIn } : appState.userDims;
+  const dims = parsed?.hasSize ? { widthIn: parsed.widthIn, heightIn: parsed.heightIn, unit: parsed.detectedUnit } : appState.userDims;
   const req = SopRules.requirements(spec, dims, parsed);
-  const safe = req.safeArea.inches != null ? `${req.safeArea.inches}"${req.safeArea.confirmed ? '' : ' (catalog)'}` : 'per template';
+  const safe = req.safeArea.inches != null ? `${SopRules.lenText(req.safeArea.inches, dims)}${req.safeArea.confirmed ? '' : ' (catalog)'}` : 'per template';
+  const cSize = req.canvas ? SopRules.sizeText(req.canvas.wIn, req.canvas.hIn, dims) : '';
   const canvas = req.canvas
-    ? (req.canvas.confirmed ? `${req.canvas.wIn}" × ${req.canvas.hIn}" (${req.canvas.note})` : `${req.canvas.wIn}" × ${req.canvas.hIn}" + template allowance`)
+    ? (req.canvas.confirmed ? `${cSize} (${req.canvas.note})` : `${cSize} + template allowance`)
     : '—';
   return `SOP: ${req.resolution.target} ppi (min ${req.resolution.min}) · Safe area ${safe} · Print canvas ${canvas}`;
 }
@@ -355,19 +360,16 @@ function onDimensionInput() {
   const before = [appState.userDims.widthIn, appState.userDims.heightIn].join('x');
   scheduleRecheckAfterSizeChange(before);
 
-  if (unit === 'ft') {
-    appState.userDims.widthIn = +(w * 12).toFixed(2);
-    appState.userDims.heightIn = +(h * 12).toFixed(2);
-  } else if (unit === 'cm') {
-    appState.userDims.widthIn = +(w / 2.54).toFixed(2);
-    appState.userDims.heightIn = +(h / 2.54).toFixed(2);
-  } else if (unit === 'mm') {
-    appState.userDims.widthIn = +(w / 25.4).toFixed(2);
-    appState.userDims.heightIn = +(h / 25.4).toFixed(2);
-  } else {
+  if (unit === 'in') {
     appState.userDims.widthIn = w;
     appState.userDims.heightIn = h;
+  } else {
+    const per = unitInches(unit);
+    appState.userDims.widthIn = +(w * per).toFixed(2);
+    appState.userDims.heightIn = +(h * per).toFixed(2);
   }
+  // the unit and the numbers as typed: sizes are shown in the order's own unit (mm / cm / m with inches beside)
+  Object.assign(appState.userDims, { unit, rawW: w, rawH: h });
 }
 
 /**
@@ -482,6 +484,7 @@ function handleFile(file) {
     return;
   }
   appState.file = file;
+  appState.analysis = null;          // the previous file's analysis — this file's own comes with its pre-check
   // a new file: its alerts open in full — "Collapse" folded only the previous file's alerts (the designer closes
   // them for this file if they want)
   if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector.foldAlerts) AgenticAiInspector.foldAlerts(false);
@@ -507,7 +510,7 @@ function handleFile(file) {
         <div class="fnb-product">${parsed.productName}</div>
         <div class="fnb-chips">
           ${chip('Order', parsed.orderNum || '—')}
-          ${chip('Size', parsed.hasSize ? `${parsed.widthIn}" × ${parsed.heightIn}"` : 'Not in the name')}
+          ${chip('Size', parsed.hasSize ? orderSizeHtml(parsed) : 'Not in the name')}
           ${chip('Sides', parsed.side)}
         </div>
         <div class="fnb-more">

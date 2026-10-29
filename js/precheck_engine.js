@@ -3,6 +3,11 @@
  * Evaluates the 10 automated checkpoints defined in BannerBuzz SOPs & Design Projects brief.
  */
 
+/** A size as the order states it: '300 × 60 cm (118.11" × 23.62")' for a mm / cm / m order, '24" × 48"' otherwise */
+function orderSizeText(w, h) {
+  return typeof SopRules !== 'undefined' && SopRules.sizeText ? SopRules.sizeText(w, h) : `${w}" × ${h}"`;
+}
+
 const PrecheckEngine = {
   /**
    * Run the complete pre-check evaluation
@@ -45,13 +50,13 @@ const PrecheckEngine = {
     const order = analysis.orientationOrder;
     const art = analysis.orientationArtwork;
     const size = analysis.detectedInchesW
-      ? ` ${analysis.detectedInchesW}" × ${analysis.detectedInchesH}"`
+      ? ` ${orderSizeText(analysis.detectedInchesW, analysis.detectedInchesH)}`
       : (analysis.pixelWidth ? ` ${analysis.pixelWidth} × ${analysis.pixelHeight} px` : '');
     const textTxt = turn
       ? (turn === 180 ? 'text reads upside down' : 'text reads sideways')
       : text && text.orientation && text.orientation.readable ? 'text reads upright'
         : textBusy ? 'checking text direction…' : text ? 'too little text to confirm its direction' : 'text direction not checked';
-    const found = `Artwork page: ${art || 'Unknown'}${size} · Order: ${order} ${printW}" × ${printH}" · ${textTxt}`;
+    const found = `Artwork page: ${art || 'Unknown'}${size} · Order: ${order} ${orderSizeText(printW, printH)} · ${textTxt}`;
     const required = `${order} artwork, text upright`;
     const slugName = `${(spec && spec.slug) || ''} ${(spec && spec.name) || ''}`.toLowerCase();
     const bothWays = /flag/.test(slugName) && /clip|suction/.test(slugName);
@@ -60,12 +65,12 @@ const PrecheckEngine = {
     if (turn) {
       const howTo = turn === 90 ? '90° clockwise' : turn === 270 ? '90° anticlockwise' : '180°';
       const pageNote = pageMismatch
-        ? ` The page is ${art.toLowerCase()} while the order is ${order.toLowerCase()} (${printW}" × ${printH}").`
+        ? ` The page is ${art.toLowerCase()} while the order is ${order.toLowerCase()} (${orderSizeText(printW, printH)}).`
         : '';
       return {
         status: 'FAIL', found, required,
         detail: `The text on the artwork ${turn === 180 ? 'is upside down' : 'runs sideways'}: it only reads correctly when the artwork is turned ${howTo}.${pageNote}`,
-        action: `Rotate the artwork ${howTo}${pageMismatch || turn !== 180 ? ` and place it on the ${printW}" × ${printH}" ${order.toLowerCase()} canvas` : ''} before creating the design file, or confirm with the customer.`
+        action: `Rotate the artwork ${howTo}${pageMismatch || turn !== 180 ? ` and place it on the ${orderSizeText(printW, printH)} ${order.toLowerCase()} canvas` : ''} before creating the design file, or confirm with the customer.`
       };
     }
     if (!art || art === 'Unknown') {
@@ -75,7 +80,7 @@ const PrecheckEngine = {
     }
     if (!pageMismatch) {
       return { status: 'PASS', found, required,
-        detail: `Artwork orientation (${art}) matches the order (${printW}" × ${printH}")${text && text.orientation && text.orientation.readable ? ' and the text reads upright' : ''}.`,
+        detail: `Artwork orientation (${art}) matches the order (${orderSizeText(printW, printH)})${text && text.orientation && text.orientation.readable ? ' and the text reads upright' : ''}.`,
         action: '' };
     }
     if (bothWays) {
@@ -113,7 +118,7 @@ const PrecheckEngine = {
     const c = sop.canvas || {};
     const fin = c.finishing, lay = c.layout;
     const base = { id: 'finishing', name: 'Finishing (grommets · pole pockets · hems)', icon: '🪢',
-      required: 'As the file name states — SOP grommet table (count per side by length), pole pocket +5.25" on the stated side(s), hem +1.25" only when the name says hemmed / stitched / welded edges' };
+      required: 'As the file name states — SOP grommet table (count per side by length), pole pocket on the stated side(s) +5.25" single-sided / +4" double-sided (stitch 3" in), hem +1.25" only when the name says hemmed / stitched / welded edges' };
     if (!fin || !fin.found) {
       return Object.assign(base, { status: 'WARNING', manual: true,
         found: 'No grommets / pole pockets / hems in the file name',
@@ -134,14 +139,14 @@ const PrecheckEngine = {
     } else if (fin.grommets && !fin.grommets.on) rows.push('No grommets.');
     if (fin.pockets) {
       rows.push(fin.pockets.sides.length
-        ? `Pole pocket on the ${fin.pockets.sides.join(' & ')}: +${lay.pocketMaterial.inches}" each${lay.pocketMaterial.custom ? ` (custom ${lay.pocketMaterial.size}" in the file name${lay.pocketMaterial.unmatched ? ' — not in the SOP pocket table, check the order' : ', SOP slide 7 table'})` : ''}; no grommets on that side.`
+        ? `Pole pocket on the ${fin.pockets.sides.join(' & ')}: +${lay.pocketMaterial.inches}" each${lay.pocketMaterial.custom ? ` (custom ${lay.pocketMaterial.size}" in the file name${lay.pocketMaterial.unmatched ? ' — not in the SOP pocket table, check the order' : ', SOP slide 7 table'})` : ''}${lay.pocketMaterial.doubleSided && !lay.pocketMaterial.custom ? ` — double-sided banner, stitch ${lay.pocketMaterial.stitchIn}" in from the trim (SOP 1_Banners slides 10, 18, 25), front and back files` : ''}; no grommets on that side.`
         : 'Pole pocket — the file name does not say which side (top / top & bottom / left & right).');
     }
     const hemSides = lay ? ['top', 'bottom', 'left', 'right'].filter(s => !lay.pocketSides.includes(s) && lay.allow[s] > 0) : [];
     if (hemSides.length) rows.push(`${fin.hem ? fin.hem.kind : 'Hem'}: +${lay.allow[hemSides[0]]}" on ${hemSides.length === 4 ? 'each side' : hemSides.join(' & ')}.`);
     else if (!fin.hem) rows.push('No hem in the file name — no hem allowance added.');
     if (fin.adhesiveTabs) rows.push('Adhesive tabs: print at the order size.');
-    rows.push(`Production canvas ${c.wIn}" × ${c.hIn}" (finished ${printW}" × ${printH}").`);
+    rows.push(`Production canvas ${orderSizeText(c.wIn, c.hIn)} (finished ${orderSizeText(printW, printH)}).`);
     const unsure = fin.pockets && fin.pockets.sides.length === 0;
     const fromName = fin.source === 'filename';
     return Object.assign(base, {
@@ -228,6 +233,28 @@ const PrecheckEngine = {
       cropPct: t.cropPctIfFilled };
   },
 
+  /**
+   * Blank space on a PDF design file: a page in another proportion than the order (AU2430882: page 100 × 50 cm on a
+   * 300 × 60 cm order) placed whole leaves part of the ordered size empty. Only when the page does not fit the order
+   * (the page-size check failed): a larger page is bleed or a template allowance, a 1:N page has the order's
+   * proportion, and a page in the production canvas's proportion (pole pockets / hems) is not blank. No PPI — the
+   * page's pictures are measured where they are placed (pc-ppi).
+   */
+  _pageBlankSpace(analysis, design, W, H, sop) {
+    const size = design.checks.find(c => c.id === 'pc-size');
+    const pw = analysis.detectedInchesW, ph = analysis.detectedInchesH;
+    if (!size || size.status !== 'FAIL' || !(pw > 0 && ph > 0) || typeof SopRules === 'undefined') return null;
+    const cv = sop && sop.canvas && sop.canvas.confirmed ? sop.canvas : null;
+    if (cv && SopRules.transform(pw, ph, { widthIn: cv.wIn, heightIn: cv.hIn }, sop).blankPct < this.BLANK_MIN) return null;
+    const b = this._blankSpace(SopRules.transform(pw, ph, { widthIn: W, heightIn: H }, sop), W, H);
+    if (!b) return null;
+    Object.assign(b, { pdfPage: true, pageIn: { w: pw, h: ph }, ppiWhole: null, ppiStretched: null });
+    // (the design result is kept per file and the report is made again on every re-check: said once)
+    const say = `Placed whole on the order, the page covers ${b.coverPct}% of it — ${SopRules.lenText(b.gapIn)} (${b.pct}%) would print empty ${b.sides}${b.noStretch ? `; stretched to fill it would be distorted ×${b.stretch}` : ''}.`;
+    if (!String(size.detail || '').includes('Placed whole on the order')) size.detail = `${size.detail || ''} ${say}`.trim();
+    return b;
+  },
+
   evaluate(analysis, spec, userDims, overrides = {}) {
     const checks = [];
     const printW = userDims?.widthIn || spec.defaultW || 36;
@@ -243,13 +270,13 @@ const PrecheckEngine = {
     // ──────────────────────────────────────────────────────────────────────────
     const canvas = sop?.canvas;
     const canvasTxt = canvas
-      ? `${canvas.wIn}" × ${canvas.hIn}"${canvas.confirmed ? ` (${canvas.note})` : ' (finishing allowance not confirmed — use template)'}`
+      ? `${orderSizeText(canvas.wIn, canvas.hIn)}${canvas.confirmed ? ` (${canvas.note})` : ' (finishing allowance not confirmed — use template)'}`
       : '—';
     const diffPct = analysis.aspectRatioMismatchPercent || 0;
     let resConcern = null;     // { ppi, target } when the artwork is below the SOP resolution → Proof 03 needed
     let printQuality = null;   // PrintQuality status: Good to Go / Bit Fuzzy / Low Resolution
     let blankSpace = null;     // the artwork placed whole leaves part of the ordered size empty (_blankSpace)
-    const reqTol = `${printW}" × ${printH}" (±0.5" SOP tolerance)`;
+    const reqTol = `${orderSizeText(printW, printH)} (±0.5" SOP tolerance)`;
     // A PDF design file read by PostCheck: its page size, per-picture resolution and real detail, colour mode and
     // fonts replace the artwork size / resolution cards (it measures every picture where it is placed)
     const design = analysis.design && analysis.design.checks ? analysis.design : null;
@@ -258,19 +285,20 @@ const PrecheckEngine = {
       design.checks.forEach(c => checks.push(c));
       resConcern = design.resConcern;
       printQuality = design.quality || null;
+      blankSpace = this._pageBlankSpace(analysis, design, printW, printH, sop);
     } else if (analysis.isVector && !analysis.embeddedRasterFound) {
       if (typeof PrintQuality !== 'undefined') printQuality = PrintQuality.vector();
-      const art = analysis.detectedInchesW ? `${analysis.detectedInchesW}" × ${analysis.detectedInchesH}" artboard` : 'Vector artwork';
+      const art = analysis.detectedInchesW ? `${orderSizeText(analysis.detectedInchesW, analysis.detectedInchesH)} artboard` : 'Vector artwork';
       const aspectInfo = analysis.aspectRatioArtwork ? ` (Ratio: ${analysis.aspectRatioArtwork}:1)` : '';
       checks.push({
         id: 'sizeTransform',
         name: 'Size Transform to Order',
         icon: '📐',
         status: (diffPct > 5.0) ? 'FAIL' : (diffPct > 1.5) ? 'WARNING' : 'PASS',
-        found: `${art}${aspectInfo} → Order: ${printW}" × ${printH}"`,
+        found: `${art}${aspectInfo} → Order: ${orderSizeText(printW, printH)}`,
         required: `${reqTol} · Print canvas ${canvasTxt}`,
         detail: `Vector artwork scales to the ordered size without resolution loss.${diffPct > 1.5 ? ` Aspect ratio difference: Δ ${diffPct}%.` : ' Aspect ratio matches order dimensions.'}`,
-        action: canvas && canvas.confirmed ? `Create production canvas at ${canvas.wIn}" × ${canvas.hIn}" (${canvas.source}).` : ''
+        action: canvas && canvas.confirmed ? `Create production canvas at ${orderSizeText(canvas.wIn, canvas.hIn)} (${canvas.source}).` : ''
       });
     } else if (analysis.pixelWidth && analysis.pixelHeight) {
       const t = (typeof SopRules !== 'undefined' && sop)
@@ -322,7 +350,7 @@ const PrecheckEngine = {
         ? (isHybrid
             ? `Hybrid Design: Vector contours scale infinitely; embedded raster (${analysis.pixelWidth}×${analysis.pixelHeight} px) matches order aspect ratio within tolerance.`
             : 'Artwork aspect ratio and dimensions match the order within tolerance.')
-        : `Proportion differs by ${actualDiff}% (Artwork ${analysis.aspectRatioArtwork || 'custom'}:1 vs Order ${analysis.aspectRatioOrder || +(printW/printH).toFixed(2)}:1): placed whole it covers ${t.fitSizeIn.w}" × ${t.fitSizeIn.h}"${t.blankPct != null ? ` of ${printW}" × ${printH}" (blank ${t.gapIn.w ? t.gapIn.w + '" W' : t.gapIn.h + '" H'} = ${t.blankPct}% of the size, to extend with background) at ${t.ppiIfFitted} PPI` : ''}; stretched to fill it is distorted ×${t.stretch || '—'} at ${t.ppiAtOrder} PPI; filled without distortion it crops ${t.cropPctIfFilled}% of the artwork.`;
+        : `Proportion differs by ${actualDiff}% (Artwork ${analysis.aspectRatioArtwork || 'custom'}:1 vs Order ${analysis.aspectRatioOrder || +(printW/printH).toFixed(2)}:1): placed whole it covers ${t.fitSizeIn.w}" × ${t.fitSizeIn.h}"${t.blankPct != null ? ` of ${orderSizeText(printW, printH)} (blank ${t.gapIn.w ? t.gapIn.w + '" W' : t.gapIn.h + '" H'} = ${t.blankPct}% of the size, to extend with background) at ${t.ppiIfFitted} PPI` : ''}; stretched to fill it is distorted ×${t.stretch || '—'} at ${t.ppiAtOrder} PPI; filled without distortion it crops ${t.cropPctIfFilled}% of the artwork.`;
 
       const hybridLabel = isHybrid ? 'Hybrid Vector + Raster: ' : '';
       // PR-DPO-03 artwork placement: not the ordered size → adjust (open) / stretch (flattened) with approval
@@ -340,18 +368,18 @@ const PrecheckEngine = {
         blank,
         // the real error in plain words (the card shows it first; the pixel maths is in "More details")
         error: st === 'PASS' ? '' : [
-          blank ? `Blank space: placed whole the artwork covers ${blank.artIn.w}" × ${blank.artIn.h}" of the ${printW}" × ${printH}" order — ${blank.gapIn}" (${blank.pct}% of the size) would print empty ${blank.sides}` : '',
-          ppiAt < target ? `${ppiAt < minResolution ? 'Low Resolution' : 'Bit Fuzzy'}: ${ppiAt} PPI at the ordered size ${printW}" × ${printH}"${blank && blank.noStretch ? ' (artwork placed whole)' : ''} — SOP needs ${target} PPI (minimum ${minResolution})` : '',
+          blank ? `Blank space: placed whole the artwork covers ${blank.artIn.w}" × ${blank.artIn.h}" of the ${orderSizeText(printW, printH)} order — ${blank.gapIn}" (${blank.pct}% of the size) would print empty ${blank.sides}` : '',
+          ppiAt < target ? `${ppiAt < minResolution ? 'Low Resolution' : 'Bit Fuzzy'}: ${ppiAt} PPI at the ordered size ${orderSizeText(printW, printH)}${blank && blank.noStretch ? ' (artwork placed whole)' : ''} — SOP needs ${target} PPI (minimum ${minResolution})` : '',
           blurCrit ? `Enlarged / blurry picture: ${ppiAt} PPI by pixel count, but the real detail is about ${blur.real} PPI — enlarged about ${blur.enlarge}× from a smaller picture${ppiAt >= target ? ` (SOP needs ${target} PPI)` : ''}` : '',
           !blank && actualDiff > 1.5 ? `Artwork proportion differs ${actualDiff}% from the order` : ''
         ].filter(Boolean).join(' · '),
-        found: `${hybridLabel}${analysis.pixelWidth} × ${analysis.pixelHeight} px (${analysis.aspectRatioArtwork}:1) → ${printW}" × ${printH}" = ${ppiAt} PPI${blank && blank.noStretch ? ` placed whole (${blank.coverPct}% of the size)` : ''}${t.rotated ? ' (artwork rotated vs order)' : ''}${blur && blur.level ? ` · picture looks ${blurWord}: real detail ≈ ${blur.real} PPI` : ''}`,
+        found: `${hybridLabel}${analysis.pixelWidth} × ${analysis.pixelHeight} px (${analysis.aspectRatioArtwork}:1) → ${orderSizeText(printW, printH)} = ${ppiAt} PPI${blank && blank.noStretch ? ` placed whole (${blank.coverPct}% of the size)` : ''}${t.rotated ? ' (artwork rotated vs order)' : ''}${blur && blur.level ? ` · picture looks ${blurWord}: real detail ≈ ${blur.real} PPI` : ''}`,
         required: `${reqTol} · Target ${target} PPI (min ${minResolution}) · Canvas ${canvasTxt}`,
         detail: `${fitTxt}${sop?.resolution?.source ? ` ${sop.resolution.source}.` : ''}${analysis.detail && typeof DetailCheck !== 'undefined' ? ` Real detail: ${DetailCheck.describe(analysis.detail, ppiAt)}` : ''}`,
         action: st === 'PASS' ? '' : [
           blank ? (blank.noStretch
-            ? `Do not stretch it (it would be distorted ×${blank.stretch}): extend the background or rearrange the design to fill ${printW}" × ${printH}", or ask the customer for artwork made at that size — customer approval, Design Review (PR-DPO-03 artwork placement).`
-            : `Extend the background to fill ${printW}" × ${printH}" (stretching would distort the artwork ×${blank.stretch}) — customer approval, Design Review (PR-DPO-03 artwork placement).`) : '',
+            ? `Do not stretch it (it would be distorted ×${blank.stretch}): extend the background or rearrange the design to fill ${orderSizeText(printW, printH)}, or ask the customer for artwork made at that size — customer approval, Design Review (PR-DPO-03 artwork placement).`
+            : `Extend the background to fill ${orderSizeText(printW, printH)} (stretching would distort the artwork ×${blank.stretch}) — customer approval, Design Review (PR-DPO-03 artwork placement).`) : '',
           ppiAt < target || blurCrit
             ? `${blurCrit ? 'Ask the customer for the original (larger) picture or a vector logo; if there is nothing better, use' : 'Use'} the "${printQuality && printQuality.status !== 'good' ? printQuality.label : 'Low Resolution'}" status and attach the Print preview screenshot proof (Proof 03) highlighting the soft area — PR-DPO-03.`
             : '',
@@ -370,8 +398,8 @@ const PrecheckEngine = {
         required: `${reqTol} · Target ${sop?.resolution?.target || reqDpi} PPI · Canvas ${canvasTxt}`,
         detail: analysis.embeddedRasterFound
           ? 'File contains raster images; their resolution at print size cannot be measured directly in browser. Ensure artboard matches order size.'
-          : `Target print size: ${printW}" × ${printH}". Ensure document artboard matches ordered dimensions.`,
-        action: `Verify artboard size matches order size (${printW}" × ${printH}") and effective resolution ≥ ${sop?.resolution?.target || reqDpi} PPI in Adobe software.`
+          : `Target print size: ${orderSizeText(printW, printH)}. Ensure document artboard matches ordered dimensions.`,
+        action: `Verify artboard size matches order size (${orderSizeText(printW, printH)}) and effective resolution ≥ ${sop?.resolution?.target || reqDpi} PPI in Adobe software.`
       });
     }
 

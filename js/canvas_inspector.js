@@ -1136,7 +1136,7 @@ const CanvasInspector = {
     ctx.fillStyle = '#cbd5e1';
     ctx.font = '500 10px Inter, sans-serif';
     const tName = this.officialTemplate?.name || spec?.name || 'Production Template';
-    const tDims = `${printW}" × ${printH}"`;
+    const tDims = this._sizeLabel(+printW, +printH, `${printW}" × ${printH}"`);
     const safeTxt = spec?.safeArea || '0.50"';
     const bleedTxt = spec?.bleed || '0.25"';
     ctx.fillText(`${tName} · Order: ${tDims} · Bleed: ${bleedTxt} · Safe Zone: ${safeTxt}`, 20, 42);
@@ -1238,12 +1238,35 @@ const CanvasInspector = {
     if (typeof SafeZoneCheck !== 'undefined') SafeZoneCheck.refresh();   // the safe zone is measured on the turned artwork
   },
 
+  // ── sizes as the order states them: a mm / cm / m order in its own unit with the inches beside it ──────────
+  _metricUnit() {
+    if (typeof SopRules === 'undefined') return null;
+    const u = SopRules.orderUnit(this.currentDims);
+    return SopRules.isMetric(u) ? u : null;
+  },
+
+  /** Dimension-line label: "300 cm W (118.11")" on a metric order, else `inchLabel` as before */
+  _dimLabel(inches, axis, inchLabel) {
+    const u = this._metricUnit();
+    return u ? `${SopRules.toUnit(inches, u)} ${u} ${axis} (${+(+inches).toFixed(2)}")` : inchLabel;
+  },
+
+  /** A length: "10.2 cm (4")" on a metric order, else `inchText` */
+  _lenLabel(inches, inchText) {
+    return this._metricUnit() ? SopRules.lenText(inches, this.currentDims) : inchText;
+  },
+
+  /** A size: "300 × 60 cm (118.11" × 23.62")" on a metric order, else `inchText` */
+  _sizeLabel(wIn, hIn, inchText) {
+    return this._metricUnit() ? SopRules.sizeText(wIn, hIn, this.currentDims) : inchText;
+  },
+
   /** Toolbar buttons: Rotate Artwork · Rotate Artboard (template board) · Reset, with the current state */
   _rotateButtons() {
     const d = this.currentDims || {};
     const fmt = v => +(+v).toFixed(2);
-    const board = d.widthIn && d.heightIn
-      ? (this.previewOrderTurned ? `${fmt(d.heightIn)}" × ${fmt(d.widthIn)}"` : `${fmt(d.widthIn)}" × ${fmt(d.heightIn)}"`) : '';
+    const [bw, bh] = this.previewOrderTurned ? [d.heightIn, d.widthIn] : [d.widthIn, d.heightIn];
+    const board = d.widthIn && d.heightIn ? this._sizeLabel(bw, bh, `${fmt(bw)}" × ${fmt(bh)}"`) : '';
     const on = 'background:#fff7ed; border-color:#fb923c; color:#c2410c;';
     return `
         <span class="vi-rotate-group">
@@ -1354,7 +1377,7 @@ const CanvasInspector = {
       for (let k = -r[3]; k < r[2] + r[3]; k += 7) { ctx.moveTo(r[0] + k, r[1] + r[3]); ctx.lineTo(r[0] + k + r[3], r[1]); }
       ctx.stroke();
       ctx.restore();
-      this._bandCallout(side, r, `${pocket ? 'Pole pocket' : 'Hem'}`, `${fmt(a[side])}"`, pocket ? '#1d4ed8' : '#475569', ox + w, oy + h);
+      this._bandCallout(side, r, `${pocket ? 'Pole pocket' : 'Hem'}`, this._lenLabel(a[side], `${fmt(a[side])}"`), pocket ? '#1d4ed8' : '#475569', ox + w, oy + h);
     });
 
     // 3. Artwork fitted into the finished (order) size — never stretched; the part it does not cover stays grey
@@ -1401,6 +1424,24 @@ const CanvasInspector = {
       ctx.strokeRect(tx + si, ty + si, tw - 2 * si, th - 2 * si);
       ctx.restore();
     }
+    // double-sided pole pocket: the stitch line 3" in from the trim on each pocket side (SOP slides 10, 18, 25)
+    const stitchIn = b.layout && b.layout.pocketMaterial && b.layout.pocketMaterial.stitchIn;
+    if (stitchIn && pocketSides.length && this.guides.cutLine !== false) {
+      const k = stitchIn * s;
+      ctx.save();
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      pocketSides.forEach(sd => {
+        if (sd === 'top') { ctx.moveTo(tx, ty + k); ctx.lineTo(tx + tw, ty + k); }
+        if (sd === 'bottom') { ctx.moveTo(tx, ty + th - k); ctx.lineTo(tx + tw, ty + th - k); }
+        if (sd === 'left') { ctx.moveTo(tx + k, ty); ctx.lineTo(tx + k, ty + th); }
+        if (sd === 'right') { ctx.moveTo(tx + tw - k, ty); ctx.lineTo(tx + tw - k, ty + th); }
+      });
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // 5. Grommets: SOP Standard Grommets Placement — count per side from that side's length (corners
     //    included), centres 1" inside the finished edge, evenly spaced; none through a pole pocket
@@ -1432,8 +1473,10 @@ const CanvasInspector = {
     const gW = g ? (g.where === 'corners' ? '4 corner grommets' : countTxt(ps.top, ps.bottom, 'top', 'bottom')) : '';
     const gH = g && g.where !== 'corners' ? countTxt(ps.left, ps.right, 'left', 'right') : '';
     const ft = v => +(v / 12).toFixed(2);
-    const labelW = [`${fmt(b.orderW)}" W (${ft(b.orderW)} ft)`, b.canvasW !== b.orderW ? `canvas ${fmt(b.canvasW)}"` : '', gW];
-    const labelH = [`${fmt(b.orderH)}" H (${ft(b.orderH)} ft)`, b.canvasH !== b.orderH ? `canvas ${fmt(b.canvasH)}"` : '', gH];
+    const labelW = [this._dimLabel(b.orderW, 'W', `${fmt(b.orderW)}" W (${ft(b.orderW)} ft)`),
+      b.canvasW !== b.orderW ? `canvas ${this._lenLabel(b.canvasW, `${fmt(b.canvasW)}"`)}` : '', gW];
+    const labelH = [this._dimLabel(b.orderH, 'H', `${fmt(b.orderH)}" H (${ft(b.orderH)} ft)`),
+      b.canvasH !== b.orderH ? `canvas ${this._lenLabel(b.canvasH, `${fmt(b.canvasH)}"`)}` : '', gH];
     if (this.guides.dims !== false && pad.t >= 30 && pad.l >= 30) {
       const yTop = Math.round(pad.t / 2) - 6, xLeft = Math.round(pad.l / 2) - 6;
       this._dimLine(tx, yTop, tw, labelW, false, oy - yTop - 2);
@@ -1447,7 +1490,7 @@ const CanvasInspector = {
       ctx.fillStyle = '#64748b';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`SOP BANNER TEMPLATE · production canvas ${fmt(b.canvasW)}" × ${fmt(b.canvasH)}" · safe ${fmt(b.safeIn)}"`, CW - pad.r, CH - Math.max(12, pad.b / 2 - 4));
+      ctx.fillText(`SOP BANNER TEMPLATE · production canvas ${this._sizeLabel(b.canvasW, b.canvasH, `${fmt(b.canvasW)}" × ${fmt(b.canvasH)}"`)} · safe ${fmt(b.safeIn)}"`, CW - pad.r, CH - Math.max(12, pad.b / 2 - 4));
       ctx.restore();
     }
 
@@ -1457,18 +1500,20 @@ const CanvasInspector = {
     const hemSides = ['top', 'bottom', 'left', 'right'].filter(sd => !pocketSides.includes(sd) && a[sd] > 0);
     const sideList = list => list.length === 4 ? 'each side' : list.join(' & ');
     const cards = [
-      { key: 'trim', title: 'Trim line (finished size)', value: `${fmt(b.orderW)}" × ${fmt(b.orderH)}" (${ft(b.orderW)} × ${ft(b.orderH)} ft)`,
+      { key: 'trim', title: 'Trim line (finished size)', value: this._sizeLabel(b.orderW, b.orderH, `${fmt(b.orderW)}" × ${fmt(b.orderH)}" (${ft(b.orderW)} × ${ft(b.orderH)} ft)`),
         desc: 'The size you ordered — where the banner is cut or folded.' },
-      { key: 'safe', title: 'Safe area', value: `${fmt(b.safeIn)}" inside the trim`, desc: 'Keep all text, logos and important graphics inside this line.' },
-      { key: 'canvas', title: 'Production canvas', value: `${fmt(b.canvasW)}" × ${fmt(b.canvasH)}"`,
+      { key: 'safe', title: 'Safe area', value: `${this._lenLabel(b.safeIn, `${fmt(b.safeIn)}"`)} inside the trim`, desc: 'Keep all text, logos and important graphics inside this line.' },
+      { key: 'canvas', title: 'Production canvas', value: this._sizeLabel(b.canvasW, b.canvasH, `${fmt(b.canvasW)}" × ${fmt(b.canvasH)}"`),
         desc: b.canvasW !== b.orderW || b.canvasH !== b.orderH ? 'Finished size plus the hem / pole pocket allowance — the print file size.' : 'Same as the finished size (no hem or pole pocket in the file name).' },
       { key: 'grommet', title: 'Grommets', value: g ? (g.where === 'corners' ? `${g.kind} · 4 corners` : `${g.kind} · ${g.total} total`)
         : fin && fin.grommets && !fin.grommets.on ? 'No grommets' : 'Not in file name',
         desc: g && g.where !== 'corners' ? `Top ${ps.top} · bottom ${ps.bottom} · left ${ps.left} · right ${ps.right} — SOP grommet table, 1" inside the edge.` : 'SOP grommet table, centres 1" inside the edge.' },
-      { key: 'hem', title: 'Hem', value: lay && lay.hemOn && hemSides.length ? `${fin.hem.kind} +${fmt(a[hemSides[0]])}" ${sideList(hemSides)}` : 'No hem (not in file name)',
+      { key: 'hem', title: 'Hem', value: lay && lay.hemOn && hemSides.length ? `${fin.hem.kind} +${this._lenLabel(a[hemSides[0]], `${fmt(a[hemSides[0]])}"`)} ${sideList(hemSides)}` : 'No hem (not in file name)',
         desc: lay && lay.hemOn && hemSides.length ? 'Folded and welded / stitched — no important content here.' : 'Only added when the file name states hemmed / stitched / welded edges.' },
-      { key: 'pocket', title: 'Pole pocket', value: pocketSides.length ? `${pocketSides.join(' & ')} +${fmt(a[pocketSides[0]])}"` : fin && fin.pockets ? 'Side NOT in file name' : 'None',
-        desc: pocketSides.length ? 'Folded back for the pole — the artwork is not visible here.' : 'Only on the sides the file name states.', warn: !pocketSides.length && fin && fin.pockets }
+      { key: 'pocket', title: 'Pole pocket', value: pocketSides.length ? `${pocketSides.join(' & ')} +${this._lenLabel(a[pocketSides[0]], `${fmt(a[pocketSides[0]])}"`)}${stitchIn ? ' (double-sided)' : ''}` : fin && fin.pockets ? 'Side NOT in file name' : 'None',
+        desc: !pocketSides.length ? 'Only on the sides the file name states.'
+          : stitchIn ? `Double-sided banner: ${fmt(a[pocketSides[0]])}" band each pocket side, stitch (red dashed) ${fmt(stitchIn)}" in from the trim — SOP slides 10, 18, 25.`
+          : 'Folded back for the pole — the artwork is not visible here.', warn: !pocketSides.length && fin && fin.pockets }
     ];
     const notes = [];
     if (this.currentRotation || this.previewOrderTurned) notes.push({ text: 'Preview turned — order unchanged', color: '#b45309' });
@@ -2385,8 +2430,8 @@ const CanvasInspector = {
     const big = Math.max(s.W, s.H) >= 24;
     if (this.guides.dims !== false) {
       const yTop = Math.round(pad.t / 2) - 6, xLeft = Math.round(pad.l / 2) - 6;
-      this._dimLine(ox, yTop, w, [`${fmt(s.W)}" W${big ? ` (${ft(s.W)} ft)` : ''}`, 'finished size'], false, oy - yTop - 2);
-      this._dimLine(xLeft, oy, h, [`${fmt(s.H)}" H${big ? ` (${ft(s.H)} ft)` : ''}`, 'finished size'], true, ox - xLeft - 2);
+      this._dimLine(ox, yTop, w, [this._dimLabel(s.W, 'W', `${fmt(s.W)}" W${big ? ` (${ft(s.W)} ft)` : ''}`), 'finished size'], false, oy - yTop - 2);
+      this._dimLine(xLeft, oy, h, [this._dimLabel(s.H, 'H', `${fmt(s.H)}" H${big ? ` (${ft(s.H)} ft)` : ''}`), 'finished size'], true, ox - xLeft - 2);
     }
     const CW = this.canvas.width, CH = this.canvas.height;
     if (pad.b >= 20 && !(this.currentRotation || this.previewOrderTurned) && CW > 420) {
@@ -2396,7 +2441,7 @@ const CanvasInspector = {
       ctx.fillStyle = '#64748b';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
-      const parts = [s.rect ? 'PRINT TEMPLATE' : 'PRODUCT TEMPLATE', `trim ${fmt(s.W)}" × ${fmt(s.H)}"`];
+      const parts = [s.rect ? 'PRINT TEMPLATE' : 'PRODUCT TEMPLATE', `trim ${this._sizeLabel(s.W, s.H, `${fmt(s.W)}" × ${fmt(s.H)}"`)}`];
       if (s.bleedPx) parts.push(`bleed ${fmt(s.bleedIn)}"`);
       if (s.rect && s.safeIn) parts.push(`safe ${fmt(s.safeIn)}"`);
       ctx.fillText(parts.join(' · '), CW - pad.r, CH - Math.max(12, pad.b / 2 - 4));
@@ -2413,18 +2458,18 @@ const CanvasInspector = {
     const cards = [];
     if (s.rect) {
       const tr = pick(/^\s*✂/), sf = pick(/^\s*🛡/), bl = pick(/^\s*📐/);
-      if (s.bleedIn > 0) cards.push({ key: 'bleed', title: 'Bleed area', value: `${fmt(s.bleedIn)}" on all sides`,
+      if (s.bleedIn > 0) cards.push({ key: 'bleed', title: 'Bleed area', value: `${this._lenLabel(s.bleedIn, `${fmt(s.bleedIn)}"`)} on all sides`,
         desc: 'Extend background colours and photos to here — trimmed off after printing.' + extra(bl) + (s.bleedEnlarged ? ' (Drawn wider so it shows at this zoom.)' : '') });
-      cards.push({ key: 'trim', title: 'Trim line (final size)', value: `${+(+s.W).toFixed(2)}" × ${+(+s.H).toFixed(2)}"`,
+      cards.push({ key: 'trim', title: 'Trim line (final size)', value: this._sizeLabel(s.W, s.H, `${+(+s.W).toFixed(2)}" × ${+(+s.H).toFixed(2)}"`),
         desc: 'The finished size of the printed piece — where the product is cut.' + extra(tr).replace(/Standard 8\.5" × 11"/, '').replace(/ · $/, '') });
-      if (s.safeIn > 0) cards.push({ key: 'safe', title: 'Safe area', value: `${fmt(s.safeIn)}" inside the trim`,
+      if (s.safeIn > 0) cards.push({ key: 'safe', title: 'Safe area', value: `${this._lenLabel(s.safeIn, `${fmt(s.safeIn)}"`)} inside the trim`,
         desc: 'Keep all important text, logos and elements inside this line.' + extra(sf) });
     } else {
       // shaped products: the template's own wording, with the SOP / catalog values where they exist
       const tr = pick(/^\s*✂/), sf = pick(/^\s*🛡/), bl = pick(/^\s*📐/);
       const after = l => { const t = strip(l.text); return t.includes(':') ? t.slice(t.indexOf(':') + 1).trim() : t; };
       const shape = tr ? strip(tr.text).split(':')[0].trim() : '';
-      cards.push({ key: 'trim', title: 'Cut line (final shape)', value: `${+(+s.W).toFixed(2)}" × ${+(+s.H).toFixed(2)}"`,
+      cards.push({ key: 'trim', title: 'Cut line (final shape)', value: this._sizeLabel(s.W, s.H, `${+(+s.W).toFixed(2)}" × ${+(+s.H).toFixed(2)}"`),
         desc: (shape ? shape.charAt(0) + shape.slice(1).toLowerCase() + ' — ' : '') + 'the finished shape of the product, where it is cut or sewn.' });
       if (s.safeIn > 0 || sf) cards.push({ key: 'safe', title: 'Safe area', value: s.safeIn > 0 ? `${fmt(s.safeIn)}" inside the cut line` : after(sf),
         desc: 'Keep all important text, logos and elements inside this line.' });
