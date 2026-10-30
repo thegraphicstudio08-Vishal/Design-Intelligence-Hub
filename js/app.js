@@ -1393,6 +1393,7 @@ function renderSummaryCard(report) {
   if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderDetailAlert) AgenticAiInspector._renderDetailAlert();
   // blank space: the artwork placed whole leaves part of the ordered size empty
   if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderBlankAlert) AgenticAiInspector._renderBlankAlert();
+  if (typeof AgenticAiInspector !== 'undefined' && AgenticAiInspector._renderStrayAlert) AgenticAiInspector._renderStrayAlert();
   // the canvas was drawn before this result: its blank-space layer is placed now (plays when the canvas is in view)
   if (typeof CanvasFx !== 'undefined') CanvasFx.place();
   // the status to set (Good to Go / Bit Fuzzy / Low Resolution) with the PPI and the zoomed print preview

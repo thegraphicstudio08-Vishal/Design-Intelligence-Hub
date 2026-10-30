@@ -95,7 +95,7 @@ const PostCheck = {
         // hairline of a large print file is less than a pixel (FineMarks)
         if (src && typeof FineMarks !== 'undefined') {
           step(`Looking for small stray marks on picture ${p.n} at full size…`);
-          p.fine = await FineMarks.scan(src, { pxPerIn: p.ppi, alive }).catch(e => { console.warn('Full-size mark check:', e); return null; });
+          p.fine = await FineMarks.scan(src, { pxPerIn: p.ppi, alive, dieCut: FineMarks.isDieCut(file.name) }).catch(e => { console.warn('Full-size mark check:', e); return null; });
           stop();
         }
       }

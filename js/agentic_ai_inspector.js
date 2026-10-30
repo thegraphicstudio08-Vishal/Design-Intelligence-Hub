@@ -788,6 +788,63 @@ const AgenticAiInspector = {
     this._dismiss(document.getElementById('spell-alert'));
   },
 
+  /**
+   * Pop-up alert for stray lines and dots (Lines & Dots): the clear findings only — not the ones beside photo detail
+   * (confirm by eye) nor the ones marked intentional / grommet marks. One row per finding with its size and where it
+   * is, and Show (the marker on the artwork). Closed, it stays closed until the findings change.
+   */
+  _renderStrayAlert() {
+    let box = document.getElementById('stray-alert');
+    const open = this.getDefects().filter(d => !d.intentional && !d.finishing && (
+      ((d.type === 'stray_dot' || d.type === 'stray_line') && !d.nearPhoto && ((d.confidence || 0) >= 0.75 || d.possible)) || d.type === 'edge_line'));
+    const key = open.map(d => d.id).join('|');
+    if (!open.length || this._strayClosedKey === key) { if (box) box.remove(); return; }
+    this._strayKey = key;
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'stray-alert';
+      box.setAttribute('role', 'alert');
+      this._alertStack().appendChild(box);
+    }
+    const sure = open.filter(d => !d.possible), maybe = open.length - sure.length;
+    // red when there is a clear stray mark, amber when there are only possible lines to look at
+    box.className = `spell-alert${sure.length ? '' : ' is-warn'}`;
+    const lines = sure.filter(d => d.type !== 'stray_dot').length, dots = sure.length - lines;
+    const what = [lines ? `${lines} stray line${lines > 1 ? 's' : ''}` : '', dots ? `${dots} stray dot${dots > 1 ? 's' : ''}` : '',
+      maybe ? `${maybe} possible stray line${maybe > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ').replace(/ and (?=.* and )/, ', ');
+    const area = d => {
+      if (d.cxPercent == null) return '';
+      const v = d.cyPercent < 33 ? 'top' : d.cyPercent > 67 ? 'bottom' : 'middle', h = d.cxPercent < 33 ? 'left' : d.cxPercent > 67 ? 'right' : 'centre';
+      return v === 'middle' && h === 'centre' ? 'centre' : v === 'middle' ? h : `${v} ${h}`;
+    };
+    const size = d => {
+      const m = d._mark || {};
+      if (d.type === 'edge_line') return `along the ${(d.sides || []).join(', ')} edge`;
+      if (m.inches) return d.type === 'stray_line' ? `${SopRules.lenText(m.inches.len)} long` : `${SopRules.lenText(m.inches.len)} across`;
+      return d.type === 'stray_line' ? `${m.lengthPx || ''} px long` : `${(m.w || '')} × ${(m.h || '')} px`;
+    };
+    const label = d => d.type === 'edge_line' ? 'Edge line' : d.type === 'stray_line' ? (d.possible ? 'Possible stray line — check by eye' : 'Stray line')
+      : (d._mark && d._mark.speck ? 'Dot inside a solid area' : 'Stray dot');
+    const shown = open.slice(0, 10);
+    box.innerHTML = `
+      <div class="spell-alert-head">⚠️ <span>${what} on the artwork</span>
+        <button class="spell-alert-close" title="Close" onclick="AgenticAiInspector.closeStrayAlert()">×</button></div>
+      <div class="spell-alert-note">Marks that are not part of the design print as they are. Remove them before creating the design file — or, if one belongs to the design, mark it intentional in the Lines &amp; Dots card.</div>
+      ${shown.map(d => `
+        <div class="spell-alert-row">
+          <div class="spell-alert-words"><span class="spell-alert-kind">${label(d)}</span>
+            <span class="sz-dist">${size(d)}${area(d) ? ' · ' + area(d) : ''}</span></div>
+          <button class="spell-alert-show" onclick="AgenticAiInspector.showSpellingMistake('${d.id}')">Show</button>
+        </div>`).join('')}
+      ${open.length > shown.length ? `<div class="spell-alert-note">+ ${open.length - shown.length} more in the Lines &amp; Dots card.</div>` : ''}`;
+    this._compact(box);
+  },
+
+  closeStrayAlert() {
+    this._strayClosedKey = this._strayKey;
+    this._dismiss(document.getElementById('stray-alert'));
+  },
+
   /** A closed alert slides out (app.js rDismiss); straight away where that is not loaded */
   _dismiss(box) {
     if (!box) return;
@@ -1270,7 +1327,9 @@ const AgenticAiInspector = {
     const active = marks.filter(d => !d.dismissed && !d.intentional);
     // Marks beside photo detail may belong to the photo: listed and marked, but a look by eye — not Critical
     const besidePhoto = active.filter(d => (d.type === 'stray_dot' || d.type === 'stray_line') && d.nearPhoto);
-    const lines = active.filter(d => d.type === 'stray_line' && !d.nearPhoto);
+    // a thin stroke across a solid area may be the design's own (a pinstripe, an outline): a look by eye
+    const possibleLines = active.filter(d => d.type === 'stray_line' && d.possible && !d.nearPhoto);
+    const lines = active.filter(d => d.type === 'stray_line' && !d.nearPhoto && !d.possible);
     const dots = active.filter(d => d.type === 'stray_dot' && !d.nearPhoto);
     const edges = active.filter(d => d.type === 'edge_line');
     const typos = [];
@@ -1284,7 +1343,8 @@ const AgenticAiInspector = {
     // Print-layout marks the tool recognised itself (grommet / eyelet marks, page frame) are named, not counted as strays
     const fin = marks.filter(d => !d.dismissed && d.finishing);
     const finDots = fin.filter(d => d.type !== 'edge_line').length;
-    const finNote = fin.length ? ` · recognised as print-layout marks: ${[finDots ? plural(finDots, 'grommet / eyelet mark') : '', fin.some(d => d.type === 'edge_line') ? 'page frame line' : ''].filter(Boolean).join(' + ')}` : '';
+    const finEdge = fin.find(d => d.type === 'edge_line');
+    const finNote = fin.length ? ` · recognised as print-layout marks: ${[finDots ? plural(finDots, 'grommet / eyelet mark') : '', finEdge ? (finEdge.waste ? 'artboard frame (cut away with the waste)' : 'page frame line') : ''].filter(Boolean).join(' + ')}` : '';
     const closedNote = (reviewed ? ` · ${reviewed} by designer` : '') + finNote;
     // A thin edge line on a design file with bleed lies in the bleed — trimmed off or hemmed: a look by eye
     const inBleed = this._edgeInBleed(edges);
@@ -1320,7 +1380,8 @@ const AgenticAiInspector = {
 
     // Findings for a look by eye: a thin line inside the bleed, possible marks beside photo detail
     const toConfirm = [inBleed ? `thin line along the ${inBleed}` : '',
-      besidePhoto.length ? `${plural(besidePhoto.length, 'possible stray mark')} beside photo detail` : ''].filter(Boolean);
+      besidePhoto.length ? `${plural(besidePhoto.length, 'possible stray mark')} beside photo detail` : '',
+      possibleLines.length ? `${plural(possibleLines.length, 'possible stray line')} in a solid area` : ''].filter(Boolean);
     if (parts.length) {
       return {
         status: hasFatal ? 'FAIL' : 'WARNING', manual: false,   // stray marks found → Critical
@@ -1336,6 +1397,7 @@ const AgenticAiInspector = {
         found: `No clear stray marks · ${toConfirm.join(' · ')} — confirm by eye · checked ${r.checkedPct}% of the artwork${closedNote}`,
         detail: coverage + patternNote,
         action: [besidePhoto.length ? 'Click the markers on the canvas: a highlight or detail of the photo is fine — remove it only if it is a speck or dust.' : '',
+          possibleLines.length ? 'Look at each possible line: a pinstripe, an outline or a decorative stroke of the design is fine — remove it if it is a stray stroke or scratch.' : '',
           inBleed ? 'The edge line lies in the bleed, which is trimmed off or hemmed — confirm it does not reach the finished edge.' : ''].filter(Boolean).join(' ')
       };
     }
@@ -1408,6 +1470,7 @@ const AgenticAiInspector = {
     if (typeof refreshPrecheckView === 'function') refreshPrecheckView(report);
     else if (typeof PrecheckEngine !== 'undefined' && PrecheckEngine.tally) PrecheckEngine.tally(report);
     this._renderSpellingAlert(false);   // keep an open alert in step with closed / intentional findings
+    this._renderStrayAlert();            // stray lines and dots
     this._renderOrientationAlert();      // landscape artwork on a vertical order (or the reverse), turned text
     if (typeof SafeZoneCheck !== 'undefined') SafeZoneCheck.afterUpdate();   // safe-zone marks on the canvas + alert
   },
@@ -1552,6 +1615,11 @@ const AgenticAiInspector = {
       const thick = Math.max(...res.edgeLines.map(e => e.thicknessPx));
       const fname = (typeof appState !== 'undefined' && ((appState.parsedFilename && appState.parsedFilename.fname) || (appState.file && appState.file.name))) || '';
       const frame = !!res.edgeLines.frame || (!!res.edgeLines.frame3 && /print[_\s-]?file/i.test(fname));
+      // a die-cut product (decal, sticker, cut-out) is cut along its cut line inside the artboard: a frame along the
+      // artboard edge goes with the waste, it is not on the finished piece
+      const spec = typeof appState !== 'undefined' && appState.report && appState.report.spec;
+      const waste = !frame && typeof FineMarks !== 'undefined' && FineMarks.isDieCut(`${fname} ${(spec && spec.name) || ''}`);
+      const where = sides.length === 4 ? 'whole artboard' : sides.join(', ') + ' edge' + (sides.length > 1 ? 's' : '');
       this.defects.push({
         id: 'edge_1',
         type: 'edge_line',
@@ -1559,15 +1627,19 @@ const AgenticAiInspector = {
         shape: 'edges',
         sides,
         severity: 'Review',
-        title: frame ? 'Page frame line around a white margin' : `Thin line along the ${sides.length === 4 ? 'whole border' : sides.join(', ') + ' edge' + (sides.length > 1 ? 's' : '')}`,
+        title: frame ? 'Page frame line around a white margin' : waste ? 'Artboard frame — cut away on a die-cut product'
+          : `Thin line along the ${sides.length === 4 ? 'whole border' : sides.join(', ') + ' edge' + (sides.length > 1 ? 's' : '')}`,
         confidence: null,
         details: {
           description: frame
             ? `A ${thick} px frame runs along the ${sides.length === 4 ? 'whole page' : sides.join(', ') + ' edges'} with a plain white margin inside it — the page frame of a print layout, not part of the printed artwork.`
-            : `A ${thick} px line runs along the ${sides.join(', ')} edge${sides.length > 1 ? 's' : ''} and differs from the artwork next to it. If it is not a planned border (e.g. a white or grey sliver left after cropping), remove it or extend the background — after trimming it can show unevenly.`
+            : waste
+              ? `A ${thick} px frame runs along the ${where}. This is a die-cut product: the cutter follows the cut line inside the artboard, so the frame goes with the waste. Check only that the cut line does not run along the artboard edge.`
+              : `A ${thick} px line runs along the ${sides.join(', ')} edge${sides.length > 1 ? 's' : ''} and differs from the artwork next to it. If it is not a planned border (e.g. a white or grey sliver left after cropping), remove it or extend the background — after trimming it can show unevenly.`
         },
-        finishing: frame,
-        intentional: frame,
+        finishing: frame || waste,
+        intentional: frame || waste,
+        waste,
         dismissed: false
       });
     }
@@ -1591,10 +1663,14 @@ const AgenticAiInspector = {
     marks.forEach(m => {
       if (known.some(k => m.cx >= k.x - pad && m.cx <= k.x + k.w + pad && m.cy >= k.y - pad && m.cy <= k.y + k.h + pad)) return;
       const size = m.inches ? ` — ${m.inches.len}" ${m.kind === 'line' ? `long, ${m.inches.thick}" thick` : 'across'} when printed` : '';
+      const before = this.defects.length;
       this.defects.push(this._markDefect(m, `f${++n}`, r.width, r.height,
         `Found on the full-size ${m.pic ? 'picture ' + m.pic : 'artwork'} (the size is in its own pixels${size}), too small to show on a scaled copy; `
         + (m.speck ? 'it sits alone inside a solid area (a letter, a shape or a plain background) — a font or a flat fill never has a speck.'
+          : m.solidLine ? 'a thin stroke across a solid area, on its own — no mirrored or repeated twin, not a straight rule, not part of a letter or shape. It may still be a decorative stroke of the design: confirm by eye.'
           : 'its colour is not used anywhere else in the design.')));
+      // a thin stroke across a solid area can be the design's own (a pinstripe, an outline): a look by eye
+      if (m.solidLine) Object.assign(this.defects[before], { possible: true, severity: 'Review', confidence: 0.7, title: 'Possible stray line' });
     });
     return n;
   },
@@ -1608,7 +1684,10 @@ const AgenticAiInspector = {
     const pxPerIn = ow > 0 && oh > 0 ? Math.max(Math.min(W / ow, H / oh), Math.min(W / oh, H / ow)) : 0;
     const current = () => this._lastScannedSrc === src && this.scanResult === res;
     let r = null;
-    try { r = await FineMarks.scan(img, { pxPerIn, alive: current }); } catch (e) { console.warn('Full-size mark check:', e); }
+    const st = typeof appState !== 'undefined' ? appState : {};
+    const dieCut = FineMarks.isDieCut([(st.parsedFilename && st.parsedFilename.fname) || '', (st.file && st.file.name) || '',
+      (st.report && st.report.spec && st.report.spec.name) || ''].join(' '));
+    try { r = await FineMarks.scan(img, { pxPerIn, alive: current, dieCut }); } catch (e) { console.warn('Full-size mark check:', e); }
     if (!r || !current() || !this._addFineMarks(r.marks)) return;
     this._tagFinishingMarks();
     this.renderOverlay();
