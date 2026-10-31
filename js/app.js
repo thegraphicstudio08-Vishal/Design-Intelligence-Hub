@@ -1008,10 +1008,14 @@ const Checking = {
   STEPS: ['Reading the file', 'Measuring size & resolution', 'Reading the text and looking for stray marks',
     'Matching the product, safe area & finishing', 'Measuring sharpness at print size', 'Building the result'],
   _t0: 0, _timer: null, _cur: -1,
+  // the result is held under this panel until it is complete (hold / settle); the longest wait, in seconds
+  HOLD_MAX_S: 180,
+  _holding: false, _enter: false, _token: 0,
 
   start() {
     const p = document.getElementById('checking-panel');
     if (!p) return;
+    this._token++;                         // a hold still waiting for an earlier file stops waiting
     const pf = appState.parsedFilename || {}, d = appState.userDims || {};
     document.getElementById('empty-state').style.display = 'none';
     document.getElementById('results-content').style.display = 'none';
@@ -1063,6 +1067,87 @@ const Checking = {
     clearInterval(this._timer);
     const p = document.getElementById('checking-panel');
     if (p) p.hidden = true;
+    if (this._holding) this._reveal();
+  },
+
+  /**
+   * Hold the result under this panel until it is complete. The checks that finish after the report is drawn (the
+   * text reading, the full-size mark scan, the colour check, the file details, the canvas with its template) used to
+   * redraw the page for many seconds after it appeared, and it looked as if the tool was hanging. Now the page is
+   * built and laid out underneath, unseen, and shown once nothing is left to do.
+   */
+  hold() {
+    this._holding = true;
+    const v = document.getElementById('view-precheck');
+    if (v) v.classList.add('ck-holding');
+    document.body.classList.add('ck-holding');
+  },
+
+  /** What is still running for the result now on the page (empty: it is complete). prevImg: the canvas picture before this check */
+  pending(prevImg) {
+    const out = [], a = appState.analysis;
+    const cv = typeof CanvasInspector !== 'undefined' && CanvasInspector.canvas ? CanvasInspector : null;
+    const ai = typeof AgenticAiInspector !== 'undefined' ? AgenticAiInspector : null;
+    if (cv && (!cv.currentImg || cv.currentImg === prevImg)) out.push('Drawing the artwork on the template');
+    else if (cv && cv.templateMatching) out.push('Matching the product template');
+    if (ai && cv && !(ai.scanResult || ai.scanSkipReason)) out.push('Looking for stray lines and dots');
+    if (ai && ['loading', 'reading'].includes(ai.textState && ai.textState.status)) out.push(ai.textState.text || 'Reading the text on the artwork');
+    if (ai && ai._fineBusy) out.push('Looking for small marks at full size');
+    if (typeof ColorCheck !== 'undefined' && ColorCheck._running) out.push('Checking how the colours will print');
+    if (typeof FileForensics !== 'undefined' && a && appState.file && !a.forensics) out.push('Reading the details inside the file');
+    return out;
+  },
+
+  /**
+   * Wait on the last step until pending() is empty and the page has had half a second without long work, then show
+   * the result (at most HOLD_MAX_S; "Show the result now" ends the wait — the checks still running then update the
+   * page as before)
+   */
+  async settle(prevImg) {
+    if (!this._holding) return;
+    const token = this._token, t0 = Date.now();
+    await this.step(this.STEPS.length - 1);
+    let lastLong = performance.now(), quiet = 0, skipped = false;
+    const po = typeof PerformanceObserver !== 'undefined' && (PerformanceObserver.supportedEntryTypes || []).includes('longtask')
+      ? new PerformanceObserver(() => { lastLong = performance.now(); }) : null;
+    if (po) po.observe({ entryTypes: ['longtask'] });
+    const skip = document.getElementById('ck-skip'), now = document.getElementById('ck-now');
+    if (skip) { skip.hidden = false; skip.onclick = () => { skipped = true; }; }
+    try {
+      while (this._holding && this._token === token && !skipped && Date.now() - t0 < this.HOLD_MAX_S * 1000) {
+        const left = this.pending(prevImg), t = performance.now();
+        if (left.length) { quiet = 0; if (now) now.textContent = left[0].replace(/…?$/, '…'); }
+        else if (!quiet) { quiet = t; if (now) now.textContent = 'Getting the result ready…'; }
+        else if (t - quiet > 500 && t - lastLong > 500) break;
+        await new Promise(r => setTimeout(r, 200));
+      }
+      // the pictures of the held page are decoded now (off the page's thread), not at the first paint after it shows —
+      // a big print preview froze the page for a second just as it appeared
+      const imgs = [...document.querySelectorAll('#results-content img')].filter(i => i.src && i.decode);
+      if (this._holding && this._token === token && !skipped && imgs.length) {
+        await Promise.race([Promise.all(imgs.map(i => i.decode().catch(() => {}))), new Promise(r => setTimeout(r, 8000))]);
+      }
+    } finally {
+      if (po) po.disconnect();
+      if (skip) skip.hidden = true;
+    }
+    if (this._token === token) this.done();
+  },
+
+  /** Show the held result: the page from the top, with the entrance (cards rising, the score counting up) */
+  _reveal() {
+    this._holding = false;
+    const v = document.getElementById('view-precheck');
+    if (v) { v.classList.remove('ck-holding'); v.scrollTop = 0; }
+    document.body.classList.remove('ck-holding');
+    const content = document.getElementById('results-content');
+    if (this._enter && content && appState.report) {
+      content.classList.add('r-enter');
+      renderSummaryCard(appState.report);
+      clearTimeout(renderResults._enter);
+      renderResults._enter = setTimeout(() => content.classList.remove('r-enter'), 2200);
+    }
+    this._enter = false;
   }
 };
 
@@ -1080,6 +1165,7 @@ async function runPreCheck() {
 
   onDimensionInput();
   if (!appState._quiet) Checking.start();   // a card the designer marked: the results stay on the page
+  const ckToken = Checking._token;          // a newer check (another file) owns the loading panel after this
 
   try {
     // 0. SOP requirements for this exact order (size + finishing + product)
@@ -1222,7 +1308,12 @@ async function runPreCheck() {
     const previousOrders = PreviousOrdersEngine.findMatches(appState.customerName, appState.product.slug);
     appState.previousOrders = previousOrders;
 
-    // 4. Render Pre-Check Results
+    // 4. Render Pre-Check Results — a new result is built under the loading panel and shown when it is complete
+    // (step 8); a card the designer marked keeps the page as it is
+    const ckPanel = document.getElementById('checking-panel');
+    const hold = !appState._quiet && !!ckPanel && !ckPanel.hidden;
+    const prevImg = typeof CanvasInspector !== 'undefined' ? CanvasInspector.currentImg : null;
+    if (hold) Checking.hold();
     renderResults(report, previousOrders);
 
     // 5. Render Interactive Canvas with Product Die-Line Template (a two-face print file on its whole sheet)
@@ -1242,14 +1333,18 @@ async function runPreCheck() {
 
     // 7. Colour check (RGB → CMYK, merge, opacity) on the real artwork pixels — updates its card when done
     if (typeof ColorCheck !== 'undefined') ColorCheck.run(analysis && analysis.previewDataUrl);
+
+    // 8. Stay on the loading panel until the text reading, the full-size marks, the colours, the file details and the
+    // canvas are in — then the page shows complete, with nothing left to redraw
+    if (hold) await Checking.settle(prevImg);
   } catch (err) {
     console.error('Pre-check error:', err);
     // back to what was on the page before this check (the last result, or the start screen)
-    Checking.done();
+    if (Checking._token === ckToken) Checking.done();
     document.getElementById(appState.report ? 'results-content' : 'empty-state').style.display = appState.report ? 'flex' : '';
     alert('An error occurred during pre-check analysis: ' + err.message);
   } finally {
-    Checking.done();
+    if (Checking._token === ckToken) Checking.done();
     appState._quiet = null;                    // a quiet re-check that failed must not hide the next panel
     btn.disabled = false;
     btnIcon.textContent = '⚡';
@@ -1261,7 +1356,8 @@ async function runPreCheck() {
  * Render the Pre-Check UI Report
  */
 function renderResults(report, previousOrders) {
-  if (typeof Checking !== 'undefined') Checking.done();
+  const held = typeof Checking !== 'undefined' && Checking._holding;   // built under the loading panel (Checking.hold)
+  if (typeof Checking !== 'undefined' && !held) Checking.done();
   document.getElementById('empty-state').style.display = 'none';
   const content = document.getElementById('results-content');
   content.style.display = 'flex';
@@ -1273,9 +1369,12 @@ function renderResults(report, previousOrders) {
   else {
     // the result is in: the left panel folds to its rail — more room for the result (once per file; › opens it again)
     if (appState._foldedFor !== appState.file) { appState._foldedFor = appState.file; toggleLeftPanel(true); }
-    content.classList.add('r-enter');
-    clearTimeout(renderResults._enter);
-    renderResults._enter = setTimeout(() => content.classList.remove('r-enter'), 2200);
+    if (held) Checking._enter = true;          // the entrance plays when the held page is shown
+    else {
+      content.classList.add('r-enter');
+      clearTimeout(renderResults._enter);
+      renderResults._enter = setTimeout(() => content.classList.remove('r-enter'), 2200);
+    }
   }
 
   const { spec, dimensions } = report;

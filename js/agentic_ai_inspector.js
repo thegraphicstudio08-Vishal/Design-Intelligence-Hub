@@ -1678,6 +1678,11 @@ const AgenticAiInspector = {
   /** JPG / PNG: the full-size pass in the background; its finds join the Lines & Dots check when it is done */
   async _fineScan(img, res, dims) {
     if (typeof FineMarks === 'undefined' || !img || !(img.naturalWidth > 0)) return;
+    this._fineBusy = (this._fineBusy || 0) + 1;      // the loading panel waits for it (Checking.pending)
+    try { await this._fineScanRun(img, res, dims); } finally { this._fineBusy--; }
+  },
+
+  async _fineScanRun(img, res, dims) {
     const src = this._lastScannedSrc, W = img.naturalWidth, H = img.naturalHeight;
     const ow = dims && dims.widthIn, oh = dims && dims.heightIn;
     // pixels per printed inch: the artwork fitted on the order, either way round

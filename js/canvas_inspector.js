@@ -1512,9 +1512,14 @@ const CanvasInspector = {
         desc: lay && lay.hemOn && hemSides.length ? 'Folded and welded / stitched — no important content here.' : 'Only added when the file name states hemmed / stitched / welded edges.' },
       { key: 'pocket', title: 'Pole pocket', value: pocketSides.length ? `${pocketSides.join(' & ')} +${this._lenLabel(a[pocketSides[0]], `${fmt(a[pocketSides[0]])}"`)}${stitchIn ? ' (double-sided)' : ''}` : fin && fin.pockets ? 'Side NOT in file name' : 'None',
         desc: !pocketSides.length ? 'Only on the sides the file name states.'
-          : stitchIn ? `Double-sided banner: ${fmt(a[pocketSides[0]])}" band each pocket side, stitch (red dashed) ${fmt(stitchIn)}" in from the trim — SOP slides 10, 18, 25.`
+          : stitchIn ? `Double-sided banner: ${fmt(a[pocketSides[0]])}" band each pocket side — SOP slides 10, 18, 25.`
           : 'Folded back for the pole — the artwork is not visible here.', warn: !pocketSides.length && fin && fin.pockets }
     ];
+    // the red dashed line on the canvas (drawn above for a double-sided pole pocket) gets its own card
+    if (stitchIn && pocketSides.length) {
+      cards.push({ key: 'stitch', title: 'Stitch line', value: `${this._lenLabel(stitchIn, `${fmt(stitchIn)}"`)} in from the trim · ${pocketSides.join(' & ')}`,
+        desc: 'Red dashed line: where the pole pocket is stitched — keep text and logos clear of it. SOP slides 10, 18, 25.' });
+    }
     const notes = [];
     if (this.currentRotation || this.previewOrderTurned) notes.push({ text: 'Preview turned — order unchanged', color: '#b45309' });
     this.legend = {

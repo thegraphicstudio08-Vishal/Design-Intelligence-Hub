@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261027b">
-  <link rel="stylesheet" href="css/redesign.css?v=20261029h">
+  <link rel="stylesheet" href="css/style.css?v=20261031b">
+  <link rel="stylesheet" href="css/redesign.css?v=20261031b">
 </head>
 <body>
 
@@ -495,19 +495,30 @@
             </div>
           </div>
 
-          <!-- While a check runs: the artwork being scanned, the steps and the time (app.js Checking) -->
+          <!-- While a check runs: the artwork being scanned, the steps and the time (app.js Checking); beside them the
+               relaxing-flight animation — an animated WebP: it plays off the page's thread (the same animation as SVG
+               took ≈ 11% of the page's time from the check); a still picture when motion is turned off -->
           <div class="checking-panel" id="checking-panel" hidden>
-            <div class="ck-art" id="ck-art">
-              <img id="ck-thumb" alt="">
-              <svg class="r-ico ck-file"><use href="#ri-file"/></svg>
-              <div class="ck-grid"></div>
-              <div class="ck-beam"></div>
+            <div class="ck-flight" aria-hidden="true">
+              <picture>
+                <source srcset="assets/animations/checking-flight-still.svg?v=20261031b" media="(prefers-reduced-motion: reduce)">
+                <img src="assets/animations/checking-flight.webp?v=20261031b" alt="" decoding="async" width="330" height="292">
+              </picture>
+              <div class="ck-flight-note">Sit back — every detail is being checked</div>
             </div>
-            <div class="ck-title">Checking <span id="ck-order">the artwork</span></div>
-            <div class="ck-sub" id="ck-sub"></div>
-            <div class="ck-bar"><i id="ck-bar"></i></div>
-            <ol class="ck-steps" id="ck-steps"></ol>
-            <div class="ck-foot"><span id="ck-now">Starting…</span><span id="ck-time">0 s</span></div>
+            <div class="ck-main">
+              <div class="ck-art" id="ck-art">
+                <img id="ck-thumb" alt="">
+                <svg class="r-ico ck-file"><use href="#ri-file"/></svg>
+                <div class="ck-grid"></div>
+                <div class="ck-beam"></div>
+              </div>
+              <div class="ck-title">Checking <span id="ck-order">the artwork</span></div>
+              <div class="ck-sub" id="ck-sub"></div>
+              <div class="ck-bar"><i id="ck-bar"></i></div>
+              <ol class="ck-steps" id="ck-steps"></ol>
+              <div class="ck-foot"><span id="ck-now">Starting…</span><button type="button" class="ck-skip" id="ck-skip" hidden>Show the result now</button><span id="ck-time">0 s</span></div>
+            </div>
           </div>
 
           <!-- Results Content -->
@@ -691,24 +702,24 @@
   <script src="js/sop_file_requirements.js?v=20261010a"></script>
   <script src="js/sop_rules.js?v=20261029a"></script>
   <script src="js/template_registry.js"></script>
-  <script src="js/raster_source.js?v=20261028a"></script>
+  <script src="js/raster_source.js?v=20261031b"></script>
   <script src="js/fine_marks.js?v=20261030e"></script>
   <script src="js/file_analyzer.js?v=20261030a"></script>
   <script src="js/artwork_text_check.js?v=20261029a"></script>
-  <script src="js/agentic_ai_inspector.js?v=20261030e"></script>
+  <script src="js/agentic_ai_inspector.js?v=20261031b"></script>
   <script src="js/color_check.js?v=20261023a"></script>
   <script src="js/safe_zone_check.js?v=20261029b"></script>
   <script src="js/precheck_engine.js?v=20261031a"></script>
   <script src="js/previous_orders.js"></script>
   <script src="js/qnap_templates.js?v=20261017d"></script>
   <script src="js/product_templates.js?v=20261017c"></script>
-  <script src="js/canvas_inspector.js?v=20261029a"></script>
+  <script src="js/canvas_inspector.js?v=20261031b"></script>
   <script src="js/canvas_fx.js?v=20261030a"></script>
   <script src="js/proof_studio.js?v=20261026a"></script>
   <script src="js/detail_check.js?v=20261028b"></script>
   <script src="js/print_quality.js?v=20261028e"></script>
   <script src="js/post_check.js?v=20261030b"></script>
   <script src="js/file_forensics.js?v=20261031a"></script>
-  <script src="js/app.js?v=20261031a"></script>
+  <script src="js/app.js?v=20261031b"></script>
 </body>
 </html>
