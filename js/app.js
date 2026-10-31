@@ -1113,6 +1113,15 @@ async function runPreCheck() {
     }
     appState.analysis = analysis;
 
+    // technical facts inside the file (layers, spot colours, profiles, EXIF…) — read in the background; when they
+    // are in, the existing cards they belong to are updated (no card of their own)
+    if (typeof FileForensics !== 'undefined' && appState.file) {
+      const fFile = appState.file, fAnalysis = analysis;
+      FileForensics.inspect(fFile, { alive: () => appState.file === fFile })
+        .then(f => { if (appState.file === fFile && fAnalysis) { fAnalysis.forensics = f; FileForensics.syncReport(); } })
+        .catch(e => console.warn('File forensics:', e));
+    }
+
     // PDF / AI: the real page rendered by pdf.js replaces the generated stand-in picture everywhere
     if (analysis && analysis.renderedFromPdf && analysis.previewDataUrl) {
       appState.previewDataUrl = analysis.previewDataUrl;

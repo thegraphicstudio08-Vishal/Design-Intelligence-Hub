@@ -716,6 +716,9 @@ const PrecheckEngine = {
       gfp.duplicateOf = 'sizeTransform';
       if (size.isOverridden && !gfp.isOverridden) { gfp.isOverridden = true; gfp.overrideReason = size.overrideReason; gfp._followed = true; }
     }
+    // What is read inside the file (layers, spot colours, profile, EXIF turn, transparency, damage — FileForensics,
+    // in the background) goes into the cards it belongs to; again on every re-score, as other checks rebuild cards
+    if (typeof FileForensics !== 'undefined' && FileForensics.applyTo) FileForensics.applyTo(report, c => this.settle(c));
     const real = checks.filter(c => !c.duplicateOf);
     const fails = real.filter(c => c.status === 'FAIL' && !c.isOverridden).length;
     const passes = real.filter(c => c.status === 'PASS' || c.isOverridden).length;
