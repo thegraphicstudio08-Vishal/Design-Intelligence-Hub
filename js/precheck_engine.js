@@ -182,7 +182,9 @@ const PrecheckEngine = {
     const statusName = resConcern && resConcern.status === 'fuzzy' ? 'Bit Fuzzy' : 'Low Resolution';
     notes.push(resConcern
       ? `Status: ${statusName}. ${resConcern.blur ? `Artwork has ${resConcern.filePpi} PPI by pixel count but looks like about ${resConcern.ppi} PPI zoomed in at print size` : `Artwork gives ${resConcern.ppi} PPI at the ordered size`}; SOP asks ${resConcern.target} PPI. Send the Print preview screenshot (${zoom.label}) and highlight the soft area.`
-      : 'Status: Good to Go — no resolution concern; the Print preview screenshot is not needed (send it only for low resolution or a print-quality concern; customers misread it otherwise).');
+      : this.isPreview(analysis) && (analysis.effectiveDpi || 0) < parseInt(spec.resolution || 0)
+        ? 'Status: set it from the print file — this is the website\'s overall preview (about 12 PPI), its pixels do not show the print resolution; send the Print preview screenshot only if the print file has a resolution concern.'
+        : 'Status: Good to Go — no resolution concern; the Print preview screenshot is not needed (send it only for low resolution or a print-quality concern; customers misread it otherwise).');
     if (customFinishing) notes.push(`Custom finishing (${SopRules.describeFinishing(fin, lay)}) — highlight it on the proof.`);
     if (mockup) notes.push(mockup);
     if (req) notes.push(`File requirement: ${req.vendor || '—'} · process file ${req.processFormat || '—'} (.pdf) · print file ${req.printFormat || '—'} (${req.printExt || '.pdf'})${req.differentProcess ? ' · different process — see the product SOP' : ''}.`);
@@ -296,6 +298,13 @@ const PrecheckEngine = {
       action: 'Extend the design\'s background to every edge of the order size (or rearrange the design to fill it), then check the safe zone again. If the customer wants the white strips, confirm it with them — Design Review (PR-DPO-03 artwork placement).' };
   },
 
+  /** The website's overall preview of the design (…_overall_… in the name): exported at about 12 PPI — its pixel count
+   *  is the preview's, not the print file's */
+  isPreview(analysis) {
+    const p = (analysis && analysis.parsedFilename) || (typeof appState !== 'undefined' ? appState.parsedFilename : null);
+    return !!(p && p.fileRole === 'Overall Proof' && !analysis.isVector && !analysis.renderedFromPdf);
+  },
+
   evaluate(analysis, spec, userDims, overrides = {}) {
     const checks = [];
     const printW = userDims?.widthIn || spec.defaultW || 36;
@@ -380,17 +389,24 @@ const PrecheckEngine = {
           printQuality.full = { url: analysis.previewDataUrl, w: analysis.pixelWidth, h: analysis.pixelHeight };
         }
       }
+      // The website's overall preview (…_overall_…) is exported at about 12 PPI: its pixel count is not the print
+      // resolution. With sharp edges (nothing enlarged in it) the resolution is a look on the print file; a preview
+      // whose design is enlarged / blurry has less detail than even the preview — that still fails
+      const previewSharp = this.isPreview(analysis) && ppiAt < target && !blurCrit && !(printQuality && printQuality.real < ppiAt);
+      if (previewSharp) printQuality = null;
       if (printQuality && printQuality.status !== 'good') {
         resConcern = { ppi: printQuality.real, target, status: printQuality.status, blur: printQuality.real < ppiAt, filePpi: ppiAt };
-      } else if (!printQuality && ppiAt < target) resConcern = { ppi: ppiAt, target };
+      } else if (!printQuality && ppiAt < target && !previewSharp) resConcern = { ppi: ppiAt, target };
       else if (!printQuality && blurCrit) resConcern = { ppi: blur.real, target, blur: true, filePpi: ppiAt };
 
-      let st = ppiAt >= target ? 'PASS' : ppiAt >= minResolution ? 'WARNING' : 'FAIL';
+      let st = previewSharp || ppiAt >= target ? 'PASS' : ppiAt >= minResolution ? 'WARNING' : 'FAIL';
       if (st === 'PASS' && (t.ratioDiffPct > 1.5 || diffPct > 1.5)) st = 'WARNING';
       if (diffPct > 5.0 || t.ratioDiffPct > 5.0) st = 'FAIL';
       let manual = false;
       if (blurCrit) st = 'FAIL';
       else if (blur && blur.level === 'look' && st === 'PASS') { st = 'WARNING'; manual = true; }
+      if (previewSharp && st === 'PASS') { st = 'WARNING'; manual = true; }
+      const previewTxt = previewSharp ? `This is the website's overall preview (${analysis.pixelWidth} × ${analysis.pixelHeight} px, about ${ppiAt} PPI at ${orderSizeText(printW, printH)}): a preview's pixels are not the print resolution, and its edges are sharp — nothing in it is enlarged.` : '';
       const blurWord = blur && (blur.det.verdict === 'sharp' ? 'partly enlarged' : blur.det.verdict);
 
       const actualDiff = t.ratioDiffPct || diffPct;
@@ -413,26 +429,28 @@ const PrecheckEngine = {
         icon: '📐',
         status: st,
         manual,
-        lowPpi: ppiAt < target || blurCrit,
+        lowPpi: !previewSharp && (ppiAt < target || blurCrit),
+        preview: previewSharp,
         blank,
         // the real error in plain words (the card shows it first; the pixel maths is in "More details")
         error: st === 'PASS' ? '' : [
           blank ? `Blank space: placed whole the artwork covers ${blank.artIn.w}" × ${blank.artIn.h}" of the ${orderSizeText(printW, printH)} order — ${blank.gapIn}" (${blank.pct}% of the size) would print empty ${blank.sides}` : '',
-          ppiAt < target ? `${ppiAt < minResolution ? 'Low Resolution' : 'Bit Fuzzy'}: ${ppiAt} PPI at the ordered size ${orderSizeText(printW, printH)}${blank && blank.noStretch ? ' (artwork placed whole)' : ''} — SOP needs ${target} PPI (minimum ${minResolution})` : '',
+          ppiAt < target && !previewSharp ? `${ppiAt < minResolution ? 'Low Resolution' : 'Bit Fuzzy'}: ${ppiAt} PPI at the ordered size ${orderSizeText(printW, printH)}${blank && blank.noStretch ? ' (artwork placed whole)' : ''} — SOP needs ${target} PPI (minimum ${minResolution})` : '',
           blurCrit ? `Enlarged / blurry picture: ${ppiAt} PPI by pixel count, but the real detail is about ${blur.real} PPI — enlarged about ${blur.enlarge}× from a smaller picture${ppiAt >= target ? ` (SOP needs ${target} PPI)` : ''}` : '',
           !blank && actualDiff > 1.5 ? `Artwork proportion differs ${actualDiff}% from the order` : ''
         ].filter(Boolean).join(' · '),
-        found: `${hybridLabel}${analysis.pixelWidth} × ${analysis.pixelHeight} px (${analysis.aspectRatioArtwork}:1) → ${orderSizeText(printW, printH)} = ${ppiAt} PPI${blank && blank.noStretch ? ` placed whole (${blank.coverPct}% of the size)` : ''}${t.rotated ? ' (artwork rotated vs order)' : ''}${blur && blur.level ? ` · picture looks ${blurWord}: real detail ≈ ${blur.real} PPI` : ''}`,
+        found: `${hybridLabel}${analysis.pixelWidth} × ${analysis.pixelHeight} px (${analysis.aspectRatioArtwork}:1) → ${orderSizeText(printW, printH)} = ${ppiAt} PPI${blank && blank.noStretch ? ` placed whole (${blank.coverPct}% of the size)` : ''}${t.rotated ? ' (artwork rotated vs order)' : ''}${blur && blur.level ? ` · picture looks ${blurWord}: real detail ≈ ${blur.real} PPI` : ''}${previewSharp ? ' · website overall preview, sharp — check the resolution on the print file' : ''}`,
         required: `${reqTol} · Target ${target} PPI (min ${minResolution}) · Canvas ${canvasTxt}`,
         detail: `${fitTxt}${sop?.resolution?.source ? ` ${sop.resolution.source}.` : ''}${analysis.detail && typeof DetailCheck !== 'undefined' ? ` Real detail: ${DetailCheck.describe(analysis.detail, ppiAt)}` : ''}`,
         action: st === 'PASS' ? '' : [
+          previewSharp ? `${previewTxt} Check the resolution on the print file (or the customer's original artwork) before setting the print-quality status.` : '',
           blank ? (blank.noStretch
             ? `Do not stretch it (it would be distorted ×${blank.stretch}): extend the background or rearrange the design to fill ${orderSizeText(printW, printH)}, or ask the customer for artwork made at that size — customer approval, Design Review (PR-DPO-03 artwork placement).`
             : `Extend the background to fill ${orderSizeText(printW, printH)} (stretching would distort the artwork ×${blank.stretch}) — customer approval, Design Review (PR-DPO-03 artwork placement).`) : '',
-          ppiAt < target || blurCrit
+          (ppiAt < target && !previewSharp) || blurCrit
             ? `${blurCrit ? 'Ask the customer for the original (larger) picture or a vector logo; if there is nothing better, use' : 'Use'} the "${printQuality && printQuality.status !== 'good' ? printQuality.label : 'Low Resolution'}" status and attach the Print preview screenshot proof (Proof 03) highlighting the soft area — PR-DPO-03.`
             : '',
-          manual ? 'Look at the artwork at print size (Photoshop "Print Size"); if it looks soft, use the "Bit Fuzzy" status with the Print preview screenshot (Proof 03).' : '',
+          manual && !previewSharp ? 'Look at the artwork at print size (Photoshop "Print Size"); if it looks soft, use the "Bit Fuzzy" status with the Print preview screenshot (Proof 03).' : '',
           !blank && actualDiff > 1.5 ? (placementAction || 'Confirm with customer: extend background to fill the order size, or crop edge allowance.') : ''
         ].filter(Boolean).join(' ')
       });
@@ -544,6 +562,14 @@ const PrecheckEngine = {
         vDetail = `LOW RESOLUTION ALERT: ${analysis.goodForPrintReason}`;
         vAction = `Request higher resolution artwork from customer (minimum ${reqDpi} DPI at ${printW}"×${printH}") or request vector format (.AI / .EPS / .SVG / .PDF).`;
       }
+      // the website's overall preview with sharp edges: its pixel count is not the print resolution (Size & resolution)
+      const sz = checks.find(c => c.id === 'sizeTransform');
+      if (sz && sz.preview && vStatus !== 'PASS' && !(gBlur && gBlur.level === 'critical')) {
+        vStatus = 'WARNING'; vManual = true;
+        vFound = `Website overall preview (${dpi} PPI at the order size) — sharp, nothing enlarged`;
+        vDetail = `The website exports the overall preview at about 12 PPI: its pixels are not the print resolution. ${analysis.goodForPrintReason || ''}`;
+        vAction = 'Check the resolution on the print file (or the customer\'s original artwork).';
+      }
     }
     if (!design) checks.push({
       id: 'goodForPrint',
@@ -551,6 +577,7 @@ const PrecheckEngine = {
       icon: analysis.isVector ? '⭐' : '🖨️',
       status: vStatus,
       manual: vManual,
+      preview: vManual && /overall preview/.test(vFound),
       found: vFound,
       required: analysis.isVector ? 'Vector Format (Preferred)' : `${spec.resolution} @ ${printW}"×${printH}"`,
       detail: vDetail,
@@ -712,7 +739,9 @@ const PrecheckEngine = {
     // "Size Transform" — shown once (in the size card), not scored twice; it follows the size card when corrected
     const size = checks.find(c => c.id === 'sizeTransform'), gfp = checks.find(c => c.id === 'goodForPrint');
     if (gfp) delete gfp.duplicateOf;
-    if (size && gfp && size.status === 'FAIL' && size.lowPpi && gfp.status === 'FAIL' && !(report.analysis && report.analysis.isVector)) {
+    // (the same for the website's overall preview: one look by eye, in the size card)
+    if (size && gfp && size.preview && gfp.preview && size.status === gfp.status) gfp.duplicateOf = 'sizeTransform';
+    else if (size && gfp && size.status === 'FAIL' && size.lowPpi && gfp.status === 'FAIL' && !(report.analysis && report.analysis.isVector)) {
       gfp.duplicateOf = 'sizeTransform';
       if (size.isOverridden && !gfp.isOverridden) { gfp.isOverridden = true; gfp.overrideReason = size.overrideReason; gfp._followed = true; }
     }

@@ -798,7 +798,7 @@ const FileAnalyzer = {
       .pop() || null;
     const fileRole = /print_file/i.test(clean) ? 'Print File'
       : /cropshot|crop_shot|_cop\b|cop$/i.test(clean) ? 'Crop Shot Proof'
-      : /overall/i.test(clean) ? 'Overall Proof'
+      : /(^|_)overall(_|$)/i.test(clean) ? 'Overall Proof'      // the website's overall preview: …_script_Front_overall_179…
       : /mockup/i.test(clean) ? 'Mockup'
       : 'Artwork';
 
@@ -1151,7 +1151,7 @@ const FileAnalyzer = {
       isBackSide,
       hasGrommets: grommetType !== 'None',   // "No_Grommet" contains the word but means none
       hasPolePockets: pocketType !== 'None' || /pole_pocket|pole_sleeve/i.test(clean),
-      isProof: /script_overall|crop|mockup|render/i.test(clean),
+      isProof: /(^|_)overall(_|$)|crop|mockup|render/i.test(clean),
       isShapedTemplate,
       templateAspect,
       tableCoverShape
